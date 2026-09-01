@@ -1,0 +1,32 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ValOS 工作目录
+.valos
+
+# 原始三维扫描件（96MB，超过 GitHub 50MB 警告线，会永久撑大仓库）
+# 线上只需要 public/models/hezun.glb（4.5MB），由 scripts/pack-hezun-model.mjs 从它生成
+# 如需入库请改用 Git LFS：git lfs track "src/assests/*.glb"
+src/assests/hezun.glb

@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 安全区变量：适配 iPhone 顶部灵动岛 / 底部 Home Indicator 等异形屏 */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink text-rice font-sans antialiased;
+    background-color: #0a0a0c;
+    overflow-x: hidden;
+  }
+
+  ::selection {
+    background-color: rgba(168, 134, 63, 0.35);
+  }
+
+  /* 极细滚动条，保持克制感 */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(168, 134, 63, 0.25);
+    border-radius: 4px;
+  }
+}
+
+@layer utilities {
+  .font-title {
+    font-family: "Noto Serif SC", "Songti SC", serif;
+  }
+
+  /* 宣纸 + 噪点纹理，用于全局背景氛围 */
+  .paper-noise {
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(168, 134, 63, 0.06), transparent 55%),
+      radial-gradient(ellipse at 80% 100%, rgba(91, 100, 89, 0.08), transparent 55%);
+  }
+
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 60;
+    opacity: 0.05;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .text-glow-gilt {
+    text-shadow: 0 0 24px rgba(201, 167, 106, 0.35);
+  }
+
+  .ink-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(201, 167, 106, 0.5),
+      transparent
+    );
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+}
