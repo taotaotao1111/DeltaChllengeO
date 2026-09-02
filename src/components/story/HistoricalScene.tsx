@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import SpeechReveal from "../shared/SpeechReveal";
-import DustParticles from "../shared/DustParticles";
 
 interface QA {
   id: string;
@@ -62,44 +61,19 @@ export default function HistoricalScene({ onContinue, continueLabel = "继续听
   };
 
   return (
-    <div className="relative flex h-dvh w-full flex-col items-center justify-center overflow-hidden bg-ink-900 px-6">
-      {/* 炉火氛围背景 */}
-      <motion.div
-        className="absolute left-1/2 top-[60%] h-[50vh] w-[60vw] -translate-x-1/2 -translate-y-1/2 rounded-full blur-3xl"
-        style={{ background: "radial-gradient(circle, rgba(156,59,46,0.35), rgba(122,97,31,0.15) 55%, transparent 75%)" }}
-        animate={{ opacity: [0.7, 0.95, 0.7], scale: [1, 1.06, 1] }}
-        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-ink-900 via-ink-900/60 to-ink-900" />
-      <DustParticles count={20} colorClassName="bg-cinnabar-light" />
+    <div className="relative flex h-dvh w-full flex-col items-center justify-center overflow-hidden px-6">
+      {/*
+        炉火氛围与火星已上移到 <ChapterBackdrop motif="forge" />（由 ChapterTwo 提供），
+        这里不能再铺 bg-ink-900 或全屏渐变——否则会把背景母题和背后的文物整层盖掉。
+      */}
 
-      {/* 简单人物剪影：工匠 */}
-      <svg
-        viewBox="0 0 200 200"
-        className="absolute bottom-0 left-[8%] h-[36vh] opacity-70 sm:left-[14%]"
-        aria-hidden
-      >
-        <path
-          d="M70 200 L74 140 C74 120 84 108 96 108 C108 108 118 120 118 140 L122 200 Z M96 108 C88 108 82 100 82 90 C82 80 88 72 96 72 C104 72 110 80 110 90 C110 100 104 108 96 108 Z M96 100 L60 118 M96 100 L128 92"
-          fill="#050504"
-          stroke="#050504"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-      </svg>
-      <svg
-        viewBox="0 0 200 200"
-        className="absolute bottom-0 right-[8%] h-[32vh] opacity-60 sm:right-[16%]"
-        aria-hidden
-      >
-        <path
-          d="M60 200 L64 145 C64 126 74 114 86 114 C98 114 108 126 108 145 L112 200 Z M86 114 C79 114 73 106 73 97 C73 88 79 80 86 80 C93 80 99 88 99 97 C99 106 93 114 86 114 Z"
-          fill="#050504"
-          stroke="#050504"
-          strokeWidth="6"
-          strokeLinecap="round"
-        />
-      </svg>
+      {/*
+        原来这里有两个工匠剪影 SVG，已删除。
+        它们填充与描边都是 #050504、压在 bg-ink-900 上，属于黑压黑等于没画；
+        试过改成暖金轮廓光让它显形，结果暴露出形体本身太简陋（读起来是"火柴人线稿"），
+        反而比看不见更廉价。作坊的临场感现在交给 <ChapterBackdrop motif="forge" />
+        的炉膛光位、上升火星与合范缝，以及背景里在场的文物本体。
+      */}
 
       <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
         {!introDone ? (

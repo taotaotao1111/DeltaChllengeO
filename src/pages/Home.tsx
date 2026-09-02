@@ -19,8 +19,12 @@ import MemoryCard from "../components/memory/MemoryCard";
 export default function Home() {
   const stage = useGameStore((s) => s.stage);
 
+  // 根容器**不能有不透明背景色**。场景背景层（InkBackground / ChapterBackdrop）都是
+  // `fixed inset-0 -z-10`，而这个 div 既不是 stacking context、又铺满全屏：按 CSS 绘制顺序，
+  // 负 z-index 的后代会画在它的背景色**之下**，整层背景于是被吃掉——这正是"第二章之后
+  // 只剩纯色加文字"的真正原因。底色交给 index.css 里的 body（#0a0a0c），视觉上无差别。
   return (
-    <div className="relative h-dvh w-full bg-ink-900 font-sans">
+    <div className="relative h-dvh w-full font-sans">
       <SectionNav />
 
       <AnimatePresence mode="wait">
@@ -89,12 +93,19 @@ export default function Home() {
       <ArtifactChat />
       <MemoryCard />
 
-      <Link
-        to="/sources"
-        className="fixed bottom-[calc(0.6rem+var(--safe-bottom))] left-1/2 z-30 -translate-x-1/2 text-[10px] tracking-wide text-rice-200/25 transition hover:text-rice-200/60"
-      >
-        数字资料来源
-      </Link>
+      {/*
+        开场那一屏不出现溯源入口：竖版海报底部已经排满了标题与小字，
+        再叠一行链接会显得杂乱，也和「推门进去」这个唯一动作抢注意力。
+        但它不能整个删掉——史料溯源是本作品的立身之本，进入展厅后仍需随时可查。
+      */}
+      {stage !== "museum" && (
+        <Link
+          to="/sources"
+          className="fixed bottom-[calc(0.6rem+var(--safe-bottom))] left-1/2 z-30 -translate-x-1/2 text-[10px] tracking-wide text-rice-200/25 transition hover:text-rice-200/60"
+        >
+          数字资料来源
+        </Link>
+      )}
     </div>
   );
 }

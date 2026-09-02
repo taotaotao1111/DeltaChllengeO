@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import InkBackground from "../shared/InkBackground";
+import ChapterBackdrop from "../shared/ChapterBackdrop";
 import Timeline from "../story/Timeline";
 import SpanBar from "../story/SpanBar";
 import { hezun } from "../../data/artifacts/hezun";
@@ -23,7 +23,7 @@ export default function TimelineScene() {
 
   return (
     <div className="relative flex h-dvh w-full flex-col overflow-hidden">
-      <InkBackground glow={0.6} />
+      <ChapterBackdrop motif="strata" />
 
       <div className="flex flex-1 flex-col items-center justify-center px-4 pt-[calc(4rem+var(--safe-top))]">
         <motion.p

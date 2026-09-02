@@ -1,6 +1,9 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import HistoricalScene from "../story/HistoricalScene";
+import ChapterBackdrop from "../shared/ChapterBackdrop";
+import ArtifactPresence from "../artifact/ArtifactPresence";
+import { hezun } from "../../data/artifacts/hezun";
 import { useGameStore } from "../../store/gameStore";
 
 export default function ChapterTwo() {
@@ -12,7 +15,19 @@ export default function ChapterTwo() {
   }, [markDiscovered]);
 
   return (
-    <div className="relative h-dvh w-full">
+    <div className="relative h-dvh w-full overflow-hidden">
+      <ChapterBackdrop motif="forge" />
+
+      {/*
+        讲述者继续在场：偏到右下、压得很暗，像"刚从范里出来还在炉边"的器物。
+        放在正文之前渲染，正文自带 z-10 会盖在它上面。
+      */}
+      <ArtifactPresence
+        artifact={hezun}
+        opacity={0.16}
+        className="-right-[18vw] bottom-[-12vh] h-[58vh] w-[58vh] sm:-right-[2vw]"
+      />
+
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

@@ -55,11 +55,19 @@ export default {
           '45%': { opacity: '0.85' },
           '55%': { opacity: '0.95' },
         },
+        // 炉火里往上飘的火星：一路上升、变小、烧尽
+        spark: {
+          '0%': { transform: 'translate(0, 0) scale(1)', opacity: '0' },
+          '12%': { opacity: '0.9' },
+          '70%': { opacity: '0.5' },
+          '100%': { transform: 'translate(14px, -46vh) scale(0.3)', opacity: '0' },
+        },
       },
       animation: {
         breathe: 'breathe 6s ease-in-out infinite',
         drift: 'drift 8s ease-in infinite',
         flicker: 'flicker 4s ease-in-out infinite',
+        spark: 'spark 7s linear infinite',
       },
     },
   },

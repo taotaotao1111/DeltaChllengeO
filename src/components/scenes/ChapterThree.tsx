@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import InkBackground from "../shared/InkBackground";
+import ChapterBackdrop from "../shared/ChapterBackdrop";
+import ArtifactPresence from "../artifact/ArtifactPresence";
 import SpeechReveal from "../shared/SpeechReveal";
 import InscriptionFocus from "../artifact/InscriptionFocus";
 import RustReveal from "../artifact/RustReveal";
@@ -66,7 +67,19 @@ export default function ChapterThree() {
 
   return (
     <div className="relative h-dvh w-full overflow-hidden">
-      <InkBackground glow={0.7} />
+      <ChapterBackdrop motif="patina" />
+
+      {/*
+        除锈与铭文特写这两步画面中央已经有实物/大字了，再放一尊会打架，
+        所以讲述者只在"说话的段落"出现（引入、竞猜、收尾）。
+      */}
+      {(phase === "lead-in" || phase === "guess" || phase === "closing") && (
+        <ArtifactPresence
+          artifact={hezun}
+          opacity={0.13}
+          className="-left-[20vw] bottom-[-10vh] h-[56vh] w-[56vh] sm:-left-[4vw]"
+        />
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
