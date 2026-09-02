@@ -29,6 +29,14 @@ export default function ArtifactModelDisplay({
         camera={{ fov: 35, position: [0, 0.1, 3.8] }}
         dpr={[1, 2]}
         gl={{ alpha: true, antialias: true }}
+        /*
+          外层那个 `pointer-events-none` **拦不住 R3F**：Canvas 会给自己的容器 div
+          内联一句 `pointer-events: auto`（源码里 `eventSource ? 'none' : 'auto'`），
+          内联样式赢过父层继承来的 none，于是这块画布照样吃掉点击。
+          症状很隐蔽：画布是透明的、看着什么都没挡，但它覆盖范围内的按钮全点不动
+          （第三章竞猜的「继续 →」就这么失灵过）。这里显式覆盖回 none。
+        */
+        style={{ pointerEvents: "none" }}
       >
         <ArtifactLights />
         <ArtifactModel3D model={model} src={src} autoRotateSpeed={autoRotateSpeed} />
