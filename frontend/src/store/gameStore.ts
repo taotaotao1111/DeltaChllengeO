@@ -47,6 +47,14 @@ interface GameState {
   selectedMemoryLine: string | null;
   /** 用户留给未来的一句话；null = 还没问过，"" = 问过但跳过了 */
   userLegacyLine: string | null;
+  /**
+   * 用户在第一章把何尊转到的角度的截图（PNG dataURL，透明背景）。
+   *
+   * 为什么要提前存下来：记忆卡是从时间轴或对话里打开的，那时第一章的 WebGL
+   * canvas 早已卸载，当场截不到。所以在第一章「用户停止旋转」时就抓一帧存着。
+   * 每个人留下的角度不同，卡片因此是独一份的。
+   */
+  artifactSnapshot: string | null;
 
   setStage: (stage: Stage) => void;
   markDiscovered: (id: DiscoveredId) => void;
@@ -58,6 +66,7 @@ interface GameState {
   openMemoryCard: (line?: string) => void;
   closeMemoryCard: () => void;
   setUserLegacyLine: (line: string) => void;
+  setArtifactSnapshot: (dataUrl: string) => void;
   currentScene: () => Scene;
   /** 最近一条用户提问，用于记忆卡个性化「我的问题」 */
   lastUserQuestion: () => string | null;
@@ -75,6 +84,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   memoryCardOpen: false,
   selectedMemoryLine: null,
   userLegacyLine: null,
+  artifactSnapshot: null,
 
   setStage: (stage) => set({ stage }),
 
@@ -112,6 +122,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ memoryCardOpen: true, selectedMemoryLine: line ?? null, chatOpen: false }),
   closeMemoryCard: () => set({ memoryCardOpen: false }),
   setUserLegacyLine: (line) => set({ userLegacyLine: line }),
+  setArtifactSnapshot: (dataUrl) => set({ artifactSnapshot: dataUrl }),
 
   currentScene: () => (get().memoryCardOpen ? "memory" : STAGE_TO_SCENE[get().stage]),
 

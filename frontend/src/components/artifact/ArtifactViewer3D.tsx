@@ -3,7 +3,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bounds, Html, OrbitControls } from "@react-three/drei";
 import { Vector3 } from "three";
+import type { WebGLRenderer } from "three";
 import type { ArtifactModel, Hotspot, HotspotType } from "../../types/artifact";
+import { useGameStore } from "../../store/gameStore";
 import ArtifactModel3D, { ArtifactLights } from "./ArtifactModel3D";
 import ArtifactHotspot from "./ArtifactHotspot";
 
@@ -23,6 +25,25 @@ const AUTO_ROTATE_RESUME_DELAY = 3000;
 
 /** 「可以转动」的手势提示最多停留多久（毫秒） */
 const HINT_VISIBLE_DURATION = 4500;
+
+/** 首次抓帧的延迟：等模型加载 + Bounds 完成取景（毫秒） */
+const FIRST_SNAPSHOT_DELAY = 2200;
+
+/** 记忆卡里那张何尊截图的边长（正方形，PNG 透明底） */
+const SNAPSHOT_SIZE = 640;
+
+/**
+ * 把 WebGL 实例交给外层，好让父组件在需要时抓帧。
+ *
+ * 必须在 <Canvas> 内部才能拿到 gl，所以用这个零渲染的桥接组件。
+ */
+function GlBridge({ onReady }: { onReady: (gl: WebGLRenderer) => void }) {
+  const gl = useThree((s) => s.gl);
+  useEffect(() => {
+    onReady(gl);
+  }, [gl, onReady]);
+  return null;
+}
 
 /**
  * 挂在模型表面的 3D 热点。
@@ -111,6 +132,42 @@ export default function ArtifactViewer3D({
   const [autoRotate, setAutoRotate] = useState(true);
   const [hintVisible, setHintVisible] = useState(true);
   const resumeTimer = useRef<number>();
+  const glRef = useRef<WebGLRenderer | null>(null);
+  const setArtifactSnapshot = useGameStore((s) => s.setArtifactSnapshot);
+
+  const handleGlReady = useCallback((gl: WebGLRenderer) => {
+    glRef.current = gl;
+  }, []);
+
+  /**
+   * 抓当前这一帧，缩到 SNAPSHOT_SIZE 的正方形后存进 store，供记忆卡使用。
+   *
+   * 依赖 Canvas 上的 preserveDrawingBuffer——否则绘制缓冲区在合成后就被清空，
+   * 这里只会拿到一张全透明的图。缩放到固定尺寸是为了别把一大串 dataURL 塞进内存。
+   */
+  const captureSnapshot = useCallback(() => {
+    const gl = glRef.current;
+    if (!gl) return;
+    const source = gl.domElement;
+    if (!source.width || !source.height) return;
+
+    const out = document.createElement("canvas");
+    out.width = SNAPSHOT_SIZE;
+    out.height = SNAPSHOT_SIZE;
+    const ctx = out.getContext("2d");
+    if (!ctx) return;
+
+    // 从原画布中间裁一个正方形，避免把两侧空白也带进卡片
+    const side = Math.min(source.width, source.height);
+    const sx = (source.width - side) / 2;
+    const sy = (source.height - side) / 2;
+    try {
+      ctx.drawImage(source, sx, sy, side, side, 0, 0, SNAPSHOT_SIZE, SNAPSHOT_SIZE);
+      setArtifactSnapshot(out.toDataURL("image/png"));
+    } catch {
+      // 极少数环境下读画布会被安全策略拦住；记忆卡自己有无截图的降级版式
+    }
+  }, [setArtifactSnapshot]);
 
   const pauseAutoRotate = useCallback(() => {
     window.clearTimeout(resumeTimer.current);
@@ -122,9 +179,17 @@ export default function ArtifactViewer3D({
   const scheduleResume = useCallback(() => {
     window.clearTimeout(resumeTimer.current);
     resumeTimer.current = window.setTimeout(() => setAutoRotate(true), AUTO_ROTATE_RESUME_DELAY);
-  }, []);
+    // 用户松手的这一刻，就是他选定的那个角度
+    captureSnapshot();
+  }, [captureSnapshot]);
 
   useEffect(() => () => window.clearTimeout(resumeTimer.current), []);
+
+  // 没转过也要有图：等模型就绪、Bounds 取景完成后先抓一帧兜底
+  useEffect(() => {
+    const t = window.setTimeout(captureSnapshot, FIRST_SNAPSHOT_DELAY);
+    return () => window.clearTimeout(t);
+  }, [captureSnapshot]);
 
   // 没人告诉过用户模型可以转，而一半热点又藏在背面，所以给一次很轻的手势提示
   useEffect(() => {
@@ -140,9 +205,12 @@ export default function ArtifactViewer3D({
       <Canvas
         camera={{ fov: 35, position: [0, 0.2, 4.2] }}
         dpr={[1, 2]}
-        gl={{ alpha: true, antialias: true }}
+        // preserveDrawingBuffer 是为了能在任意时刻 toDataURL 抓帧做记忆卡截图；
+        // 不开的话绘制缓冲区合成后即被清空，抓到的是一张全透明图
+        gl={{ alpha: true, antialias: true, preserveDrawingBuffer: true }}
         style={{ touchAction: "none" }}
       >
+        <GlBridge onReady={handleGlReady} />
         <ArtifactLights />
 
         {/* 何尊喇叭口的直径和器身高度接近，窄屏下按高度取景会左右出框，

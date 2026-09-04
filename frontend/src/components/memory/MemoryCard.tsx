@@ -1,7 +1,8 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore, type DiscoveredId } from "../../store/gameStore";
 import { hezun } from "../../data/artifacts/hezun";
+import { renderCard } from "./cardCanvas";
 
 const DEFAULT_QUESTION = "如果你可以穿越回三千年前，你最想问何尊什么？";
 const LEGACY_PROMPT = "如果三千年后，有人看到今天的你，你想留下什么？";
@@ -11,15 +12,21 @@ function getInsight(discovered: DiscoveredId[]): string {
     return "「宅兹中国」里的「中国」，指的是天下之中的都邑，并不是今天意义上的「中国」。";
   }
   if (discovered.includes("hotspot-form")) {
-    return "何尊是一种「尊」——西周礼器中，用来盛酒、行礼的青铜器。";
+    return "我是一种「尊」——西周礼器中，用来盛酒、行礼的青铜器。";
   }
   if (discovered.includes("hotspot-pattern")) {
-    return "何尊腹部的兽面纹，不只是装饰，也承载着那个时代的秩序与敬畏。";
+    return "我腹部的兽面纹，不只是装饰，也承载着那个时代的秩序与敬畏。";
   }
   if (discovered.includes("history")) {
-    return "何尊的铸造，是为了让一段重要的嘱托被长久地记住。";
+    return "铸造我，是为了让一段重要的嘱托被长久地记住。";
   }
-  return "何尊已经三千多岁了，现在正站在你面前。";
+  return "我已经三千多岁了，此刻正站在你面前。";
+}
+
+function formatToday(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())}`;
 }
 
 export default function MemoryCard() {
@@ -30,8 +37,12 @@ export default function MemoryCard() {
   const lastUserQuestion = useGameStore((s) => s.lastUserQuestion);
   const userLegacyLine = useGameStore((s) => s.userLegacyLine);
   const setUserLegacyLine = useGameStore((s) => s.setUserLegacyLine);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const snapshot = useGameStore((s) => s.artifactSnapshot);
+
   const [draft, setDraft] = useState("");
+  /** 导出好的图片（dataURL）。非空时展示导出浮层，让用户长按保存或分享 */
+  const [exported, setExported] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const memoryLine = useMemo(() => selectedLine ?? hezun.memoryLines[0], [selectedLine]);
   const insight = useMemo(() => getInsight(discovered), [discovered]);
@@ -40,26 +51,54 @@ export default function MemoryCard() {
   const hasLegacy = !!userLegacyLine;
   const needsPrompt = userLegacyLine === null;
 
-  const handleSave = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    drawCard(canvas, {
-      insight,
-      memoryLine,
-      myQuestion,
-      isPersonalQuestion,
-      legacyLine: userLegacyLine || null,
-    });
-    const url = canvas.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "物语千年-我的千年相遇.png";
-    a.click();
+  /**
+   * 生成图片。
+   *
+   * 这里**不再直接走 a.download**——iOS Safari 对 canvas 生成的 dataURL 不触发下载，
+   * 而这个作品主要是在手机上看的，等于保存功能在主场景失效。改成把图渲出来放进浮层，
+   * 用户长按即可存进相册；桌面端和安卓仍然提供下载按钮。
+   */
+  const handleExport = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const canvas = await renderCard({
+        memoryLine,
+        insight,
+        myQuestion,
+        isPersonalQuestion,
+        legacyLine: userLegacyLine || null,
+        snapshot,
+        discoveredCount: discovered.length,
+      });
+      setExported(canvas.toDataURL("image/png"));
+    } catch (err) {
+      console.warn("[MemoryCard] 生成卡片失败", err);
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const submitLegacy = () => {
-    setUserLegacyLine(draft.trim());
+  const handleShare = async () => {
+    if (!exported) return;
+    try {
+      const blob = await (await fetch(exported)).blob();
+      const file = new File([blob], "物语千年-我的千年相遇.png", { type: "image/png" });
+      const nav = navigator as Navigator & {
+        canShare?: (d: { files: File[] }) => boolean;
+        share?: (d: { files: File[]; title?: string }) => Promise<void>;
+      };
+      if (nav.canShare?.({ files: [file] }) && nav.share) {
+        await nav.share({ files: [file], title: "我的千年相遇" });
+      }
+    } catch {
+      /* 用户取消分享，不做处理 */
+    }
   };
+
+  const canShareFiles =
+    typeof navigator !== "undefined" &&
+    !!(navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean }).canShare;
 
   return (
     <AnimatePresence>
@@ -95,7 +134,7 @@ export default function MemoryCard() {
                 />
                 <div className="mt-5 flex gap-3">
                   <button
-                    onClick={submitLegacy}
+                    onClick={() => setUserLegacyLine(draft.trim())}
                     disabled={!draft.trim()}
                     className="flex-1 rounded-full bg-gilt/25 py-2.5 text-sm text-gilt-light transition hover:bg-gilt/35 disabled:opacity-30"
                   >
@@ -111,54 +150,80 @@ export default function MemoryCard() {
               </div>
             ) : (
               <div className="flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-gilt/25 bg-ink-800/95 shadow-2xl">
-                <div className="scrollbar-none overflow-y-auto p-6 text-center sm:p-7">
-                  <p className="font-title text-lg text-rice-100">我的千年相遇</p>
-                  <p className="mt-1 text-sm text-rice-200/60">{hezun.name} · {hezun.dynasty}</p>
+                <div className="scrollbar-none overflow-y-auto px-6 py-7 sm:px-7">
+                  {/* 抬头：文物身份，小而轻 */}
+                  <p className="text-[11px] tracking-widest text-rice-200/40">
+                    {hezun.name} · {hezun.dynasty}
+                  </p>
+                  <p className="font-title mt-2 text-base text-rice-100/85">这是我留给你的</p>
 
-                  <div className="ink-divider my-5" />
+                  {/* 用户转到的那个角度——每张卡都不一样 */}
+                  {snapshot && (
+                    <div className="relative mt-5 flex justify-center">
+                      <div className="pointer-events-none absolute inset-x-6 bottom-2 h-16 rounded-full bg-gilt/10 blur-2xl" />
+                      <img
+                        src={snapshot}
+                        alt="你看到的何尊"
+                        className="relative h-40 w-40 object-contain"
+                      />
+                    </div>
+                  )}
 
-                  <p className="text-xs text-rice-200/50">我今天知道了</p>
-                  <p className="mt-2 text-[15px] leading-7 text-gilt-light">{insight}</p>
-
-                  <div className="ink-divider my-5" />
-
-                  <p className="text-xs text-rice-200/50">它让我印象最深的一句话</p>
-                  <p className="mt-2 whitespace-pre-line text-sm leading-7 text-rice-100/85">
-                    「{memoryLine}」
+                  {/* 主角：何尊留下的那句话。整张卡只放大这一处 */}
+                  <p className="font-title mt-6 whitespace-pre-line text-[22px] leading-[1.75] text-rice-100">
+                    {memoryLine}
                   </p>
 
-                  <div className="ink-divider my-5" />
+                  <div className="ink-divider my-6" />
 
-                  <p className="text-xs text-rice-200/50">
-                    {isPersonalQuestion ? "我问过它" : "我的问题"}
+                  <p className="text-[11px] tracking-widest text-gilt/60">我告诉过你</p>
+                  <p className="mt-2 text-[13px] leading-7 text-gilt-light/90">{insight}</p>
+
+                  <p className="mt-6 text-[11px] tracking-widest text-gilt/60">
+                    {isPersonalQuestion ? "你问过我" : "你还没问我"}
                   </p>
-                  <p className="mt-2 text-sm leading-7 text-rice-100/70">{myQuestion}</p>
+                  <p className="mt-2 text-[13px] leading-7 text-rice-100/70">{myQuestion}</p>
 
                   {hasLegacy && (
                     <>
-                      <div className="ink-divider my-5" />
-                      <p className="text-xs text-rice-200/50">我留下的话</p>
-                      <p className="mt-2 text-xs italic text-gilt-light/70">「那我替你记住。」——何尊</p>
-                      <p className="mt-2 whitespace-pre-line text-sm leading-7 text-rice-100/85">
+                      <p className="mt-6 text-[11px] tracking-widest text-gilt/60">
+                        你留给三千年后的话
+                      </p>
+                      <p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-rice-100/85">
                         「{userLegacyLine}」
+                      </p>
+                      <p className="mt-2 text-[11px] italic text-gilt-light/50">
+                        那我替你记住。
                       </p>
                     </>
                   )}
 
-                  <div className="ink-divider my-5" />
-
-                  <p className="font-title text-sm text-rice-100/70">《物语千年》</p>
-                  <p className="mt-1 text-[11px] tracking-wide text-rice-200/40">
-                    闭馆以后，文物终于可以说话了。
-                  </p>
+                  {/* 落款：日期 + 痕迹 + 方印 */}
+                  <div className="ink-divider my-6" />
+                  <div className="flex items-end justify-between gap-4">
+                    <div>
+                      <p className="text-[11px] text-rice-200/40">
+                        {formatToday()} · 你打开了我 {discovered.length} 处细节
+                      </p>
+                      <p className="font-title mt-2 text-[13px] text-rice-100/60">《物语千年》</p>
+                      <p className="mt-1 text-[10px] tracking-wide text-rice-200/35">
+                        闭馆以后，文物终于可以说话了。
+                      </p>
+                    </div>
+                    <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-[3px] border border-gilt/45 text-[11px] leading-tight text-gilt/75">
+                      <span>何</span>
+                      <span>尊</span>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex shrink-0 gap-3 border-t border-rice-100/10 p-4">
                   <button
-                    onClick={handleSave}
-                    className="flex-1 rounded-full bg-gilt/25 py-2.5 text-sm text-gilt-light transition hover:bg-gilt/35"
+                    onClick={handleExport}
+                    disabled={exporting}
+                    className="flex-1 rounded-full bg-gilt/25 py-2.5 text-sm text-gilt-light transition hover:bg-gilt/35 disabled:opacity-40"
                   >
-                    保存这张卡片
+                    {exporting ? "正在生成…" : "保存这张卡片"}
                   </button>
                   <button
                     onClick={close}
@@ -169,131 +234,51 @@ export default function MemoryCard() {
                 </div>
               </div>
             )}
-
-            <canvas ref={canvasRef} width={750} height={1260} className="hidden" />
           </motion.div>
+
+          {/* 导出浮层：iOS 不支持 a.download，只能让用户长按图片存相册 */}
+          <AnimatePresence>
+            {exported && (
+              <motion.div
+                className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-4 bg-ink-900/95 p-5 pt-[calc(1.25rem+var(--safe-top))] pb-[calc(1.25rem+var(--safe-bottom))]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <p className="text-xs tracking-widest text-gilt-light/70">长按图片即可保存到相册</p>
+                <img
+                  src={exported}
+                  alt="我的千年相遇"
+                  className="max-h-[68vh] w-auto max-w-full rounded-xl border border-gilt/20"
+                />
+                <div className="flex gap-3">
+                  {canShareFiles && (
+                    <button
+                      onClick={handleShare}
+                      className="rounded-full bg-gilt/25 px-5 py-2.5 text-sm text-gilt-light transition hover:bg-gilt/35"
+                    >
+                      分享
+                    </button>
+                  )}
+                  <a
+                    href={exported}
+                    download="物语千年-我的千年相遇.png"
+                    className="rounded-full border border-gilt/30 px-5 py-2.5 text-sm text-gilt-light/90 transition hover:bg-gilt/15"
+                  >
+                    下载
+                  </a>
+                  <button
+                    onClick={() => setExported(null)}
+                    className="rounded-full border border-rice-100/15 px-5 py-2.5 text-sm text-rice-200/70 transition hover:text-rice-100"
+                  >
+                    返回
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
   );
-}
-
-function wrapCanvasText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
-): number {
-  const paragraphs = text.split("\n");
-  let cursorY = y;
-  paragraphs.forEach((para) => {
-    let line = "";
-    for (const char of para) {
-      const test = line + char;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        ctx.fillText(line, x, cursorY);
-        line = char;
-        cursorY += lineHeight;
-      } else {
-        line = test;
-      }
-    }
-    ctx.fillText(line, x, cursorY);
-    cursorY += lineHeight;
-  });
-  return cursorY;
-}
-
-function drawCard(
-  canvas: HTMLCanvasElement,
-  opts: {
-    insight: string;
-    memoryLine: string;
-    myQuestion: string;
-    isPersonalQuestion: boolean;
-    legacyLine: string | null;
-  },
-) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const W = canvas.width;
-  const H = canvas.height;
-  const cx = W / 2;
-
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, "#121214");
-  bg.addColorStop(1, "#0a0a0c");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, W, H);
-
-  ctx.strokeStyle = "rgba(201,167,106,0.35)";
-  ctx.lineWidth = 2;
-  ctx.strokeRect(28, 28, W - 56, H - 56);
-
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#f2ead9";
-  ctx.font = "44px 'Noto Serif SC', serif";
-  ctx.fillText("我的千年相遇", cx, 130);
-
-  ctx.fillStyle = "rgba(242,234,217,0.6)";
-  ctx.font = "24px 'Noto Sans SC', sans-serif";
-  ctx.fillText("何尊 · 西周", cx, 172);
-
-  let y = 230;
-  y = section(ctx, cx, y, "我今天知道了", opts.insight, "#c9a76a", 22, W);
-
-  y += 30;
-  y = section(ctx, cx, y, "它让我印象最深的一句话", `「${opts.memoryLine}」`, "#f2ead9", 24, W);
-
-  y += 30;
-  y = section(ctx, cx, y, opts.isPersonalQuestion ? "我问过它" : "我的问题", opts.myQuestion, "#f2ead9", 22, W);
-
-  if (opts.legacyLine) {
-    y += 30;
-    section(ctx, cx, y, "我留下的话（那我替你记住。——何尊）", `「${opts.legacyLine}」`, "#f2ead9", 22, W);
-  }
-
-  ctx.fillStyle = "#f2ead9";
-  ctx.font = "24px 'Noto Serif SC', serif";
-  ctx.fillText("《物语千年》", cx, H - 90);
-  ctx.font = "18px 'Noto Sans SC', sans-serif";
-  ctx.fillStyle = "rgba(242,234,217,0.5)";
-  ctx.fillText("闭馆以后，文物终于可以说话了。", cx, H - 55);
-}
-
-function section(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  y: number,
-  label: string,
-  content: string,
-  color: string,
-  fontSize: number,
-  totalWidth: number,
-): number {
-  ctx.fillStyle = "rgba(242,234,217,0.45)";
-  ctx.font = "20px 'Noto Sans SC', sans-serif";
-  ctx.fillText(label, cx, y);
-
-  ctx.fillStyle = color;
-  ctx.font = `${fontSize}px 'Noto Serif SC', serif`;
-  const endY = wrapCanvasText(ctx, content, cx, y + 44, totalWidth - 160, fontSize + 14);
-
-  line(ctx, cx, endY + 26, totalWidth - 140);
-  return endY + 26;
-}
-
-function line(ctx: CanvasRenderingContext2D, cx: number, y: number, width: number) {
-  const grad = ctx.createLinearGradient(cx - width / 2, y, cx + width / 2, y);
-  grad.addColorStop(0, "rgba(201,167,106,0)");
-  grad.addColorStop(0.5, "rgba(201,167,106,0.5)");
-  grad.addColorStop(1, "rgba(201,167,106,0)");
-  ctx.strokeStyle = grad;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(cx - width / 2, y);
-  ctx.lineTo(cx + width / 2, y);
-  ctx.stroke();
 }
