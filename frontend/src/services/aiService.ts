@@ -4,17 +4,17 @@ import { findRelevantFacts, unknownAnswerTemplate, buildSystemPrompt } from "../
 /**
  * aiService —— 独立的 AI 调用层
  *
- * 架构意图：
- *   frontend  →  /api/chat（后端 AI Service，负责持有真正的 LLM API Key）  →  LLM
+ * 架构：
+ *   frontend  →  api/chat（后端持有 AI 凭据）  →  Runway 网关（Bedrock / Claude）
  *
- * 当前 Demo 运行环境没有可用的后端 / API Key，因此：
- *   - 若配置了 VITE_AI_API_URL，会尝试真实请求；
- *   - 否则（以及请求失败时）自动降级为「Mock Streaming」——
- *     基于 factGuard 与何尊人格模板在本地生成克制、有事实边界的回答，
- *     并模拟逐字流式输出，保证核心体验不被外部依赖阻塞。
+ * 后端一次性返回完整回答（Runway 的同步 invoke 端点），前端本地做打字机逐字输出，
+ * 与 Mock 共用同一份 typeOut，所以两条路径的手感完全一致。
  *
- * 这样设计的好处：未来接入真实后端时，只需要让 /api/chat 返回同样的流式协议，
- * 组件层完全不需要改动。
+ * 请求失败（网络错误 / 401 / 502 / 503）时自动降级为「Mock Streaming」——
+ * 基于 factGuard 与何尊人格模板在本地生成克制、有事实边界的回答，
+ * 保证核心体验不被外部依赖阻塞。
+ *
+ * 组件层只依赖下面的 StreamHandlers 协议，不关心文本来自哪里。
  */
 
 export interface StreamHandlers {
@@ -23,8 +23,21 @@ export interface StreamHandlers {
   onError?: (err: unknown) => void;
 }
 
-const REMOTE_ENDPOINT = (import.meta as unknown as { env?: Record<string, string> }).env
-  ?.VITE_AI_API_URL;
+/**
+ * ⚠️ 必须是**相对路径**（不带开头斜杠）。
+ *
+ * 部署到 Cowork 后页面在 `/s/<alias>/` 下，平台只改写 HTML 里的资源引用并注入
+ * `<base href="/s/<alias>/">`，**不会改写打包后 JS 里的字符串字面量**。
+ * 写成 `/api/chat` 会打到站点根（返回 HTTP 200 的兜底页面，不是 404，
+ * 于是 res.json() 解析失败、悄悄降级成 Mock，很难察觉）。
+ * 写成相对路径则由 <base> 正确解析；本地开发页面在 `/`，同样指向 `/api/chat`。
+ */
+const CHAT_ENDPOINT = "api/chat";
+
+/** 打字机节奏：每次吐 2 个字符、间隔 38ms，开场先停 380ms 装作在思考 */
+const THINK_PAUSE_MS = 380;
+const TYPE_CHUNK_SIZE = 2;
+const TYPE_INTERVAL_MS = 38;
 
 export async function streamArtifactReply(
   context: ArtifactContext,
@@ -32,48 +45,85 @@ export async function streamArtifactReply(
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  if (REMOTE_ENDPOINT) {
-    try {
-      await streamFromRemote(REMOTE_ENDPOINT, context, userMessage, handlers, signal);
-      return;
-    } catch (err) {
-      // 真实后端不可用时，无缝降级，不打断体验
-      console.warn("[aiService] 远程 AI 服务不可用，已降级为本地 Mock Streaming。", err);
-    }
+  try {
+    await streamFromBackend(context, userMessage, handlers, signal);
+    return;
+  } catch (err) {
+    // 用户主动取消（切换问题）不算故障，不要再用 Mock 覆盖一遍
+    if (signal?.aborted) return;
+    console.warn("[aiService] api/chat 不可用，已降级为本地 Mock Streaming。", err);
   }
   await streamMock(context, userMessage, handlers, signal);
 }
 
-async function streamFromRemote(
-  endpoint: string,
+async function streamFromBackend(
   context: ArtifactContext,
   userMessage: string,
   handlers: StreamHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(endpoint, {
+  const res = await fetch(CHAT_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message: userMessage,
       systemPrompt: buildSystemPrompt(context, userMessage),
-      history: context.conversationHistory.slice(-8),
+      history: context.conversationHistory.slice(-8).map((m) => ({
+        role: m.role === "artifact" ? "assistant" : "user",
+        content: m.content,
+      })),
     }),
     signal,
   });
-  if (!res.ok || !res.body) throw new Error(`AI service responded with ${res.status}`);
+  if (!res.ok) throw new Error(`api/chat responded with ${res.status}`);
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
+  const data = (await res.json()) as { reply?: string };
+  const reply = (data.reply ?? "").trim();
+  if (!reply) throw new Error("api/chat returned empty reply");
+
+  await wait(THINK_PAUSE_MS, signal);
+  const full = await typeOut(reply, handlers.onToken, signal);
+  if (signal?.aborted) return;
+  handlers.onDone(full, judgeFactBasis(userMessage, context));
+}
+
+/**
+ * 判定这条回答的事实依据档位。
+ *
+ * 仍在前端本地判定，而不是要求模型输出结构化字段——理由是模型多输出一层
+ * JSON 结构就多一处可能跑偏的地方，而这里的判定规则（命中的 fact 是否全部
+ * verified）本身是确定性的，跟文本由谁生成无关。判定口径与 Mock 保持一致。
+ */
+function judgeFactBasis(
+  userMessage: string,
+  context: ArtifactContext,
+): FactConfidence | "unknown" {
+  const facts = findRelevantFacts(userMessage, context.verifiedFacts, 2);
+  if (facts.length === 0) return "unknown";
+  return facts.every((f) => f.confidence === "verified") ? "verified" : "inferred";
+}
+
+/**
+ * 把一段已知的完整文本按打字机节奏逐步交给 onToken。
+ *
+ * 每次回调传的是**累积全文**（不是单个增量），与 gameStore.patchLastMessage 的
+ * 语义对齐，组件层不需要自己拼接。返回实际吐出的文本（被取消时是截断的部分）。
+ */
+async function typeOut(
+  text: string,
+  onToken: StreamHandlers["onToken"],
+  signal?: AbortSignal,
+): Promise<string> {
   let full = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    const chunk = decoder.decode(value, { stream: true });
-    full += chunk;
-    handlers.onToken(full, chunk);
+  const chars = Array.from(text); // 按 code point 切，避免中文/emoji 被截断
+  for (let i = 0; i < chars.length; i += TYPE_CHUNK_SIZE) {
+    if (signal?.aborted) return full;
+    const token = chars.slice(i, i + TYPE_CHUNK_SIZE).join("");
+    full += token;
+    onToken(full, token);
+    await wait(TYPE_INTERVAL_MS, signal);
   }
-  handlers.onDone(full, "verified");
+  return full;
 }
 
 /** ------------------------- Mock Streaming 实现 ------------------------- */
@@ -188,18 +238,10 @@ async function streamMock(
   const { text, factBasis } = buildMockReply(context, userMessage);
 
   // 模拟「思考」停顿，让回答显得不是瞬间吐出来的
-  await wait(380, signal);
+  await wait(THINK_PAUSE_MS, signal);
 
-  let full = "";
-  const chars = Array.from(text);
-  const chunkSize = 2;
-  for (let i = 0; i < chars.length; i += chunkSize) {
-    if (signal?.aborted) return;
-    const token = chars.slice(i, i + chunkSize).join("");
-    full += token;
-    handlers.onToken(full, token);
-    await wait(38, signal);
-  }
+  const full = await typeOut(text, handlers.onToken, signal);
+  if (signal?.aborted) return;
   handlers.onDone(full, factBasis);
 }
 
