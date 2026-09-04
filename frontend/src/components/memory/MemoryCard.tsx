@@ -3,9 +3,22 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore, type DiscoveredId } from "../../store/gameStore";
 import { hezun } from "../../data/artifacts/hezun";
 import { renderCard } from "./cardCanvas";
+import { useScrollLock } from "../../utils/useScrollLock";
 
-const DEFAULT_QUESTION = "如果你可以穿越回三千年前，你最想问何尊什么？";
 const LEGACY_PROMPT = "如果三千年后，有人看到今天的你，你想留下什么？";
+
+/**
+ * 一次都没问过时的落款。
+ *
+ * 原来这里放的是一句反问（「如果你可以穿越回三千年前，你最想问何尊什么？」），
+ * 配上标题「你还没问我」读起来很别扭：既在何尊的口吻里出现了第三人称的「何尊」，
+ * 又像是卡片突然朝用户抛出一道题——用户反馈"云里雾里"。
+ * 改成何尊自己把这件事说完，标题也不再用否定句式。
+ */
+const NO_QUESTION = {
+  label: "临走前",
+  text: "这一趟你没有问我什么。下次来，随便问——包括我答不上来的。",
+};
 
 function getInsight(discovered: DiscoveredId[]): string {
   if (discovered.includes("hotspot-inscription")) {
@@ -46,10 +59,17 @@ export default function MemoryCard() {
 
   const memoryLine = useMemo(() => selectedLine ?? hezun.memoryLines[0], [selectedLine]);
   const insight = useMemo(() => getInsight(discovered), [discovered]);
-  const myQuestion = useMemo(() => lastUserQuestion() ?? DEFAULT_QUESTION, [lastUserQuestion]);
-  const isPersonalQuestion = myQuestion !== DEFAULT_QUESTION;
+  const asked = useMemo(() => lastUserQuestion(), [lastUserQuestion]);
+  const questionLabel = asked ? "你问过我" : NO_QUESTION.label;
+  const myQuestion = asked ?? NO_QUESTION.text;
   const hasLegacy = !!userLegacyLine;
   const needsPrompt = userLegacyLine === null;
+
+  /**
+   * 弹层打开期间锁住页面滚动。
+   * 不锁的话在 iOS 上手指按住卡片拖动会穿透到 document，整页上下左右乱滑。
+   */
+  useScrollLock(open);
 
   /**
    * 生成图片。
@@ -65,8 +85,8 @@ export default function MemoryCard() {
       const canvas = await renderCard({
         memoryLine,
         insight,
+        questionLabel,
         myQuestion,
-        isPersonalQuestion,
         legacyLine: userLegacyLine || null,
         snapshot,
         discoveredCount: discovered.length,
@@ -105,13 +125,18 @@ export default function MemoryCard() {
       {open && (
         <>
           <motion.div
-            className="fixed inset-0 z-[70] bg-ink-900/85"
+            /* touch-none：遮罩上的拖动不产生任何滚动手势，避免带着整页跑 */
+            className="fixed inset-0 z-[70] touch-none bg-ink-900/85"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={needsPrompt ? undefined : close}
           />
           <motion.div
+            /*
+              ⚠️ 这一层不能加 touch-none：touch-action 会和祖先取交集，
+              父层写 none 会把里面卡片的纵向滚动一起禁掉。拦穿透靠 useScrollLock。
+            */
             className="fixed inset-0 z-[71] flex items-center justify-center p-4 pt-[calc(1rem+var(--safe-top))] pb-[calc(1rem+var(--safe-bottom))] sm:p-6"
             initial={{ opacity: 0, scale: 0.94 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -150,7 +175,8 @@ export default function MemoryCard() {
               </div>
             ) : (
               <div className="flex max-h-full w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-gilt/25 bg-ink-800/95 shadow-2xl">
-                <div className="scrollbar-none overflow-y-auto px-6 py-7 sm:px-7">
+                {/* touch-pan-y + overscroll-contain：只允许纵向滚，且滚到头不把手势交给外层 */}
+                <div className="scrollbar-none touch-pan-y overflow-y-auto overscroll-contain px-6 py-7 sm:px-7">
                   {/* 抬头：文物身份，小而轻 */}
                   <p className="text-[11px] tracking-widest text-rice-200/40">
                     {hezun.name} · {hezun.dynasty}
@@ -179,9 +205,7 @@ export default function MemoryCard() {
                   <p className="text-[11px] tracking-widest text-gilt/60">我告诉过你</p>
                   <p className="mt-2 text-[13px] leading-7 text-gilt-light/90">{insight}</p>
 
-                  <p className="mt-6 text-[11px] tracking-widest text-gilt/60">
-                    {isPersonalQuestion ? "你问过我" : "你还没问我"}
-                  </p>
+                  <p className="mt-6 text-[11px] tracking-widest text-gilt/60">{questionLabel}</p>
                   <p className="mt-2 text-[13px] leading-7 text-rice-100/70">{myQuestion}</p>
 
                   {hasLegacy && (
@@ -240,7 +264,7 @@ export default function MemoryCard() {
           <AnimatePresence>
             {exported && (
               <motion.div
-                className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-4 bg-ink-900/95 p-5 pt-[calc(1.25rem+var(--safe-top))] pb-[calc(1.25rem+var(--safe-bottom))]"
+                className="fixed inset-0 z-[80] flex touch-none flex-col items-center justify-center gap-4 bg-ink-900/95 p-5 pt-[calc(1.25rem+var(--safe-top))] pb-[calc(1.25rem+var(--safe-bottom))]"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}

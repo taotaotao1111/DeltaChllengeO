@@ -12,10 +12,10 @@ export interface CardData {
   memoryLine: string;
   /** 「我告诉过你」——本次体验解锁的那条史实 */
   insight: string;
-  /** 用户问过的问题；没问过时是引导语 */
+  /** 这一段的小标题（问过 / 没问过时说法不同，由调用方决定） */
+  questionLabel: string;
+  /** 用户问过的问题；没问过时是何尊自己的一句临别话 */
   myQuestion: string;
-  /** 用户是否真的问过（决定标签用「你问过我」还是「你还没问我」） */
-  isPersonalQuestion: boolean;
   /** 用户留给三千年后的话，可能没有 */
   legacyLine: string | null;
   /** 用户在第一章转到的那个角度的截图（PNG dataURL），可能没有 */
@@ -150,7 +150,7 @@ function measure(ctx: CanvasRenderingContext2D, data: CardData): { blocks: Block
   push(null, data.memoryLine, 46, SERIF, COLOR_RICE, 0);
   push("我告诉过你", data.insight, 26, SERIF, COLOR_GILT, 64);
   push(
-    data.isPersonalQuestion ? "你问过我" : "你还没问我",
+    data.questionLabel,
     data.myQuestion,
     26,
     SERIF,

@@ -27,12 +27,17 @@ export default function ArtifactCallout({ left, top, entering = false }: Artifac
       className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
       style={{ left, top }}
     >
-      {/* 暖光晕：像展柜里的灯被拨亮了一点。进场时迅速扩张并提亮 */}
+      {/*
+        暖光晕：像展柜里的灯被拨亮了一点。进场时迅速扩张并提亮。
+        呼吸关键帧刻意**从最亮那一相位起步**（0.55 → 0.2 → 0.55）：
+        原来从 0.2 起，挂载后还要再等两秒多才第一次亮到能被注意到，
+        「热点出现得慢」有一半是这个相位造成的。呼吸本身照旧。
+      */}
       <motion.span
         animate={
           entering
             ? { opacity: 0.85, scale: 2.6 }
-            : { opacity: [0.2, 0.55, 0.2], scale: [1, 1.1, 1] }
+            : { opacity: [0.55, 0.2, 0.55], scale: [1.1, 1, 1.1] }
         }
         transition={
           entering
@@ -54,7 +59,17 @@ export default function ArtifactCallout({ left, top, entering = false }: Artifac
             key={delay}
             initial={{ opacity: 0, scale: 0.5 }}
             animate={{ opacity: [0, 0.6, 0], scale: [0.55, 1.7, 2.1] }}
-            transition={{ duration: 3.2, repeat: Infinity, delay, ease: "easeOut" }}
+            /*
+              times 把"亮起来"压到整段的前 15%（约 0.5s）：
+              默认关键帧均分，第一圈要到 1.6s 才最亮，进页面时会显得反应迟钝。
+            */
+            transition={{
+              duration: 3.2,
+              times: [0, 0.15, 1],
+              repeat: Infinity,
+              delay,
+              ease: "easeOut",
+            }}
             /*
               drop-shadow 是为了在明亮的青铜纹饰上也能看清环线；
               x/y 负责居中——同上，framer 的 transform 会盖掉 Tailwind 的 -translate-*。

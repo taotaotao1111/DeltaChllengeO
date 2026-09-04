@@ -6,11 +6,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="《物语千年》——每一件文物，都有一段想告诉你的故事。" />
     <meta name="theme-color" content="#0d0d0f" />
+    <!--
+      开场海报要在"一进页面"就出现，所以在 HTML 解析阶段就开始下载，
+      不等 JS 包解析完再由 <img> 触发（否则要多等一个 JS 下载+执行的往返）。
+      media 让浏览器只取当前朝向那一张——和 MuseumIntro 里用 JS 选图的目的一致，
+      两张图加起来 700KB+，不能都下。
+      路径必须是相对的（部署在 /s/<alias>/ 下，平台注入 <base>，见 MuseumIntro 注释）。
+    -->
+    <link
+      rel="preload"
+      as="image"
+      href="images/museum-intro-portrait.jpg"
+      media="(orientation: portrait)"
+      fetchpriority="high"
+    />
+    <link
+      rel="preload"
+      as="image"
+      href="images/museum-intro.jpg"
+      media="(orientation: landscape)"
+      fetchpriority="high"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!--
+      字体表用 media="print" + onload 切回来，让它不再阻塞首屏渲染。
+      Google Fonts 在内网可能被拦，当它是 render-blocking 样式表时，
+      整个页面会白屏等到请求超时——开场海报也就跟着迟到好几秒。
+      标题字缺失时会走 index.css 里 .font-title 的 Songti SC 兜底，不影响可读性。
+    -->
     <link
       href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
     <title>物语千年 · 何尊</title>
   </head>

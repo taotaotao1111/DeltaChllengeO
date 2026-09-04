@@ -17,6 +17,15 @@
     height: 100%;
   }
 
+  /*
+    关掉整页的橡皮筋 / 下拉刷新。这是个作品页而不是文档，
+    手机上"整页跟着手指晃"会直接破坏沉浸感。
+  */
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
   body {
     @apply bg-ink text-rice font-sans antialiased;
     background-color: #0a0a0c;

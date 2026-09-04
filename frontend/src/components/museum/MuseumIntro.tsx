@@ -40,8 +40,17 @@ const INTRO = {
  */
 const LINES = ["今夜，选一件，听它讲自己的一生。"];
 
-/** 竖屏没有逐句念白，先给海报一个静场的拍子，再让光亮起来 */
-const PORTRAIT_GLOW_DELAY = 2600;
+/**
+ * 竖屏没有逐句念白，光就是唯一的钩子——所以只留一个"看清海报"的极短拍子。
+ *
+ * 之前这里是 2600ms，叠上海报自身 2.6s 的淡入，手机上要等 5 秒多才看到"能点哪里"，
+ * 用户会以为页面卡住了。现在海报 0.8s 淡完（见 PORTRAIT_FADE），光紧跟着亮起来。
+ */
+const PORTRAIT_GLOW_DELAY = 350;
+
+/** 海报淡入时长（秒）。横屏仍走慢淡入，节奏由念白带着走；竖屏要抢首屏 */
+const PORTRAIT_FADE = 0.8;
+const LANDSCAPE_FADE = 2.6;
 
 /** 推门动效的时长：走完再真正切场景，让用户看到自己"推进去"了 */
 const ENTER_DURATION = 620;
@@ -107,7 +116,7 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
           aria-hidden="true"
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.45 }}
-          transition={{ duration: 2.6, ease: "easeOut" }}
+          transition={{ duration: LANDSCAPE_FADE, ease: "easeOut" }}
           className="pointer-events-none absolute inset-0 h-full w-full scale-110 select-none object-cover blur-2xl"
         />
       )}
@@ -122,7 +131,7 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 2.6, ease: "easeOut" }}
+        transition={{ duration: portrait ? PORTRAIT_FADE : LANDSCAPE_FADE, ease: "easeOut" }}
         className={`absolute inset-0 flex justify-center overflow-hidden ${
           portrait ? "items-center" : "items-start"
         }`}
