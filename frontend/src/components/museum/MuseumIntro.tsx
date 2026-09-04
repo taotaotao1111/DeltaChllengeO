@@ -18,10 +18,16 @@ interface MuseumIntroProps {
  *
  * FOCUS 是「唤醒光」要对准的位置——中央展柜里的何尊，
  * 用的是图片自身坐标系的百分比（见下面 ASPECT 包裹层的说明）。
+ *
+ * ⚠️ 路径必须是**相对路径**（不带开头的斜杠）。部署到 Cowork 后页面在
+ * `/s/<alias>/` 下，平台只会改写 HTML 里的资源引用并注入 `<base href="/s/<alias>/">`，
+ * **不会改写 JS 里的字符串字面量**。写成 `/images/...` 会打到站点根拿到一个
+ * 10KB 的兜底页面（HTTP 200 但不是图片），海报直接坏掉；写成相对路径则由
+ * `<base>` 正确解析。本地开发页面在 `/`，相对路径同样指向 `/images/...`，行为不变。
  */
 const INTRO = {
-  landscape: { src: "/images/museum-intro.jpg", aspect: "1536 / 1024", focus: { left: "49.5%", top: "63%" } },
-  portrait: { src: "/images/museum-intro-portrait.jpg", aspect: "1024 / 1536", focus: { left: "48%", top: "53%" } },
+  landscape: { src: "images/museum-intro.jpg", aspect: "1536 / 1024", focus: { left: "49.5%", top: "63%" } },
+  portrait: { src: "images/museum-intro-portrait.jpg", aspect: "1024 / 1536", focus: { left: "48%", top: "53%" } },
 } as const;
 
 /**

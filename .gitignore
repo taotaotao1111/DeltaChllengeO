@@ -26,12 +26,18 @@ dist-ssr
 # ValOS 工作目录
 .valos
 
-# 原始三维扫描件（96MB，超过 GitHub 50MB 警告线，会永久撑大仓库）
-# 线上只需要 public/models/hezun.glb（4.5MB），由 scripts/pack-hezun-model.mjs 从它生成
-# 如需入库请改用 Git LFS：git lfs track "src/assests/*.glb"
-src/assests/hezun.glb
+# 原始素材（96MB 三维扫描件 + 开场海报原图，共约 100MB）已移到**仓库外**：
+#   ~/DeltaChallenge-assets/
+# 移出去的原因不只是 GitHub 50MB 警告线，更要紧的是 Cowork 的 pack 是整目录 copytree、
+# 只剥 node_modules/dist，**不看 .gitignore** —— 素材留在仓库里会让发布包变成 93MB 并上传超时。
+# 线上只需要 frontend/public/models/hezun.glb（4.5MB）与 frontend/public/images/ 下的压缩 JPEG，
+# 由 frontend/scripts/pack-hezun-model.mjs 从原始件生成（默认读 ~/DeltaChallenge-assets/，
+# 可用 ASSETS_DIR 环境变量覆盖）。
+# 图片压缩配方：sips -s format jpeg -s formatOptions <q> <in> --out <out>（横版 q88 / 竖版 q86）
 
-# 开场海报原图（横竖两版共约 3.6MB）。线上只用 public/images/ 下压缩后的 JPEG，
-# 压缩配方：sips -s format jpeg -s formatOptions <q> <in> --out <out>（横版 q88 / 竖版 q86）
-src/assests/background.jpeg
-src/assests/背景图.png
+# Cowork 平台在 Pod 启动时注入的凭据文件，绝不能入库，也不能进发布 zip
+/ai.properties
+/db.properties
+
+# cowork CLI 每次部署都会重写的本地记录（.cowork.json 记录 workId/alias，是入库的）
+/.cowork/

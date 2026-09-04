@@ -1,0 +1,26 @@
+{
+  "schema": "cowork-project/v1",
+  "id": "cw_proj_gyhb9r5jqw",
+  "name": "DeltaChallenge",
+  "srcDir": "/Users/taojiaxin/DeltaChallenge",
+  "createdAt": 1788493657785,
+  "updatedAt": 1788493895138,
+  "createdBy": "cowork-cli",
+  "stack": null,
+  "guardCompliant": true,
+  "cowork": {
+    "workId": 255761,
+    "workDeployType": "APP_DEPLOY",
+    "appId": "1be34b4d",
+    "alias": "wuyu-qiannian",
+    "accessUrl": "https://cowork.xiaohongshu.com/s/wuyu-qiannian/",
+    "coworkAppUrl": "https://cowork.xiaohongshu.com/app/NWEzZjg5M2M",
+    "rawAccessUrl": "https://cowork.xiaohongshu.com/s/1be34b4d/",
+    "deploymentId": 25439,
+    "deploymentStatus": "RUNNING",
+    "publishedAt": 1788493895138,
+    "visibility": "SELF_ONLY",
+    "version": "1.0.1",
+    "lastZipHash": "sha256:64c871a58ff9f72820c7fc56cd04bfac900b84c748c164ddf9a79da4c2d7cf45"
+  }
+}

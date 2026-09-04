@@ -1,0 +1,14 @@
+{
+  "name": "wuyu-qiannian-backend",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "@hono/node-server": "^1.13.0"
+  },
+  "engines": { "node": ">=18" }
+}

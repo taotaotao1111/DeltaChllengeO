@@ -1,8 +1,13 @@
 /**
  * 何尊 3D 模型资源打包脚本
  *
- * 原始扫描件 src/assests/hezun.glb 有 100MB（85.8 万顶点 + 3 张共 55MB 的 PNG 贴图），
- * 无法直接上线。本脚本把它压到几 MB 级别，产物写到 public/models/hezun.glb。
+ * 原始扫描件有 96MB（85.8 万顶点 + 3 张共 55MB 的 PNG 贴图），无法直接上线。
+ * 本脚本把它压到几 MB 级别，产物写到 frontend/public/models/hezun.glb。
+ *
+ * ⚠️ 原始素材放在**仓库外** `~/DeltaChallenge-assets/`（默认路径，可用环境变量
+ * ASSETS_DIR 覆盖）。为什么不放仓库里：Cowork 的 `pack` 是整目录 copytree、
+ * 只剥 node_modules/dist，**不看 .gitignore**，素材留在仓库里会让发布包变成 93MB
+ * 并导致上传超时。
  *
  * 流程：
  *   1. 解出原始 glb 的 JSON / BIN 两个 chunk
@@ -14,7 +19,8 @@
  * （会直接报 "built without WebP support"），而 sips 只能写 JPEG 不能写 WebP。
  * JPEG 是 glTF 原生支持的格式，浏览器零成本解码，够用。
  *
- * 用法：node scripts/pack-hezun-model.mjs
+ * 用法：cd frontend && node scripts/pack-hezun-model.mjs
+ *   自定义素材目录：ASSETS_DIR=/path/to/assets node scripts/pack-hezun-model.mjs
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -23,7 +29,10 @@ import os from "node:os";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const SRC = path.join(ROOT, "src/assests/hezun.glb");
+/** 原始素材目录，在仓库外（见文件头说明） */
+const ASSETS_DIR =
+  process.env.ASSETS_DIR || path.join(os.homedir(), "DeltaChallenge-assets");
+const SRC = path.join(ASSETS_DIR, "hezun.glb");
 const OUT = path.join(ROOT, "public/models/hezun.glb");
 const GLTFPACK = path.join(ROOT, "node_modules/.bin/gltfpack");
 

@@ -39,10 +39,12 @@ export const hezun: Artifact = {
    * 换模型时若发现器物躺着，再按需补 rotation。
    */
   model: {
-    url: "/models/hezun.glb",
+    // 相对路径（不带开头斜杠）：Cowork 部署在 /s/<alias>/ 下，平台只改写 HTML
+    // 并注入 <base href>，不改写 JS 字面量；写绝对路径会打到站点根拿不到模型。
+    url: "models/hezun.glb",
     // DEMO 数据：授权信息待确认，请在正式发布前替换为真实来源与授权说明
     license: "项目自有 DEMO 扫描资源，授权信息待确认",
-    source: "项目提供的何尊三维扫描件（src/assests/hezun.glb）",
+    source: "项目提供的何尊三维扫描件（原始件存于仓库外 ~/DeltaChallenge-assets/hezun.glb）",
   },
 
   verifiedFacts: [
