@@ -56,7 +56,7 @@ async function streamFromRemote(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message: userMessage,
-      systemPrompt: buildSystemPrompt(context),
+      systemPrompt: buildSystemPrompt(context, userMessage),
       history: context.conversationHistory.slice(-8),
     }),
     signal,
