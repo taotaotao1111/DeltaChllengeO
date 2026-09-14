@@ -1,9 +1,16 @@
 import { Link } from "react-router-dom";
 import InkBackground from "../components/shared/InkBackground";
-import { ARTIFACT_REGISTRY } from "../data/artifacts";
+import { ARTIFACT_REGISTRY, GALLERY_MANIFEST } from "../data/artifacts";
 
-/** 已登记的文物，按注册表顺序。新增文物这一页会自动跟着长出来，不用手写 */
-const ARTIFACTS = Object.values(ARTIFACT_REGISTRY);
+/**
+ * 只说**已开放**的文物。
+ *
+ * 注册表里可能有档案已就绪、但还没对外开放的文物（史实待核对期间会先锁在展厅里），
+ * 在来源页介绍一件用户点不进去的东西只会让人困惑。开放之后这一页会自动跟着长出来。
+ */
+const ARTIFACTS = GALLERY_MANIFEST.filter((e) => !e.locked)
+  .map((e) => ARTIFACT_REGISTRY[e.id])
+  .filter(Boolean);
 
 /**
  * 整份档案都还没核对过的文物——这件事不能藏起来。

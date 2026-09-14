@@ -40,7 +40,10 @@ export interface GalleryEntry {
   locked: boolean;
 }
 
-function entryOf(artifact: Artifact, extra: { icon?: string; useIllustration?: boolean }): GalleryEntry {
+function entryOf(
+  artifact: Artifact,
+  extra: { icon?: string; useIllustration?: boolean; locked?: boolean },
+): GalleryEntry {
   return {
     id: artifact.id,
     name: artifact.name,
@@ -48,13 +51,17 @@ function entryOf(artifact: Artifact, extra: { icon?: string; useIllustration?: b
     teaserLine: artifact.teaserLine,
     icon: extra.icon,
     illustrationId: extra.useIllustration ? artifact.illustrationId : undefined,
-    locked: false,
+    locked: extra.locked ?? false,
   };
 }
 
 export const GALLERY_MANIFEST: GalleryEntry[] = [
   entryOf(hezun, { icon: "🏺" }),
-  entryOf(changxin, { useIllustration: true }),
+  /**
+   * 长信宫灯：档案与三维模型都已就绪，但**史实尚未逐条核对**，所以先不对外开放。
+   * 核实完成（档案里的 confidence 从 inferred 升为 verified）之后，把 locked 去掉即可开放。
+   */
+  entryOf(changxin, { useIllustration: true, locked: true }),
   {
     id: "tongbenma",
     name: "铜奔马",
