@@ -44,7 +44,8 @@ export const hezun: Artifact = {
     url: "models/hezun.glb",
     // DEMO 数据：授权信息待确认，请在正式发布前替换为真实来源与授权说明
     license: "项目自有 DEMO 扫描资源，授权信息待确认",
-    source: "项目提供的何尊三维扫描件（原始件存于仓库外 ~/DeltaChallenge-assets/hezun.glb）",
+    // 这段会显示在 /sources 页面上，所以只写来源性质，不写本机路径
+    source: "项目提供的何尊三维扫描件，授权信息待确认",
   },
 
   verifiedFacts: [

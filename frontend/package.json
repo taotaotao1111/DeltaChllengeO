@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "node scripts/check-artifacts.mjs && tsc -b && vite build",
+    "check:artifacts": "node scripts/check-artifacts.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -43,8 +43,8 @@ export const changxin: Artifact = {
     url: "models/changxin.glb",
     // DEMO 数据：授权信息待确认，请在正式发布前替换为真实来源与授权说明
     license: "项目自有 DEMO 三维资源，授权信息待确认",
-    source:
-      "项目提供的长信宫灯三维模型（原始扫描件存于仓库外 ~/DeltaChallenge-assets/changxin.glb，来源与授权待补充确认）",
+    // 这段会显示在 /sources 页面上，所以只写来源性质，不写本机路径
+    source: "项目提供的长信宫灯三维扫描件，来源与授权信息待补充确认",
   },
 
   verifiedFacts: [
