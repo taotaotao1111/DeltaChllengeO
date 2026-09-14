@@ -128,14 +128,13 @@ async function typeOut(
 
 /** ------------------------- Mock Streaming 实现 ------------------------- */
 
+/**
+ * 通用的「答不了」触发词：问的是拟人化边界，任何文物都该克制作答。
+ *
+ * 文物自己叙事里特有的答不了的问题（何尊的「谁埋的你」预设了入土情节，
+ * 换一件文物并不成立）放在各自档案的 mock.extraUnknownTriggers 里。
+ */
 const UNKNOWN_TRIGGERS = [
-  "见过",
-  "认识周",
-  "谁埋",
-  "谁把你埋",
-  "谁使用过你之后",
-  "本名叫什么",
-  "埋你的人是谁",
   "你有生命吗",
   "你真的活着吗",
   "你是不是真的有意识",
@@ -181,8 +180,12 @@ const PERSONA_ANSWERS: PersonaAnswer[] = [
   },
 ];
 
-function isUnanswerable(question: string): boolean {
-  return UNKNOWN_TRIGGERS.some((kw) => question.includes(kw));
+function isUnanswerable(question: string, context: ArtifactContext): boolean {
+  const triggers = [
+    ...UNKNOWN_TRIGGERS,
+    ...(context.artifact.mock?.extraUnknownTriggers ?? []),
+  ];
+  return triggers.some((kw) => question.includes(kw));
 }
 
 function pickPersonaAnswer(question: string): PersonaAnswer | undefined {
@@ -217,7 +220,7 @@ function buildMockReply(
 ): { text: string; factBasis: FactConfidence | "unknown" } {
   const q = userMessage.trim();
 
-  if (isUnanswerable(q)) {
+  if (isUnanswerable(q, context)) {
     return { text: unknownAnswerTemplate(), factBasis: "unknown" };
   }
 

@@ -4,11 +4,15 @@
  * 从 MemoryCard.tsx 拆出来，一是因为 ESLint 的 react-refresh/only-export-components
  * 不允许组件文件导出非组件，二是绘制逻辑本身足够独立。
  *
- * 版式意图：一张卡只有一个主角——何尊留给你的那句话。截图与其余信息都是它的陪衬。
+ * 版式意图：一张卡只有一个主角——文物留给你的那句话。截图与其余信息都是它的陪衬。
  */
 
 export interface CardData {
-  /** 何尊留下的主句，卡片的视觉主体 */
+  /** 抬头，如「何尊 · 西周早期」 */
+  kicker: string;
+  /** 右下方印的两个字 */
+  sealChars: [string, string];
+  /** 文物留下的主句，卡片的视觉主体 */
   memoryLine: string;
   /** 「我告诉过你」——本次体验解锁的那条史实 */
   insight: string;
@@ -209,7 +213,7 @@ export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
   ctx.textAlign = "left";
   ctx.fillStyle = "rgba(242,234,217,0.4)";
   ctx.font = `22px ${SANS}`;
-  ctx.fillText("何尊 · 西周早期", PAD, KICKER_Y);
+  ctx.fillText(data.kicker, PAD, KICKER_Y);
 
   ctx.fillStyle = COLOR_RICE;
   ctx.font = `34px ${SERIF}`;
@@ -288,8 +292,8 @@ export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
   ctx.font = `26px ${SERIF}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("何", sx + seal / 2, sy + seal * 0.3);
-  ctx.fillText("尊", sx + seal / 2, sy + seal * 0.72);
+  ctx.fillText(data.sealChars[0], sx + seal / 2, sy + seal * 0.3);
+  ctx.fillText(data.sealChars[1], sx + seal / 2, sy + seal * 0.72);
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
 

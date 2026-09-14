@@ -2,7 +2,7 @@ import { lazy, useMemo, useRef, useState } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import type { Artifact, Hotspot, HotspotType } from "../../types/artifact";
 import { evaluateViewerMode } from "../../utils/artifactEvaluator";
-import HezunIllustration from "./HezunIllustration";
+import ArtifactIllustration from "./ArtifactIllustration";
 import ArtifactHotspot from "./ArtifactHotspot";
 import ArtifactModelGate from "./ArtifactModelGate";
 
@@ -84,7 +84,8 @@ export default function ArtifactViewer({
       }
       transition={{ scale: { type: "spring", stiffness: 120, damping: 18 } }}
     >
-      <HezunIllustration
+      <ArtifactIllustration
+        id={artifact.illustrationId}
         className="h-[52vh] max-h-[460px] w-auto drop-shadow-[0_30px_60px_rgba(0,0,0,0.55)] sm:h-[58vh]"
         activeHotspot={activeHotspotType}
       />

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore } from "../../store/gameStore";
-import { hezun } from "../../data/artifacts/hezun";
+import { getArtifact } from "../../data/artifacts";
 import { streamArtifactReply } from "../../services/aiService";
 import ChatMessage from "./ChatMessage";
 import SuggestedQuestions from "./SuggestedQuestions";
@@ -22,6 +22,9 @@ export default function ArtifactChat() {
   const discoveredDetails = useGameStore((s) => s.discoveredDetails);
   const currentScene = useGameStore((s) => s.currentScene);
   const openMemoryCard = useGameStore((s) => s.openMemoryCard);
+  const artifactId = useGameStore((s) => s.currentArtifactId);
+
+  const artifact = getArtifact(artifactId);
 
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -68,9 +71,9 @@ export default function ArtifactChat() {
     setChatLoading(true);
 
     const context: ArtifactContext = {
-      artifact: hezun,
-      verifiedFacts: hezun.verifiedFacts,
-      timeline: hezun.timeline,
+      artifact,
+      verifiedFacts: artifact.verifiedFacts,
+      timeline: artifact.timeline,
       currentScene: currentScene(),
       discoveredDetails,
       conversationHistory: [...messages, userMsg],
@@ -134,7 +137,7 @@ export default function ArtifactChat() {
             >
               <div className="flex items-center justify-between border-b border-rice-100/10 px-5 py-3 pt-[calc(0.75rem+var(--safe-top))] sm:pt-3">
                 <div>
-                  <p className="font-title text-base text-rice-100">{hezun.name}</p>
+                  <p className="font-title text-base text-rice-100">{artifact.name}</p>
                   <p className="text-[11px] text-rice-200/40">正在与你对话</p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -161,7 +164,7 @@ export default function ArtifactChat() {
               </div>
 
               <SuggestedQuestions
-                questions={hezun.suggestedQuestions}
+                questions={artifact.suggestedQuestions}
                 onSelect={send}
                 disabled={chatLoading}
               />

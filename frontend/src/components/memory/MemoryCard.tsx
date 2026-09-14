@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useGameStore, type DiscoveredId } from "../../store/gameStore";
-import { hezun } from "../../data/artifacts/hezun";
+import { getArtifact } from "../../data/artifacts";
+import type { Artifact } from "../../types/artifact";
 import { renderCard } from "./cardCanvas";
 import { useScrollLock } from "../../utils/useScrollLock";
 
@@ -20,20 +21,15 @@ const NO_QUESTION = {
   text: "这一趟你没有问我什么。下次来，随便问——包括我答不上来的。",
 };
 
-function getInsight(discovered: DiscoveredId[]): string {
-  if (discovered.includes("hotspot-inscription")) {
-    return "「宅兹中国」里的「中国」，指的是天下之中的都邑，并不是今天意义上的「中国」。";
-  }
-  if (discovered.includes("hotspot-form")) {
-    return "我是一种「尊」——西周礼器中，用来盛酒、行礼的青铜器。";
-  }
-  if (discovered.includes("hotspot-pattern")) {
-    return "我腹部的兽面纹，不只是装饰，也承载着那个时代的秩序与敬畏。";
-  }
-  if (discovered.includes("history")) {
-    return "铸造我，是为了让一段重要的嘱托被长久地记住。";
-  }
-  return "我已经三千多岁了，此刻正站在你面前。";
+/**
+ * 「我告诉过你」那一句。
+ *
+ * 按档案里的顺序取第一条 requires 全部命中的，都没命中用 defaultInsight —— 顺序
+ * 即优先级（看过铭文的人，卡片上就该是铭文那句，而不是更浅的一条）。
+ */
+function getInsight(artifact: Artifact, discovered: DiscoveredId[]): string {
+  const hit = artifact.insights.find((i) => i.requires.every((r) => discovered.includes(r)));
+  return hit?.text ?? artifact.defaultInsight;
 }
 
 function formatToday(): string {
@@ -51,14 +47,20 @@ export default function MemoryCard() {
   const userLegacyLine = useGameStore((s) => s.userLegacyLine);
   const setUserLegacyLine = useGameStore((s) => s.setUserLegacyLine);
   const snapshot = useGameStore((s) => s.artifactSnapshot);
+  const artifactId = useGameStore((s) => s.currentArtifactId);
+
+  const artifact = getArtifact(artifactId);
 
   const [draft, setDraft] = useState("");
   /** 导出好的图片（dataURL）。非空时展示导出浮层，让用户长按保存或分享 */
   const [exported, setExported] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  const memoryLine = useMemo(() => selectedLine ?? hezun.memoryLines[0], [selectedLine]);
-  const insight = useMemo(() => getInsight(discovered), [discovered]);
+  const memoryLine = useMemo(
+    () => selectedLine ?? artifact.memoryLines[0],
+    [selectedLine, artifact],
+  );
+  const insight = useMemo(() => getInsight(artifact, discovered), [artifact, discovered]);
   const asked = useMemo(() => lastUserQuestion(), [lastUserQuestion]);
   const questionLabel = asked ? "你问过我" : NO_QUESTION.label;
   const myQuestion = asked ?? NO_QUESTION.text;
@@ -83,6 +85,8 @@ export default function MemoryCard() {
     setExporting(true);
     try {
       const canvas = await renderCard({
+        kicker: `${artifact.name} · ${artifact.shortPeriod}`,
+        sealChars: artifact.sealChars,
         memoryLine,
         insight,
         questionLabel,
@@ -179,7 +183,7 @@ export default function MemoryCard() {
                 <div className="scrollbar-none touch-pan-y overflow-y-auto overscroll-contain px-6 py-7 sm:px-7">
                   {/* 抬头：文物身份，小而轻 */}
                   <p className="text-[11px] tracking-widest text-rice-200/40">
-                    {hezun.name} · {hezun.dynasty}
+                    {artifact.name} · {artifact.dynasty}
                   </p>
                   <p className="font-title mt-2 text-base text-rice-100/85">这是我留给你的</p>
 
@@ -189,7 +193,7 @@ export default function MemoryCard() {
                       <div className="pointer-events-none absolute inset-x-6 bottom-2 h-16 rounded-full bg-gilt/10 blur-2xl" />
                       <img
                         src={snapshot}
-                        alt="你看到的何尊"
+                        alt={`你看到的${artifact.name}`}
                         className="relative h-40 w-40 object-contain"
                       />
                     </div>
@@ -235,8 +239,8 @@ export default function MemoryCard() {
                       </p>
                     </div>
                     <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-[3px] border border-gilt/45 text-[11px] leading-tight text-gilt/75">
-                      <span>何</span>
-                      <span>尊</span>
+                      <span>{artifact.sealChars[0]}</span>
+                      <span>{artifact.sealChars[1]}</span>
                     </div>
                   </div>
                 </div>

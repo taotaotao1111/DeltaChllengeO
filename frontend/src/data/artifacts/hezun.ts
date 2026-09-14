@@ -292,6 +292,7 @@ export const hezun: Artifact = {
   ],
 
   teaserLine: "我身上的四个字，被你们记了三千年。",
+  shortPeriod: "西周早期",
   illustrationId: "hezun",
   sealChars: ["何", "尊"],
 
@@ -459,6 +460,17 @@ export const hezun: Artifact = {
       },
     },
   ],
+
+  span: {
+    /**
+     * 铸造年代：铭文与成王时期史事相印证，年代大致在公元前11世纪（见 fact-date）。
+     * 取公元前 1050 年作为"约公元前11世纪"的中值，仅用于画比例，正文一律只说"约三千年"。
+     */
+    castYear: -1050,
+    /** 1963 年在陕西宝鸡贾村镇出土（见 fact-discovery） */
+    foundYear: 1963,
+    note: "按铸造年代（约公元前11世纪）与出土年份（1963年）计算 · 来源：宝鸡青铜器博物院公开资料",
+  },
 
   insights: [
     {

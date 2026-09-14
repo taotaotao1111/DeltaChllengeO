@@ -1,25 +1,26 @@
 import { motion } from "framer-motion";
 
-/**
- * 铸造年代：铭文与成王时期史事相印证，年代大致在公元前11世纪（见 fact-date）。
- * 取公元前 1050 年作为"约公元前11世纪"的中值，仅用于画比例，正文一律只说"约三千年"。
- */
-const CAST_YEAR = -1050;
-/** 1963 年在陕西宝鸡贾村镇出土（见 fact-discovery） */
-const FOUND_YEAR = 1963;
+interface SpanBarProps {
+  /** 铸造年代（负数 = 公元前），仅用于画比例 */
+  castYear: number;
+  /** 出土年份 */
+  foundYear: number;
+  /** 底部的算法与来源说明 */
+  note: string;
+}
 
 /**
- * 「三千年比例条」：把何尊「无人知晓的时间」与「被人看见的时间」按真实比例并排画出来。
+ * 「三千年比例条」：把文物「无人知晓的时间」与「被人看见的时间」按真实比例并排画出来。
  *
  * 刻意只画这两段。时间线里「沉睡」那一节只写了「西周之后」，没有确切年份，
  * 硬给它分一段比例就是编数据 —— 而「铸造 → 被发现 → 今天」这两段完全可以直接相减，
  * 结论已经足够有冲击力。
  */
-export default function SpanBar() {
+export default function SpanBar({ castYear, foundYear, note }: SpanBarProps) {
   const thisYear = new Date().getFullYear();
 
-  const unseenYears = FOUND_YEAR - CAST_YEAR; // 约 3000 年
-  const seenYears = thisYear - FOUND_YEAR; // 约 60 余年
+  const unseenYears = foundYear - castYear; // 何尊约 3000 年
+  const seenYears = thisYear - foundYear; // 何尊约 60 余年
   const totalYears = unseenYears + seenYears;
   const seenPercent = (seenYears / totalYears) * 100;
 
@@ -56,9 +57,7 @@ export default function SpanBar() {
         <span className="mx-1 text-gilt-light">{seenPercent.toFixed(1)}%</span>。
       </motion.p>
 
-      <p className="mt-2 text-center text-[10px] text-rice-200/25">
-        按铸造年代（约公元前11世纪）与出土年份（1963年）计算 · 来源：宝鸡青铜器博物院公开资料
-      </p>
+      <p className="mt-2 text-center text-[10px] text-rice-200/25">{note}</p>
     </div>
   );
 }

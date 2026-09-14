@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import ChapterBackdrop from "../shared/ChapterBackdrop";
 import Timeline from "../story/Timeline";
 import SpanBar from "../story/SpanBar";
-import { hezun } from "../../data/artifacts/hezun";
+import { getArtifact } from "../../data/artifacts";
 import { useGameStore } from "../../store/gameStore";
 
 /**
@@ -16,10 +16,15 @@ import { useGameStore } from "../../store/gameStore";
 export default function TimelineScene() {
   const markDiscovered = useGameStore((s) => s.markDiscovered);
   const openMemoryCard = useGameStore((s) => s.openMemoryCard);
+  const artifactId = useGameStore((s) => s.currentArtifactId);
+
+  const artifact = getArtifact(artifactId);
 
   useEffect(() => {
-    markDiscovered("hotspot-timeline");
-  }, [markDiscovered]);
+    // 热点 id 因文物而异，所以按类型找，找不到就不标记
+    const id = artifact.hotspots.find((h) => h.type === "timeline")?.id;
+    if (id) markDiscovered(id);
+  }, [markDiscovered, artifact]);
 
   return (
     <div className="relative flex h-dvh w-full flex-col overflow-hidden">
@@ -34,17 +39,23 @@ export default function TimelineScene() {
           我的一生
         </motion.p>
         <div className="w-full max-w-3xl">
-          <Timeline events={hezun.timeline} />
+          <Timeline events={artifact.timeline} />
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8, duration: 0.8 }}
-          className="mt-8 w-full"
-        >
-          <SpanBar />
-        </motion.div>
+        {artifact.span && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.8, duration: 0.8 }}
+            className="mt-8 w-full"
+          >
+            <SpanBar
+              castYear={artifact.span.castYear}
+              foundYear={artifact.span.foundYear}
+              note={artifact.span.note}
+            />
+          </motion.div>
+        )}
       </div>
 
       <motion.div

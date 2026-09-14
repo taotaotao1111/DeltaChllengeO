@@ -58,7 +58,6 @@ export type HotspotType =
   | "flange"
   /** 圈足，兼带器物的尺寸与重量 */
   | "foot"
-  // eslint-disable-next-line @typescript-eslint/ban-types
   | (string & {});
 
 export interface Hotspot {
@@ -228,6 +227,11 @@ export interface Artifact {
 
   /** 展厅卡片上的一句自述 */
   teaserLine: string;
+  /**
+   * 年代简写，如「西周早期」。
+   * 记忆卡落款用它：period 太长（带括号注解）、dynasty 太粗（只有「西周」）。
+   */
+  shortPeriod: string;
   /** 2.5D 插画组件的标识，由 ArtifactIllustration 按它分发 */
   illustrationId: string;
   /**
@@ -243,6 +247,13 @@ export interface Artifact {
   };
   /** 主线章节。长度即章数——只做一章也成立，不必凑三章 */
   chapters: ArtifactChapter[];
+  /**
+   * 「有多久没人看见我」比例条所需的两个年份（负数 = 公元前）与来源说明。
+   *
+   * 不从 timeline 的 year 里解析——那是「约公元前11世纪」这样的展示文案，
+   * 解析字符串等于替史料猜数字。没有确切年份的文物就不写，这一段留白比编数字好。
+   */
+  span?: { castYear: number; foundYear: number; note: string };
   /** 记忆卡洞察（有序匹配） */
   insights: MemoryInsight[];
   /** 一处都没探索时的兜底洞察 */
