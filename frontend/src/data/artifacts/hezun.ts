@@ -399,6 +399,7 @@ export const hezun: Artifact = {
       label: "第三章",
       title: "我身上的秘密",
       backdrop: "patina",
+      backdropGlyphs: ["宅", "兹", "中", "国"],
       presence: {
         opacity: 0.13,
         className: "-left-[20vw] bottom-[-10vh] h-[56vh] w-[56vh] sm:-left-[4vw]",

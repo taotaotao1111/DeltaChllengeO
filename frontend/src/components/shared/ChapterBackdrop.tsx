@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { motion } from "framer-motion";
 
 /**
@@ -13,6 +13,11 @@ interface ChapterBackdropProps {
   motif: Motif;
   /** 额外压暗，配合前景文字密度微调 */
   dim?: number;
+  /**
+   * patina 母题里那层巨大的字影用哪几个字。
+   * 不传就不渲染这一层——别让下一件文物的背景里飘着上一件的铭文。
+   */
+  glyphs?: string[];
 }
 
 /** 炉火里往上飘的火星。数量克制，纯 CSS animation，不逐帧算 */
@@ -97,7 +102,7 @@ function ForgeMotif() {
   );
 }
 
-function PatinaMotif() {
+function PatinaMotif({ glyphs }: { glyphs?: string[] }) {
   return (
     <>
       {/* 铜绿锈斑：三块极慢漂移的青绿，模拟埋藏三千年长出来的皮壳 */}
@@ -116,20 +121,25 @@ function PatinaMotif() {
 
       {/*
         字影：内壁上那句话，大到看不清的样子。
-        只用「宅兹中国」这四个有据可查的字——不拼凑、不伪造其余 118 字的字形。
+        只用有据可查的那几个字——不拼凑、不伪造其余字形（何尊铭文共 122 字，
+        这里只放「宅兹中国」四个）。
         第二章刻意没有这一层：铭文是第三章才被擦出来的秘密，提前铺开就剧透了。
       */}
-      <motion.div
-        /* 22vh × 4 字 × 1.05 行高 ≈ 92vh：再大一点「国」的下半截就会被视口切掉 */
-        className="font-title absolute right-[4vw] top-1/2 -translate-y-1/2 select-none text-[22vh] leading-[1.05] tracking-tight text-rice-100 opacity-[0.08] blur-[2px]"
-        animate={{ y: ["-52%", "-48%", "-52%"], opacity: [0.06, 0.095, 0.06] }}
-        transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
-      >
-        宅
-        <br />兹
-        <br />中
-        <br />国
-      </motion.div>
+      {glyphs && glyphs.length > 0 && (
+        <motion.div
+          /* 22vh × 4 字 × 1.05 行高 ≈ 92vh：再大一点「国」的下半截就会被视口切掉 */
+          className="font-title absolute right-[4vw] top-1/2 -translate-y-1/2 select-none text-[22vh] leading-[1.05] tracking-tight text-rice-100 opacity-[0.08] blur-[2px]"
+          animate={{ y: ["-52%", "-48%", "-52%"], opacity: [0.06, 0.095, 0.06] }}
+          transition={{ duration: 24, repeat: Infinity, ease: "easeInOut" }}
+        >
+          {glyphs.map((g, i) => (
+            <Fragment key={i}>
+              {i > 0 && <br />}
+              {g}
+            </Fragment>
+          ))}
+        </motion.div>
+      )}
     </>
   );
 }
@@ -180,11 +190,11 @@ function StrataMotif() {
   );
 }
 
-export default function ChapterBackdrop({ motif, dim = 0 }: ChapterBackdropProps) {
+export default function ChapterBackdrop({ motif, dim = 0, glyphs }: ChapterBackdropProps) {
   return (
     <div className="paper-noise fixed inset-0 -z-10 overflow-hidden bg-ink-900" aria-hidden>
       {motif === "forge" && <ForgeMotif />}
-      {motif === "patina" && <PatinaMotif />}
+      {motif === "patina" && <PatinaMotif glyphs={glyphs} />}
       {motif === "strata" && <StrataMotif />}
 
       {/*

@@ -1,8 +1,9 @@
 /**
- * 何尊 3D 模型资源打包脚本
+ * 文物 3D 模型资源打包脚本
  *
- * 原始扫描件有 96MB（85.8 万顶点 + 3 张共 55MB 的 PNG 贴图），无法直接上线。
- * 本脚本把它压到几 MB 级别，产物写到 frontend/public/models/hezun.glb。
+ * 三维扫描件动辄近百 MB（何尊 96MB / 85.8 万顶点，长信宫灯 98MB / 150 万面，
+ * 都挂着几十 MB 的 PNG 贴图），无法直接上线。本脚本把它压到几 MB 级别，
+ * 产物写到 frontend/public/models/<id>.glb。
  *
  * ⚠️ 原始素材放在**仓库外** `~/DeltaChallenge-assets/`（默认路径，可用环境变量
  * ASSETS_DIR 覆盖）。为什么不放仓库里：Cowork 的 `pack` 是整目录 copytree、
@@ -19,8 +20,13 @@
  * （会直接报 "built without WebP support"），而 sips 只能写 JPEG 不能写 WebP。
  * JPEG 是 glTF 原生支持的格式，浏览器零成本解码，够用。
  *
- * 用法：cd frontend && node scripts/pack-hezun-model.mjs
- *   自定义素材目录：ASSETS_DIR=/path/to/assets node scripts/pack-hezun-model.mjs
+ * 用法：cd frontend && node scripts/pack-model.mjs <文物id> [简化比例]
+ *   node scripts/pack-model.mjs hezun            # 读 <素材目录>/hezun.glb
+ *   node scripts/pack-model.mjs changxin 0.25    # 指定简化比例试参
+ *   ASSETS_DIR=/path/to/assets node scripts/pack-model.mjs hezun
+ *
+ * ⚠️ 简化比例不要跨文物照抄：0.18 是按何尊（回转体 + 纹饰细节）调出来的，
+ * 人物造型（如宫灯的面部与手部）压太狠会先糊在这些地方，需要单独试参。
  */
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -32,12 +38,19 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /** 原始素材目录，在仓库外（见文件头说明） */
 const ASSETS_DIR =
   process.env.ASSETS_DIR || path.join(os.homedir(), "DeltaChallenge-assets");
-const SRC = path.join(ASSETS_DIR, "hezun.glb");
-const OUT = path.join(ROOT, "public/models/hezun.glb");
+
+const ARTIFACT_ID = process.argv[2];
+if (!ARTIFACT_ID) {
+  console.error("用法：node scripts/pack-model.mjs <文物id> [简化比例]");
+  process.exit(1);
+}
+
+const SRC = path.join(ASSETS_DIR, `${ARTIFACT_ID}.glb`);
+const OUT = path.join(ROOT, `public/models/${ARTIFACT_ID}.glb`);
 const GLTFPACK = path.join(ROOT, "node_modules/.bin/gltfpack");
 
-/** 网格简化目标三角面比例；0.18 约等于 27 万面，肉眼与原件无差 */
-const SIMPLIFY_RATIO = "0.18";
+/** 网格简化目标三角面比例；何尊用 0.18 约等于 27 万面，肉眼与原件无差 */
+const SIMPLIFY_RATIO = process.argv[3] || "0.18";
 /** 简化误差上限，0.005 = 允许 0.5% 形变 */
 const SIMPLIFY_ERROR = "0.005";
 
@@ -113,12 +126,12 @@ function main() {
   console.log(`读取 ${path.relative(ROOT, SRC)}（${fmtBytes(fs.statSync(SRC).size)}）`);
   const { json, bin } = parseGlb(SRC);
 
-  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), "hezun-pack-"));
+  const workDir = fs.mkdtempSync(path.join(os.tmpdir(), `${ARTIFACT_ID}-pack-`));
   console.log(`临时目录 ${workDir}`);
 
   // BIN chunk 整体落盘，作为中间态 gltf 的外部 buffer。
   // 里面包含已经不再需要的原始贴图字节，但这只是临时文件，gltfpack 只会带走真正引用到的数据。
-  const binName = "hezun.bin";
+  const binName = `${ARTIFACT_ID}.bin`;
   fs.writeFileSync(path.join(workDir, binName), bin);
   json.buffers = [{ byteLength: bin.length, uri: binName }];
 
@@ -154,7 +167,7 @@ function main() {
   });
 
   // 贴图已改为外部 uri，原先承载 PNG 字节的 bufferView 变成孤儿，gltfpack 会自行丢弃。
-  const gltfPath = path.join(workDir, "hezun.gltf");
+  const gltfPath = path.join(workDir, `${ARTIFACT_ID}.gltf`);
   fs.writeFileSync(gltfPath, JSON.stringify(json));
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true });

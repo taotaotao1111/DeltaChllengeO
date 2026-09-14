@@ -182,6 +182,8 @@ export interface ArtifactChapter {
   /** 「我是谁」 */
   title: string;
   backdrop?: ChapterBackdropMotif;
+  /** patina 母题背景里那层巨大字影用哪几个字（必须是这件文物身上有据可查的字） */
+  backdropGlyphs?: string[];
   /**
    * 背景里常驻的讲述者。
    * 第一章不写——那时主角就在主视图中央，再放一尊会打架。

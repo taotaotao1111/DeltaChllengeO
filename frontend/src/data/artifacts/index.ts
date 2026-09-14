@@ -13,11 +13,13 @@
  */
 import type { Artifact } from "../../types/artifact";
 import { hezun } from "./hezun";
+import { changxin } from "./changxin";
 
 export const DEFAULT_ARTIFACT_ID = hezun.id;
 
 export const ARTIFACT_REGISTRY: Record<string, Artifact> = {
   [hezun.id]: hezun,
+  [changxin.id]: changxin,
 };
 
 /** 按 id 取档案；取不到时回落到默认文物，不让界面崩在半路 */
@@ -52,14 +54,7 @@ function entryOf(artifact: Artifact, extra: { icon?: string; useIllustration?: b
 
 export const GALLERY_MANIFEST: GalleryEntry[] = [
   entryOf(hezun, { icon: "🏺" }),
-  {
-    id: "changxin",
-    name: "长信宫灯",
-    dynasty: "西汉",
-    teaserLine: "你看到的灯光，其实是我藏起来的烟。",
-    illustrationId: "changxin",
-    locked: true,
-  },
+  entryOf(changxin, { useIllustration: true }),
   {
     id: "tongbenma",
     name: "铜奔马",

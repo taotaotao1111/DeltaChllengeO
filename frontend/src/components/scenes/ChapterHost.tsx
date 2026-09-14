@@ -35,7 +35,11 @@ export default function ChapterHost() {
 
   return (
     <div className="relative h-dvh w-full overflow-hidden">
-      {chapter.backdrop ? <ChapterBackdrop motif={chapter.backdrop} /> : <InkBackground glow={1} />}
+      {chapter.backdrop ? (
+        <ChapterBackdrop motif={chapter.backdrop} glyphs={chapter.backdropGlyphs} />
+      ) : (
+        <InkBackground glow={1} />
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
