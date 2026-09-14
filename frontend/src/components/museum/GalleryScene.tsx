@@ -4,69 +4,13 @@ import InkBackground from "../shared/InkBackground";
 import DustParticles from "../shared/DustParticles";
 import SpeechReveal from "../shared/SpeechReveal";
 import FogWipeReveal from "../shared/FogWipeReveal";
-import GuessChoice, { type GuessOption } from "../shared/GuessChoice";
-import HezunIllustration from "../artifact/HezunIllustration";
-import ChangxinLampIllustration from "../artifact/ChangxinLampIllustration";
+import GuessChoice from "../shared/GuessChoice";
+import ArtifactIllustration from "../artifact/ArtifactIllustration";
 import ArtifactModelGate from "../artifact/ArtifactModelGate";
-import { hezun } from "../../data/artifacts/hezun";
+import { ARTIFACT_REGISTRY, GALLERY_MANIFEST, type GalleryEntry } from "../../data/artifacts";
 import { evaluateViewerMode } from "../../utils/artifactEvaluator";
 import { startModelFetch } from "../artifact/modelSource";
 import { useGameStore } from "../../store/gameStore";
-
-interface CaseItem {
-  id: string;
-  name: string;
-  dynasty: string;
-  line: string;
-  /** 简单占位用 emoji（尚未有插画的文物） */
-  icon?: string;
-  /** 精细插画组件（优先于 icon 使用） */
-  Illustration?: React.ComponentType<{ className?: string }>;
-  locked: boolean;
-}
-
-const CASES: CaseItem[] = [
-  {
-    id: "hezun",
-    name: "何尊",
-    dynasty: "西周",
-    line: "我身上的四个字，被你们记了三千年。",
-    icon: "🏺",
-    locked: false,
-  },
-  {
-    id: "changxin",
-    name: "长信宫灯",
-    dynasty: "西汉",
-    line: "你看到的灯光，其实是我藏起来的烟。",
-    Illustration: ChangxinLampIllustration,
-    locked: true,
-  },
-  {
-    id: "tongbenma",
-    name: "铜奔马",
-    dynasty: "东汉",
-    line: "他们总说我在奔跑。可你知道我要去哪里吗？",
-    icon: "🐎",
-    locked: true,
-  },
-  {
-    id: "qingming",
-    name: "清明上河图",
-    dynasty: "北宋",
-    line: "别只看我。走进来看看。",
-    icon: "🎨",
-    locked: true,
-  },
-];
-
-const GREETING_LINES = ["你终于来了。", "我已经很久没有和人说过话了。", "他们叫我——何尊。"];
-
-const GUESS_OPTIONS: GuessOption[] = [
-  { id: "drink", label: "用来喝酒", response: "我确实是一种盛酒的礌器——但铸造我，不只是为了喝酒这么简单。" },
-  { id: "ritual", label: "用来祭祀", response: "礌仪的确重要，我也因此而生——不过还有一个更具体的原因。" },
-  { id: "remember", label: "用来纪念一件重要的事情", response: "你猜对了。有一段话，需要被记住，我因此而生。" },
-];
 
 type View = "grid" | "reveal";
 
@@ -81,35 +25,37 @@ const ArtifactModelDisplay = lazy(() => import("../artifact/ArtifactModelDisplay
  */
 export default function GalleryScene() {
   const setStage = useGameStore((s) => s.setStage);
+  const selectArtifact = useGameStore((s) => s.selectArtifact);
   const [view, setView] = useState<View>("grid");
   const [litIn, setLitIn] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showGuess, setShowGuess] = useState(false);
   const [wiped, setWiped] = useState(false);
+  /** 被选中进入揭幕的文物 id */
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 展厅是入口，这里就把 3D chunk 与模型文件一起预热掉，
+  const picked = pickedId ? ARTIFACT_REGISTRY[pickedId] : null;
+  const pickedViewerMode = useMemo(() => (picked ? evaluateViewerMode(picked) : "2.5d"), [picked]);
+
+  // 展厅是入口，这里就把可进入文物的 3D chunk 与模型文件一起预热掉，
   // 用户看完开场文案、擦完雾时基本已经就绪
-  const hezunViewerMode = useMemo(() => evaluateViewerMode(hezun), []);
-
   useEffect(() => {
-    if (hezunViewerMode !== "3d" || !hezun.model) return;
-    const { url } = hezun.model;
+    const ready = GALLERY_MANIFEST.filter((e) => !e.locked)
+      .map((e) => ARTIFACT_REGISTRY[e.id])
+      .filter((a) => a && evaluateViewerMode(a) === "3d" && a.model);
+    if (ready.length === 0) return;
     // 模型字节流和 3D 代码 chunk 并行预热，两边都不阻塞展厅的选择流程
-    startModelFetch(url);
+    ready.forEach((a) => startModelFetch(a.model!.url));
     import("../artifact/ArtifactModelDisplay");
-  }, [hezunViewerMode]);
-
-  const hezunIllustration = (
-    <HezunIllustration className="h-[30vh] max-h-[260px] w-auto animate-breathe drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)]" />
-  );
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setLitIn(true), 200);
     return () => clearTimeout(t);
   }, []);
 
-  const handleCaseClick = (item: CaseItem) => {
+  const handleCaseClick = (item: GalleryEntry) => {
     if (item.locked) {
       setToast(`「${item.name}」敬请期待`);
       if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -118,8 +64,22 @@ export default function GalleryScene() {
     }
     setWiped(false);
     setShowGuess(false);
+    setPickedId(item.id);
+    selectArtifact(item.id);
     setView("reveal");
   };
+
+  const enterChapters = () => setStage("chapter");
+
+  const greeting = picked?.galleryReveal;
+  /** 没有揭幕念白的文物，擦完雾就等于念完了 */
+  const greetingDone = showGuess || !greeting;
+  const pickedIllustration = picked ? (
+    <ArtifactIllustration
+      id={picked.illustrationId}
+      className="h-[30vh] max-h-[260px] w-auto animate-breathe drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
+    />
+  ) : null;
 
   return (
     <div className="relative h-dvh w-full overflow-hidden">
@@ -146,7 +106,7 @@ export default function GalleryScene() {
             </motion.p>
 
             <div className="grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">
-              {CASES.map((item, i) => (
+              {GALLERY_MANIFEST.map((item, i) => (
                 <motion.button
                   key={item.id}
                   initial={{ opacity: 0, y: 16 }}
@@ -159,8 +119,9 @@ export default function GalleryScene() {
                       : "border-gilt/30 bg-gilt/5 shadow-[0_0_30px_rgba(201,167,106,0.12)] hover:border-gilt/50 hover:bg-gilt/10"
                   }`}
                 >
-                  {item.Illustration ? (
-                    <item.Illustration
+                  {item.illustrationId ? (
+                    <ArtifactIllustration
+                      id={item.illustrationId}
                       className={`mb-3 h-12 w-auto transition-all sm:h-14 ${
                         item.locked ? "opacity-40 grayscale" : "animate-breathe"
                       }`}
@@ -193,7 +154,7 @@ export default function GalleryScene() {
                       item.locked ? "text-rice-200/25" : "text-rice-200/60"
                     }`}
                   >
-                    {item.line}
+                    {item.teaserLine}
                   </p>
 
                   {item.locked && (
@@ -220,7 +181,7 @@ export default function GalleryScene() {
           </motion.div>
         )}
 
-        {view === "reveal" && (
+        {view === "reveal" && picked && (
           <motion.div
             key="reveal"
             className="relative h-full w-full"
@@ -239,29 +200,29 @@ export default function GalleryScene() {
                 transition={{ duration: 1 }}
                 className="mb-8"
               >
-                {hezunViewerMode === "3d" && hezun.model ? (
+                {pickedViewerMode === "3d" && picked.model ? (
                   <ArtifactModelGate
-                    model={hezun.model}
-                    fallback={hezunIllustration}
+                    model={picked.model}
+                    fallback={pickedIllustration}
                     placeholderClassName="h-[30vh] max-h-[260px] w-[30vh] max-w-[260px]"
                   >
                     {(src) => (
                       <ArtifactModelDisplay
-                        model={hezun.model!}
+                        model={picked.model!}
                         src={src}
                         className="h-[30vh] max-h-[260px] w-[30vh] max-w-[260px] animate-breathe drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
                       />
                     )}
                   </ArtifactModelGate>
                 ) : (
-                  hezunIllustration
+                  pickedIllustration
                 )}
               </motion.div>
 
-              {wiped && !showGuess && (
+              {wiped && !greetingDone && greeting && (
                 <SpeechReveal
-                  lines={GREETING_LINES}
-                  lineDelay={2000}
+                  lines={greeting.greetingLines}
+                  lineDelay={greeting.lineDelay}
                   onComplete={() => setShowGuess(true)}
                   className="max-w-lg text-center"
                   textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-2xl"
@@ -269,18 +230,30 @@ export default function GalleryScene() {
               )}
 
               <AnimatePresence>
-                {showGuess && (
+                {wiped && greetingDone && (
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="w-full max-w-md"
                   >
-                    <GuessChoice
-                      question="你觉得，我为什么会被铸造成这个样子？"
-                      options={GUESS_OPTIONS}
-                      onDone={() => setStage("chapter1")}
-                      continueLabel="听它讲下去 →"
-                    />
+                    {greeting?.guess ? (
+                      <GuessChoice
+                        question={greeting.guess.question}
+                        options={greeting.guess.options}
+                        onDone={enterChapters}
+                        continueLabel="听它讲下去 →"
+                      />
+                    ) : (
+                      /* 没有设计竞猜的文物：擦完雾、听完自我介绍就直接进正文 */
+                      <div className="flex justify-center">
+                        <button
+                          onClick={enterChapters}
+                          className="rounded-full bg-gilt/20 px-6 py-2.5 text-sm tracking-wide text-gilt-light transition hover:bg-gilt/30"
+                        >
+                          听它讲下去 →
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

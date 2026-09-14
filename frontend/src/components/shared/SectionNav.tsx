@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import { useGameStore } from "../../store/gameStore";
 
-const ITEMS: { key: "chapter1" | "timeline" | "chat"; label: string }[] = [
-  { key: "chapter1", label: "认识我" },
+type NavKey = "chapter" | "timeline" | "chat";
+
+const ITEMS: { key: NavKey; label: string }[] = [
+  { key: "chapter", label: "认识我" },
   { key: "timeline", label: "探索历史" },
   { key: "chat", label: "问问我" },
 ];
@@ -13,22 +15,22 @@ const ITEMS: { key: "chapter1" | "timeline" | "chat"; label: string }[] = [
 export default function SectionNav() {
   const stage = useGameStore((s) => s.stage);
   const setStage = useGameStore((s) => s.setStage);
+  const setChapter = useGameStore((s) => s.setChapter);
   const toggleChat = useGameStore((s) => s.toggleChat);
 
   if (stage === "museum" || stage === "gallery") return null;
 
-  const handleClick = (key: "chapter1" | "timeline" | "chat") => {
+  const handleClick = (key: NavKey) => {
     if (key === "chat") {
       toggleChat(true);
       return;
     }
+    // 「认识我」的语义一直是"回到当前文物的第一章"
+    if (key === "chapter") setChapter(0);
     setStage(key);
   };
 
-  const isActive = (key: string) => {
-    if (key === "chapter1") return stage === "chapter1" || stage === "chapter2" || stage === "chapter3";
-    return stage === key;
-  };
+  const isActive = (key: string) => stage === key;
 
   return (
     <motion.nav

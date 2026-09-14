@@ -40,6 +40,13 @@ export interface TimelineEvent {
   sceneMood?: "furnace" | "court" | "burial" | "excavation" | "museum" | "today";
 }
 
+/**
+ * 热点类型。
+ *
+ * 前四个是跨文物通用的，后三个是青铜器器型专属命名——新增文物（宫灯、字画……）
+ * 会有自己的部位词，所以这里用 `(string & {})` 收尾允许任意字符串：
+ * 直接写 `| string` 会让整个联合坍缩成 string，丢掉已知值的自动补全。
+ */
 export type HotspotType =
   | "pattern"
   | "inscription"
@@ -50,7 +57,9 @@ export type HotspotType =
   /** 纵贯器身的扉棱（棱脊） */
   | "flange"
   /** 圈足，兼带器物的尺寸与重量 */
-  | "foot";
+  | "foot"
+  // eslint-disable-next-line @typescript-eslint/ban-types
+  | (string & {});
 
 export interface Hotspot {
   id: string;
@@ -91,6 +100,109 @@ export interface ArtifactModel {
   rotation?: [number, number, number];
 }
 
+/** 章节背景母题，对应 ChapterBackdrop 的三种视觉 */
+export type ChapterBackdropMotif = "forge" | "patina" | "strata";
+
+/** 猜一猜的一个选项（展厅揭幕与章节内竞猜共用） */
+export interface GuessOptionData {
+  id: string;
+  label: string;
+  /** 选中后文物的回应；不判对错，只把认知纠正说清楚 */
+  response: string;
+}
+
+export interface GuessBlock {
+  question: string;
+  options: GuessOptionData[];
+}
+
+/**
+ * 观察模块：让用户先自己看，第一眼落在哪里决定文物怎么回应。
+ */
+export interface ObserveModuleData {
+  kind: "observe";
+  /** 「先别急着听我说……」 */
+  prompt: string;
+  /** 参与本章的热点 id（不写则取该文物除 inscription/timeline 外的全部热点） */
+  hotspotIds?: string[];
+  /**
+   * 按热点 type 查表的「第一眼」回应。
+   *
+   * 必须覆盖本章热点涉及的每一个 type —— 漏一个界面上会直接显示 undefined。
+   * scripts/check-artifacts.mjs 负责在构建前守住这条。
+   */
+  firstLookResponses: Record<string, string>;
+  /** 全部热点都看过之后，把进度文案换成这句 */
+  allFoundLine: string;
+  openingLines: string[];
+  lineDelay: number;
+  /** 还没看完就要往下走时的提示 */
+  notAllFoundHint: string;
+}
+
+/** 问答模块：一组「你想先听哪一个」 */
+export interface QaModuleData {
+  kind: "qa";
+  openingLines: string[];
+  lineDelay: number;
+  /** 问答列表上方的引导句 */
+  prompt: string;
+  items: { id: string; question: string; answer: string }[];
+}
+
+/**
+ * 揭示模块：引入念白 → 除锈 → 关键字特写 → 竞猜 → 收尾。
+ * 中间三段都是可选的，没有对应素材的文物会直接跳过。
+ */
+export interface RevealModuleData {
+  kind: "reveal";
+  leadInLines: string[];
+  lineDelay: number;
+  /** 亲手擦掉覆盖物才看得见字的那一步。leadLines 一句一行（原样保留换行） */
+  derust?: { leadLines: string[]; footnote: string };
+  /** 关键字逐字浮现的特写。explainLines 一句一行 */
+  focus?: { characters: string[]; explainLines: string[]; factIds: string[] };
+  guess?: GuessBlock;
+  closingLines: string[];
+  /** 看完特写就算探索过的热点 id */
+  marksDiscovered?: string;
+}
+
+/**
+ * 一章的内容。
+ *
+ * 新增一种叙事玩法 = 加一个 kind + 一个模块组件，已有 kind 一行都不用动。
+ * （长信宫灯的「光点聚形」开场就会走这个口子进来。）
+ */
+export type ChapterModule = ObserveModuleData | QaModuleData | RevealModuleData;
+
+export interface ArtifactChapter {
+  id: string;
+  /** 「第一章」 */
+  label: string;
+  /** 「我是谁」 */
+  title: string;
+  backdrop?: ChapterBackdropMotif;
+  /**
+   * 背景里常驻的讲述者。
+   * 第一章不写——那时主角就在主视图中央，再放一尊会打架。
+   */
+  presence?: { opacity: number; className: string };
+  /** 覆盖由 module.kind 推导出的 Scene（一般不需要） */
+  scene?: Scene;
+  module: ChapterModule;
+}
+
+/**
+ * 记忆卡上那句「我告诉过你」。
+ *
+ * 有序匹配：从上往下取第一条 requires 全部命中的，都没命中用 defaultInsight。
+ */
+export interface MemoryInsight {
+  requires: string[];
+  text: string;
+}
+
 /** 文物的人格化设定，供 AI Persona 与 UI 文案使用 */
 export interface Artifact {
   id: string;
@@ -111,6 +223,37 @@ export interface Artifact {
   suggestedQuestions: string[];
   /** 记忆卡上「一句话记住我」候选文案 */
   memoryLines: string[];
+
+  // ↓↓↓ 以下字段让「新增一件文物」只需要写数据、不改组件 ↓↓↓
+
+  /** 展厅卡片上的一句自述 */
+  teaserLine: string;
+  /** 2.5D 插画组件的标识，由 ArtifactIllustration 按它分发 */
+  illustrationId: string;
+  /**
+   * 记忆卡落款印章的两个字。
+   * 显式写，不从 name 截前两字——「长信宫灯」截出来是「长信」，读着像人名不像印章款。
+   */
+  sealChars: [string, string];
+  /** 展厅里被选中后的揭幕流程；竞猜可选 */
+  galleryReveal?: {
+    greetingLines: string[];
+    lineDelay: number;
+    guess?: GuessBlock;
+  };
+  /** 主线章节。长度即章数——只做一章也成立，不必凑三章 */
+  chapters: ArtifactChapter[];
+  /** 记忆卡洞察（有序匹配） */
+  insights: MemoryInsight[];
+  /** 一处都没探索时的兜底洞察 */
+  defaultInsight: string;
+  /**
+   * Mock 降级路径的补充配置。
+   *
+   * 全局兜底已覆盖「你有意识吗」这类通用拟人化边界；这里只放**该文物叙事专属**的
+   * 答不了的问题（何尊的「谁埋的你」预设了入土情节，对别的文物并不成立）。
+   */
+  mock?: { extraUnknownTriggers?: string[] };
 }
 
 /** 3D / 2.5D / 纯图片 三档降级展示模式 */

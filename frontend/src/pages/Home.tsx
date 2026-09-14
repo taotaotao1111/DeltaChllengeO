@@ -3,9 +3,7 @@ import { Link } from "react-router-dom";
 import { useGameStore } from "../store/gameStore";
 import MuseumScene from "../components/museum/MuseumScene";
 import GalleryScene from "../components/museum/GalleryScene";
-import ChapterOne from "../components/scenes/ChapterOne";
-import ChapterTwo from "../components/scenes/ChapterTwo";
-import ChapterThree from "../components/scenes/ChapterThree";
+import ChapterHost from "../components/scenes/ChapterHost";
 import TimelineScene from "../components/scenes/TimelineScene";
 import SectionNav from "../components/shared/SectionNav";
 import ArtifactChat from "../components/ai/ArtifactChat";
@@ -18,6 +16,8 @@ import MemoryCard from "../components/memory/MemoryCard";
  */
 export default function Home() {
   const stage = useGameStore((s) => s.stage);
+  const currentArtifactId = useGameStore((s) => s.currentArtifactId);
+  const chapterIndex = useGameStore((s) => s.chapterIndex);
 
   // 根容器**不能有不透明背景色**。场景背景层（InkBackground / ChapterBackdrop）都是
   // `fixed inset-0 -z-10`，而这个 div 既不是 stacking context、又铺满全屏：按 CSS 绘制顺序，
@@ -44,37 +44,20 @@ export default function Home() {
             <GalleryScene />
           </motion.div>
         )}
-        {stage === "chapter1" && (
+        {stage === "chapter" && (
+          /*
+            key 必须同时含文物 id 与章序号：换章时要整体卸载重挂载（原来三个 stage
+            天然如此），否则 React 会复用同一个实例、模块内部的 phase 不重置，
+            表现为切章后念白不从头播——TS 完全看不出来。
+          */
           <motion.div
-            key="chapter1"
+            key={`chapter-${currentArtifactId}-${chapterIndex}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <ChapterOne />
-          </motion.div>
-        )}
-        {stage === "chapter2" && (
-          <motion.div
-            key="chapter2"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <ChapterTwo />
-          </motion.div>
-        )}
-        {stage === "chapter3" && (
-          <motion.div
-            key="chapter3"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <ChapterThree />
+            <ChapterHost />
           </motion.div>
         )}
         {stage === "timeline" && (

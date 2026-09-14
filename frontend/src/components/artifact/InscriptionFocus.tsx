@@ -1,20 +1,28 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Fact } from "../../types/artifact";
 
 interface InscriptionFocusProps {
   open: boolean;
+  /** 逐字浮现的关键字 */
+  characters: string[];
+  /** 字浮现完之后的说明，一句一行 */
+  explainLines: string[];
   facts: Fact[];
   onClose: () => void;
 }
 
-const CHARACTERS = ["宅", "兹", "中", "国"];
-
 /**
  * 铭文特写 —— 全 Demo 情绪高潮之一。
- * 背景变暗，镜头/文字聚焦，"宅兹中国" 逐字浮现。
+ * 背景变暗，镜头/文字聚焦，关键的几个字逐字浮现。
  */
-export default function InscriptionFocus({ open, facts, onClose }: InscriptionFocusProps) {
+export default function InscriptionFocus({
+  open,
+  characters,
+  explainLines,
+  facts,
+  onClose,
+}: InscriptionFocusProps) {
   const [revealCount, setRevealCount] = useState(0);
   const [showExplain, setShowExplain] = useState(false);
 
@@ -25,12 +33,12 @@ export default function InscriptionFocus({ open, facts, onClose }: InscriptionFo
       return;
     }
     const timers: ReturnType<typeof setTimeout>[] = [];
-    CHARACTERS.forEach((_, i) => {
+    characters.forEach((_, i) => {
       timers.push(setTimeout(() => setRevealCount(i + 1), 500 + i * 650));
     });
-    timers.push(setTimeout(() => setShowExplain(true), 500 + CHARACTERS.length * 650 + 500));
+    timers.push(setTimeout(() => setShowExplain(true), 500 + characters.length * 650 + 500));
     return () => timers.forEach(clearTimeout);
-  }, [open]);
+  }, [open, characters]);
 
   return (
     <AnimatePresence>
@@ -49,7 +57,7 @@ export default function InscriptionFocus({ open, facts, onClose }: InscriptionFo
           </p>
 
           <div className="flex gap-4 sm:gap-8">
-            {CHARACTERS.map((ch, i) => (
+            {characters.map((ch, i) => (
               <motion.span
                 key={ch}
                 initial={{ opacity: 0, y: 20, filter: "blur(6px)" }}
@@ -77,9 +85,12 @@ export default function InscriptionFocus({ open, facts, onClose }: InscriptionFo
                 className="mt-10 max-w-md text-center"
               >
                 <p className="text-sm leading-7 text-rice-200/80">
-                  这是何尊铭文中的一句，铭文全文共122字（含重文）。
-                  <br />
-                  「宅兹中国」，是目前所见「中国」二字连用的最早文字记录之一。
+                  {explainLines.map((line, i) => (
+                    <Fragment key={i}>
+                      {i > 0 && <br />}
+                      {line}
+                    </Fragment>
+                  ))}
                 </p>
                 {facts.length > 0 && (
                   <p className="mt-3 text-xs text-rice-200/40">

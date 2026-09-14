@@ -1,7 +1,12 @@
+import { Fragment } from "react";
 import { motion } from "framer-motion";
 import FogWipeReveal from "../shared/FogWipeReveal";
 
 interface RustRevealProps {
+  /** 引入文案，一句一行 */
+  leadLines: string[];
+  /** 底部免责说明（说明字影是示意、不是拓片） */
+  footnote: string;
   onRevealed: () => void;
 }
 
@@ -19,7 +24,7 @@ const GLYPH_COLS = 10;
  * 一是不伪造文物图像，二是让"发现有字"（本组件）和"看清读懂"
  * （随后的 InscriptionFocus）分成递进的两步，不重复。
  */
-export default function RustReveal({ onRevealed }: RustRevealProps) {
+export default function RustReveal({ leadLines, footnote, onRevealed }: RustRevealProps) {
   return (
     // pt 是给章节标题（第三章 / 我身上的秘密）留位置，手机端否则会叠在一起
     <div className="flex h-full w-full flex-col items-center justify-center px-6 pb-[calc(2.5rem+var(--safe-bottom))] pt-[calc(9.5rem+var(--safe-top))] sm:pt-32">
@@ -29,9 +34,12 @@ export default function RustReveal({ onRevealed }: RustRevealProps) {
         transition={{ duration: 0.9 }}
         className="mb-5 max-w-sm text-center text-sm leading-7 text-rice-200/70"
       >
-        三千年的锈，盖住了我内壁的字。
-        <br />
-        1975年，有人一点一点把它清理掉。
+        {leadLines.map((line, i) => (
+          <Fragment key={i}>
+            {i > 0 && <br />}
+            {line}
+          </Fragment>
+        ))}
       </motion.p>
 
       <FogWipeReveal
@@ -65,9 +73,7 @@ export default function RustReveal({ onRevealed }: RustRevealProps) {
         </div>
       </FogWipeReveal>
 
-      <p className="mt-4 text-center text-[10px] text-rice-200/25">
-        字影为示意呈现，非拓片实物 · 铭文全文共122字（含重文）
-      </p>
+      <p className="mt-4 text-center text-[10px] text-rice-200/25">{footnote}</p>
     </div>
   );
 }
