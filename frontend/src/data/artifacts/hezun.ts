@@ -121,6 +121,46 @@ export const hezun: Artifact = {
       tags: ["现状", "禁止出境"],
     },
     {
+      id: "fact-inscription-full",
+      content:
+        "铭文122字的大意：王初迁居成周、举行祭礼禀告武王与上天；成王在京室训诫宗室子弟「何」，追述其父辅佐文王之功，并转述武王克商后「宅兹中国」（定居天下之中）的告天之辞；训诰之后赏赐何贝三十朋，何因此铸尊以为纪念。铭文纪年为「唯王五祀」。",
+      source: "学界对何尊铭文的通行释读",
+      confidence: "verified",
+      tags: ["铭文", "全文", "成王", "武王", "训诰", "赏赐"],
+    },
+    {
+      id: "fact-inscription-debate",
+      content:
+        "铭文个别字词的释读（如开篇首字、作器对象称谓等）学界存在不同意见；本作品的解读采用学界通行释读，遇到分歧之处会明确标注。",
+      source: "何尊铭文研究的公开学术文献综述（通行意见与异说并存）",
+      confidence: "verified",
+      tags: ["铭文", "释读", "分歧", "学术"],
+    },
+    {
+      id: "fact-scrap-unearthed",
+      content:
+        "1963年，何尊出土于宝鸡县贾村镇（今宝鸡市陈仓区）一户陈姓村民家的后院断崖——取土时挖出，先藏于家中。",
+      source: "王光永《宝鸡市博物馆新征集的饕餮纹铜尊》（《文物》1966年1期）· 李仲操《何尊的发现及其史料价值》（宝鸡日报，2020年）",
+      confidence: "verified",
+      tags: ["出土", "1963", "贾村", "发现"],
+    },
+    {
+      id: "fact-scrap-sale",
+      content:
+        "1965年8月，因生活困难，村民将此尊背到宝鸡市，以人民币30元卖给龙泉巷废品回收门市部；门市部营业员将此事告知博物馆工作人员，宝鸡市博物馆随即将其征集收藏。",
+      source: "李仲操《何尊的发现及其史料价值》（宝鸡日报，2020年，转述经手人王光永的记述）",
+      confidence: "verified",
+      tags: ["废品", "30元", "1965", "回收", "征集", "熔掉", "差点消失"],
+    },
+    {
+      id: "fact-scrap-1975",
+      content:
+        "何尊入藏后十余年间因铜锈未除，内底铭文一直未被发现。1975年，何尊被列为出国展品，清除锈垢时发现内底铭文12行122字；唐兰、马承源等学者的考释文章于1976年《文物》发表，此尊从此定名「何尊」。",
+      source: "李仲操《何尊的发现及其史料价值》（宝鸡日报，2020年）·《文物》1976年1期考释文章",
+      confidence: "verified",
+      tags: ["1975", "除锈", "发现铭文", "定名", "考释"],
+    },
+    {
       id: "fact-unknown-personal",
       content:
         "关于「何」本人的具体身份、生平细节，以及此器在铸成之后流转、入土的具体经过，现有史料并未给出明确记载。",
@@ -284,6 +324,8 @@ export const hezun: Artifact = {
     "古人怎么制作你？",
     "你为什么会被埋起来？",
     "你现在为什么在博物馆？",
+    "你差点被熔掉是真的吗？",
+    "铭文里都写了什么？",
   ],
 
   memoryLines: [
@@ -299,7 +341,7 @@ export const hezun: Artifact = {
 
   galleryReveal: {
     greetingLines: ["你终于来了。", "我已经很久没有和人说过话了。", "他们叫我——何尊。"],
-    lineDelay: 2000,
+    lineDelay: 1500,
     guess: {
       question: "你觉得，我为什么会被铸造成这个样子？",
       options: [
@@ -327,6 +369,7 @@ export const hezun: Artifact = {
       id: "who-am-i",
       label: "第一章",
       title: "我是谁",
+      hook: "先自己看看我——你的第一眼落在哪里？",
       module: {
         kind: "observe",
         prompt: "先别急着听我说。你自己看看我——你的第一眼，最先注意到了哪里？",
@@ -348,14 +391,25 @@ export const hezun: Artifact = {
           "那时候，人们用青铜铸造礼器。",
           "我的主人，希望把一件重要的事情留下来。",
         ],
-        lineDelay: 2400,
+        lineDelay: 1500,
         notAllFoundHint: "我身上还有你没看过的地方——也可以直接听我讲下去。",
+        /**
+         * 自我介绍视频（用户提供的 3D 动画短片，第一人称讲述从出土到「中国」词源）。
+         * 横构图 1080p，44.7s，4.6MB。开场白念完后的「听我完整讲一遍」入口进入。
+         * 注意：视频内字幕是文学化表述，与 FACT 层口径的对齐见 /sources 的史料列表。
+         */
+        introVideo: {
+          src: "videos/hezun-intro.mp4",
+          poster: "images/hezun-intro-poster.jpg",
+          durationSec: 45,
+        },
       },
     },
     {
       id: "why-cast",
       label: "第二章",
       title: "我为什么会被铸造",
+      hook: "一场为了「记住」的铸造。",
       backdrop: "forge",
       // 讲述者继续在场：偏到右下、压得很暗，像"刚从范里出来还在炉边"的器物
       presence: {
@@ -365,7 +419,7 @@ export const hezun: Artifact = {
       module: {
         kind: "qa",
         openingLines: ["那时候，我还没有名字。", "工匠把青铜熔化。", "火光照亮了整个作坊。"],
-        lineDelay: 2200,
+        lineDelay: 1500,
         prompt: "你想先听哪一个？",
         items: [
           {
@@ -399,6 +453,7 @@ export const hezun: Artifact = {
       id: "my-secret",
       label: "第三章",
       title: "我身上的秘密",
+      hook: "锈的下面，藏着四个字。",
       backdrop: "patina",
       backdropGlyphs: ["宅", "兹", "中", "国"],
       presence: {
@@ -408,7 +463,7 @@ export const hezun: Artifact = {
       module: {
         kind: "reveal",
         leadInLines: ["你还记得，我说过我身上刻着字吗？", "现在，我想让你看看。"],
-        lineDelay: 2400,
+        lineDelay: 1500,
         derust: {
           leadLines: ["三千年的锈，盖住了我内壁的字。", "1975年，有人一点一点把它清理掉。"],
           footnote: "字影为示意呈现，非拓片实物 · 铭文全文共122字（含重文）",
@@ -420,6 +475,11 @@ export const hezun: Artifact = {
             "「宅兹中国」，是目前所见「中国」二字连用的最早文字记录之一。",
           ],
           factIds: ["fact-inscription-zhongguo", "fact-inscription-content"],
+          // 三千年后，「宅兹中国」四个字仍被人做成灯、刻成礼——这句话活到了今天
+          sideImage: {
+            src: "images/hezun-lamp-lit.jpg",
+            caption: "「宅兹中国」文创摆件 · 今天",
+          },
         },
         /**
          * 「中国」古今义竞猜。
@@ -459,6 +519,240 @@ export const hezun: Artifact = {
           "我只知道：这两个字连在一起被写下来，目前所见最早的一次，就在我的内壁上。",
         ],
         marksDiscovered: "hotspot-inscription",
+        // 下一章不再是时间线，出口按钮写过渡文案（见 RevealModuleData.nextLabel）
+        nextLabel: "接着，读我腹中的字 →",
+      },
+    },
+    {
+      id: "read-my-words",
+      label: "第四章",
+      title: "读我腹中的字",
+      hook: "122 个字，一段一段读给你听。",
+      // 与第三章同母题：刚擦完锈读铭文，视觉上是同一个场景的延续
+      backdrop: "patina",
+      backdropGlyphs: ["宅", "兹", "中", "国"],
+      module: {
+        kind: "inscription",
+        openingLines: [
+          "刚才你只看见了四个字。",
+          "其实在我内底，一共有一百二十二个。",
+          "现在，我想把它们一段一段，读给你听。",
+        ],
+        lineDelay: 1500,
+        /**
+         * 铭文全文逐字序列：通行释读（与《文物》1976 年考释一致的网络多来源交叉核实，
+         * 2026-09-29），共 122 字——含重文（「武王」二字重文计入）与损泐占位字「□」。
+         * 数字数自洽：8+8+5+9+6+4+7+8+6+6+4+2+7+4+4+2+3+6+4+3+5+7+4 = 122。
+         * 卷面一次性铺开整卷；各节 range 是它在 fullText 里的字序范围。
+         */
+        fullText:
+          "唯王初壅宅于成周复禀武王礼福自天在四月丙戌王诰宗小子于京室曰昔在尔考公氏克逑文王肆文王受兹大命唯武王既克大邑商则廷告于天曰余其宅兹中国自之乂民呜呼尔有唯小子无识视于公氏有勋于天彻命敬享哉唯王恭德裕天训我不敏王咸诰何赐贝卅朋用作□公宝尊彝唯王五祀".split(
+            "",
+          ),
+        overviewHint: "这一卷纸，就是我的全部——一百二十二个字。",
+        /**
+         * 分节按学界通行释读（fact-inscription-full）。
+         * 每节三层：卷面上的原文段（range 点亮，精摹字见 hezun-glyphs.ts，
+         * 未摹字以示意字位呈现）→ 释文 → 第一人称讲述。
+         * debateNote 只标注、不展开学术综述——分歧本身如实呈现，采用的释读说明白。
+         */
+        sections: [
+          {
+            id: "sec-opening",
+            characters: ["唯", "王", "成", "周", "武", "天"],
+            range: [0, 16],
+            transcript: "王初迁居成周，举行祭礼，禀告武王与上天。",
+            sceneNote: "开篇纪时",
+            narrationLines: [
+              "这段话，是从一场仪式开始的。",
+              "有人刚搬了新家——第一件事，是告诉祖先和天。",
+            ],
+            debateNote:
+              "开篇首字的释读，学界另有不同意见（迁 / 邕 / 壅诸说）。本作品采用通行释读。",
+            factIds: ["fact-inscription-full", "fact-inscription-debate"],
+          },
+          {
+            id: "sec-admonition",
+            characters: ["诰", "何"],
+            range: [16, 30],
+            transcript: "四月丙戌这一天，王在京室训诫宗室子弟，说——",
+            sceneNote: "训诰场景",
+            narrationLines: [
+              "被叫到跟前的年轻人里，有一个叫「何」。",
+              "就是我后来名字的来源。",
+            ],
+            factIds: ["fact-inscription-full", "fact-owner"],
+          },
+          {
+            id: "sec-ancestors",
+            characters: ["王", "武"],
+            range: [30, 47],
+            transcript: "王先追述了何的父亲辅佐文王的功绩，又说文王承受了上天的大命。",
+            sceneNote: "追述先人",
+            narrationLines: [
+              "训话之前，先被肯定——王夸了他的父亲。",
+              "三千年前，人们已经懂得这个道理。",
+            ],
+            debateNote: "「逑」字（辅佐之义）的释读，学界另有诸说。本作品采用通行释读。",
+            factIds: ["fact-inscription-full"],
+          },
+          {
+            id: "sec-climax",
+            characters: ["武", "王", "唯", "宅", "兹", "中", "国"],
+            range: [47, 71],
+            transcript: "武王攻克大邑商之后，向上天祷告说：我要定居在天下之中，从这里治理民众。",
+            sceneNote: "武王告天",
+            narrationLines: [
+              "注意——这句最重的话，不是王对何说的。",
+              "是武王，对天说的。",
+              "「余其宅兹中国，自之乂民。」",
+            ],
+            isClimax: true,
+            debateNote:
+              "铭文中「中国」指「天下之中的都邑」为通行释义；个别学者持「国中（都城之中）」说。本作品采用通行释义。",
+            factIds: ["fact-inscription-zhongguo", "fact-inscription-content", "fact-inscription-full"],
+          },
+          {
+            id: "sec-exhort",
+            characters: ["王", "天"],
+            range: [71, 103],
+            transcript: "王勉励何：要效法你的父亲，他有功于天；要恭敬地对待你的职守。",
+            sceneNote: "勉励",
+            narrationLines: [
+              "训话最后落到了何自己身上。",
+              "「年轻人，好好干」——三千年前的话，今天听着也不过时。",
+            ],
+            debateNote: "此段个别句子的断句与释字，学界有不同意见。本作品采用通行释读。",
+            factIds: ["fact-inscription-full"],
+          },
+          {
+            id: "sec-reward",
+            characters: ["何", "贝", "朋", "王", "祀"],
+            range: [103, 122],
+            transcript: "王结束训诰，赏赐何贝三十朋。何铸了这件尊，用来纪念——纪年为「唯王五祀」。",
+            sceneNote: "赏赐与作器",
+            narrationLines: [
+              "这场训诰的结尾，何得到了三十朋贝。",
+              "他用这份赏赐，把我铸了出来——为了让这段话活下去。",
+              "我，就是那个结果。",
+            ],
+            debateNote:
+              "「用作□公宝尊彝」中有一损泐字，作器对象的称谓各家释读不一。本作品如实标注，不作臆测。",
+            factIds: ["fact-inscription-full", "fact-inscription-content"],
+          },
+        ],
+        closingLines: [
+          "整卷读完，用了你几分钟。",
+          "它们在我肚子里，安安静静待了三千年。",
+        ],
+        footnote: "字形为手工摹写示意（非拓片）· 未摹字以示意字位呈现 · 全文 122 字（含重文与损泐字）",
+        marksDiscovered: "hotspot-inscription",
+      },
+    },
+    {
+      id: "almost-gone",
+      label: "第五章",
+      title: "我差点消失",
+      hook: "离熔炉最近的十二年。",
+      backdrop: "scrap",
+      module: {
+        kind: "flip",
+        openingLines: [
+          "在读给你听之前，其实——我差点没能等到 1975 年。",
+          "1963 年之后的这十二年，是我离熔炉最近的日子。",
+          "每张卡翻过来，都是核实过的事实。你自己看。",
+        ],
+        lineDelay: 1500,
+        /**
+         * 卡片正面 STORY / 背面 FACT（factIds 指向 verifiedFacts）。
+         * 史实已逐条核实（2026-09）：出土、30 元、1975 故宫除锈均有
+         * 《文物》原始报告与博物馆当事人回忆文章支撑（见各 fact 的 source）。
+         * 「差点被熔掉」是 STORY 层的比喻（废品站是事实、熔炉是推断），
+         * 正面口白只用「离熔炉最近」的说法，背面不写「曾被送去熔炉」。
+         */
+        cards: [
+          {
+            id: "card-1963",
+            front: "一九六三年，宝鸡贾村。\n一场雨过后，后院的崖土塌了一块——我重新见到了光。\n没有人认得我。",
+            back: {
+              content:
+                "1963年，何尊出土于宝鸡县贾村镇（今宝鸡市陈仓区）一户陈姓村民家的后院断崖，取土时挖出，先藏于家中。",
+              source: "王光永《宝鸡市博物馆新征集的饕餮纹铜尊》（《文物》1966年1期）",
+              confidence: "verified",
+              factId: "fact-scrap-unearthed",
+            },
+            hint: "出土地：宝鸡贾村塬 · 后院断崖取土时挖出",
+          },
+          {
+            id: "card-30yuan",
+            front: "两年后，我被装进麻袋，背进了城里。\n按废铜的价，三十块钱。\n我身上那些字，那时候没有人知道——包括买我的人。",
+            back: {
+              content:
+                "1965年8月，因生活困难，村民将此尊以人民币30元卖给龙泉巷废品回收门市部。",
+              source:
+                "李仲操《何尊的发现及其史料价值》（宝鸡日报，2020年，转述经手人王光永的记述）",
+              confidence: "verified",
+              factId: "fact-scrap-sale",
+            },
+            hint: "废品回收门市部：龙泉巷 · 卖出时铭文尚未被发现",
+          },
+          {
+            id: "card-rescue",
+            front: "废品站里，我旁边堆着别的铜器。\n有一个人的目光在我身上停得久了些。\n后来我常想：那一眼，值多少个三十块？",
+            back: {
+              content:
+                "废品门市部营业员将此事告知博物馆工作人员佟太放，宝鸡市博物馆随即将何尊征集收藏。",
+              source:
+                "李仲操《何尊的发现及其史料价值》（宝鸡日报，2020年，转述经手人王光永的记述）",
+              confidence: "verified",
+              factId: "fact-scrap-sale",
+            },
+          },
+          {
+            id: "card-dormant",
+            front: "进了库房，我睡得很沉。\n锈还盖在那 122 个字上面——一盖，又是十年。\n安静，但也没有人认识我。",
+            back: {
+              content:
+                "何尊入藏后十余年间因铜锈未除，内底铭文一直未被发现；期间曾被借往北京故宫博物院展出。",
+              source:
+                "李仲操《何尊的发现及其史料价值》（宝鸡日报，2020年）· 王光永《宝鸡市博物馆新征集的饕餮纹铜尊》（《文物》1966年1期）",
+              confidence: "verified",
+              factId: "fact-scrap-1975",
+            },
+          },
+          {
+            id: "card-1975",
+            front: "一九七五年，我入选出国展览的名单。\n出发前，有人把我身上的锈，一点一点清掉。\n然后——那个人愣住了。",
+            back: {
+              content:
+                "1975年，何尊被列为出国展品，清除锈垢时发现内底铭文12行122字；唐兰、马承源等学者的考释文章于1976年《文物》发表，此尊从此定名「何尊」。",
+              source: "李仲操回忆文章 ·《文物》1976年1期考释文章",
+              confidence: "verified",
+              factId: "fact-scrap-1975",
+            },
+            hint: "铭文藏在内底：入藏十余年无人看见，直到除锈那一刻",
+          },
+          {
+            id: "card-revalue",
+            front: "从废品堆，到禁止出境。\n中间隔着的，只是那 122 个字——被看见。",
+            back: {
+              content:
+                "何尊现藏于宝鸡青铜器博物院，属国家文物局公布的「禁止出境展览文物」名录中的文物。",
+              source: "国家文物局公开名录",
+              confidence: "verified",
+              factId: "fact-status",
+            },
+          },
+        ],
+        /**
+         * 读完六张卡的「合成时刻」：STORY 卡与 FACT 卡叠合浮现的点题句。
+         * FACT/STORY 双层是全项目的骨架，这章翻牌动作（情绪→求证）的语义终点。
+         */
+        mergeLine: "记忆和事实，都是我的一部分",
+        closingLines: [
+          "你刚才读的那 122 个字，差一点，谁都没机会读。",
+          "所以被看见这件事，本身就是运气——我的，也是你的。",
+        ],
       },
     },
   ],
@@ -493,6 +787,9 @@ export const hezun: Artifact = {
     },
   ],
   defaultInsight: "我已经三千多岁了，此刻正站在你面前。",
+
+  /** 时间线终点的描红仪式：四个字须在 hezun-glyphs.ts 有精摹字形 */
+  traceGlyphs: { chars: ["宅", "兹", "中", "国"] },
 
   mock: {
     /** 这些问题都预设了何尊自己的叙事（入土、西周、被谁使用），换一件文物并不成立 */
