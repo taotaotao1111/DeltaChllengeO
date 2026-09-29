@@ -47,6 +47,7 @@ export default function MemoryCard() {
   const userLegacyLine = useGameStore((s) => s.userLegacyLine);
   const setUserLegacyLine = useGameStore((s) => s.setUserLegacyLine);
   const snapshot = useGameStore((s) => s.artifactSnapshot);
+  const tracedGlyphs = useGameStore((s) => s.tracedGlyphs);
   const artifactId = useGameStore((s) => s.currentArtifactId);
 
   const artifact = getArtifact(artifactId);
@@ -93,6 +94,7 @@ export default function MemoryCard() {
         myQuestion,
         legacyLine: userLegacyLine || null,
         snapshot,
+        tracedGlyphs,
         discoveredCount: discovered.length,
       });
       setExported(canvas.toDataURL("image/png"));
@@ -222,6 +224,30 @@ export default function MemoryCard() {
                       </p>
                       <p className="mt-2 text-[11px] italic text-gilt-light/50">
                         那我替你记住。
+                      </p>
+                    </>
+                  )}
+
+                  {/* 描红笔迹：有笔迹的字才展示（全跳过就不占位） */}
+                  {tracedGlyphs?.some((t) => !!t) && (
+                    <>
+                      <p className="mt-6 text-[11px] tracking-widest text-gilt/60">
+                        你亲手描下的字
+                      </p>
+                      <div className="mt-3 flex justify-center gap-3">
+                        {tracedGlyphs.map((t, i) =>
+                          t ? (
+                            <img key={i} src={t} alt={`描红的第${i + 1}个字`} className="h-16 w-16 object-contain" />
+                          ) : (
+                            <span
+                              key={i}
+                              className="h-16 w-16 rounded-sm border border-dashed border-rice-200/20"
+                            />
+                          ),
+                        )}
+                      </div>
+                      <p className="mt-2 text-center text-[10px] text-rice-200/35">
+                        三千年前的笔画，你补了一笔。
                       </p>
                     </>
                   )}

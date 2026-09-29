@@ -24,6 +24,8 @@ export interface CardData {
   legacyLine: string | null;
   /** 用户在第一章转到的那个角度的截图（PNG dataURL），可能没有 */
   snapshot: string | null;
+  /** 金文描红的笔迹（每字一张 PNG dataURL，跳过的字为 null），可能没有 */
+  tracedGlyphs?: (string | null)[] | null;
   /** 解锁的细节数量，用来落一句「你打开了 N 处细节」 */
   discoveredCount: number;
 }
@@ -170,6 +172,14 @@ function measure(ctx: CanvasRenderingContext2D, data: CardData): { blocks: Block
     body += b.gapBefore + (b.label ? 46 : 0) + b.lines.length * b.lineHeight;
   }
 
+  // 描红笔迹行：小图横排一行 + 行下方小字（有笔迹的字才计）
+  const traced = data.tracedGlyphs ?? [];
+  const hasTraced = traced.some((t) => !!t);
+  const TRACED_SIZE = 150;
+  if (hasTraced) {
+    body += 52 + 46 + TRACED_SIZE + 34; // gapBefore + label + 图行 + 图下小字
+  }
+
   return {
     blocks,
     height: Math.round(headerBottom(!!data.snapshot) + body + FOOTER_H),
@@ -185,6 +195,10 @@ function measure(ctx: CanvasRenderingContext2D, data: CardData): { blocks: Block
 export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
   await ensureFonts();
   const snapshotImg = data.snapshot ? await loadImage(data.snapshot) : null;
+  // 描红笔迹逐张加载（null 的字画虚线占位）
+  const tracedImgs = await Promise.all(
+    (data.tracedGlyphs ?? []).map((t) => (t ? loadImage(t) : Promise.resolve(null))),
+  );
 
   // 先用一个临时上下文量高度
   const probe = document.createElement("canvas").getContext("2d");
@@ -255,6 +269,42 @@ export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
       ctx.fillText(line, PAD, y);
       y += b.lineHeight;
     }
+  }
+
+  // ── 描红笔迹：你亲手描下的字 ─────────────────────────────────────
+  const tracedImgsList = tracedImgs as (HTMLImageElement | null)[];
+  const hasTraced = tracedImgsList.some((img) => !!img);
+  if (hasTraced) {
+    y += 52;
+    ctx.fillStyle = "rgba(201,167,106,0.55)";
+    ctx.font = `20px ${SANS}`;
+    ctx.fillText("你亲手描下的字", PAD, y);
+    y += 46;
+
+    const count = tracedImgsList.length;
+    const size = 150;
+    const gap = 16;
+    const totalW = count * size + (count - 1) * gap;
+    let x = (W - totalW) / 2;
+    for (const img of tracedImgsList) {
+      if (img) {
+        ctx.drawImage(img, x, y, size, size);
+      } else {
+        // 跳过的字：虚线占位框
+        ctx.strokeStyle = "rgba(242,234,217,0.18)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([6, 6]);
+        ctx.strokeRect(x, y, size, size);
+        ctx.setLineDash([]);
+      }
+      x += size + gap;
+    }
+    y += size + 34;
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(242,234,217,0.4)";
+    ctx.font = `20px ${SANS}`;
+    ctx.fillText("三千年前的笔画，你补了一笔。", W / 2, y - 6);
+    ctx.textAlign = "left";
   }
 
   // ── 尾部：日期 + 痕迹 + 署名 ───────────────────────────────────────

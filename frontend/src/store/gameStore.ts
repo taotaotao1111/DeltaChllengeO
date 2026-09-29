@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import type { ChapterModule, ChatMessage, Scene } from "../types/artifact";
 import { DEFAULT_ARTIFACT_ID, getArtifact } from "../data/artifacts";
+import { track } from "../utils/tracking";
+
+/**
+ * 行为埋点说明：各 action 内的 track() 是纯发射（见 utils/tracking.ts）——
+ * 绝不抛错、不 await、不影响返回的 state。store 仍是「无 middleware 单一文件」。
+ */
 
 /**
  * 叙事主线阶段（v3：多件文物 · 章数可变）。
@@ -26,6 +32,8 @@ const MODULE_KIND_TO_SCENE: Record<ChapterModule["kind"], Scene> = {
   observe: "artifact-viewer",
   qa: "history",
   reveal: "inscription",
+  inscription: "inscription",
+  flip: "history",
 };
 
 interface GameState {
@@ -53,6 +61,12 @@ interface GameState {
    * 每个人留下的角度不同，卡片因此是独一份的。
    */
   artifactSnapshot: string | null;
+  /**
+   * 时间线终点「金文描红」的笔迹（每字一张 PNG dataURL，跳过的字为 null）。
+   * null = 还没描过（描红入口据此判断是否要先走描红仪式）。
+   * 与 artifactSnapshot 同模式：提前存，记忆卡打开时 canvas 已卸载截不到。
+   */
+  tracedGlyphs: (string | null)[] | null;
 
   setStage: (stage: Stage) => void;
   /** 选定一件文物（重置章序号，换文物就从第一章开始） */
@@ -69,6 +83,7 @@ interface GameState {
   closeMemoryCard: () => void;
   setUserLegacyLine: (line: string) => void;
   setArtifactSnapshot: (dataUrl: string) => void;
+  setTracedGlyphs: (dataUrls: (string | null)[] | null) => void;
   currentScene: () => Scene;
   /** 最近一条用户提问，用于记忆卡个性化「我的问题」 */
   lastUserQuestion: () => string | null;
@@ -89,19 +104,52 @@ export const useGameStore = create<GameState>((set, get) => ({
   selectedMemoryLine: null,
   userLegacyLine: null,
   artifactSnapshot: null,
+  tracedGlyphs: null,
 
-  setStage: (stage) => set({ stage }),
+  setStage: (stage) => {
+    track("stage_reach", { stage });
+    set({ stage });
+  },
 
-  selectArtifact: (id) => set({ currentArtifactId: id, chapterIndex: 0 }),
+  /** 选定一件文物：换文物 = 换一段相遇，上一段的对话、探索痕迹与纪念品都不许跟过来 */
+  selectArtifact: (id) => {
+    const revisit = get().currentArtifactId === id;
+    track("artifact_select", { artifactId: id, revisit });
+    set((s) =>
+      s.currentArtifactId === id
+        ? { chapterIndex: 0 }
+        : {
+            currentArtifactId: id,
+            chapterIndex: 0,
+            // 跨文物残留会污染 AI 上下文（新文物吃到旧文物的对话历史）
+            // 与记忆卡（旧文物的视角截图、留给未来的一句话），多展品后必踩
+            chatMessages: [],
+            discoveredDetails: [],
+            artifactSnapshot: null,
+            userLegacyLine: null,
+            tracedGlyphs: null,
+          },
+    );
+  },
 
-  setChapter: (index) => set({ chapterIndex: index }),
+  setChapter: (index) => {
+    track("chapter_view", { artifactId: get().currentArtifactId, chapterIndex: index });
+    set({ chapterIndex: index });
+  },
 
   markDiscovered: (id) =>
-    set((s) =>
-      s.discoveredDetails.includes(id)
-        ? s
-        : { discoveredDetails: [...s.discoveredDetails, id] },
-    ),
+    set((s) => {
+      if (s.discoveredDetails.includes(id)) return s;
+      // 埋点放在非幂等分支内：每个热点天然只计一次
+      const artifact = getArtifact(s.currentArtifactId);
+      const hotspotType = artifact.hotspots.find((h) => h.id === id)?.type ?? id;
+      track("hotspot_discover", {
+        artifactId: s.currentArtifactId,
+        hotspotId: id,
+        hotspotType: String(hotspotType),
+      });
+      return { discoveredDetails: [...s.discoveredDetails, id] };
+    }),
 
   toggleChat: (open) =>
     set((s) => ({ chatOpen: open ?? !s.chatOpen, memoryCardOpen: false })),
@@ -126,11 +174,17 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setChatLoading: (loading) => set({ chatLoading: loading }),
 
-  openMemoryCard: (line) =>
-    set({ memoryCardOpen: true, selectedMemoryLine: line ?? null, chatOpen: false }),
+  openMemoryCard: (line) => {
+    track("memory_card_open", {
+      artifactId: get().currentArtifactId,
+      discoveredCount: get().discoveredDetails.length,
+    });
+    set({ memoryCardOpen: true, selectedMemoryLine: line ?? null, chatOpen: false });
+  },
   closeMemoryCard: () => set({ memoryCardOpen: false }),
   setUserLegacyLine: (line) => set({ userLegacyLine: line }),
   setArtifactSnapshot: (dataUrl) => set({ artifactSnapshot: dataUrl }),
+  setTracedGlyphs: (dataUrls) => set({ tracedGlyphs: dataUrls }),
 
   currentScene: () => {
     const s = get();
