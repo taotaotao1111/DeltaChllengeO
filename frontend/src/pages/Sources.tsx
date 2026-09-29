@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import InkBackground from "../components/shared/InkBackground";
 import { ARTIFACT_REGISTRY, GALLERY_MANIFEST } from "../data/artifacts";
@@ -62,6 +63,100 @@ const SECTIONS = [
   },
 ];
 
+interface StatsRatios {
+  chatBasis: Record<string, number>;
+  chatUnknownRate: number | null;
+  questionMix: Record<string, number>;
+  completionRate: number | null;
+  memoryCardRate: number | null;
+  avgHotspots: number | null;
+}
+
+interface StatsResponse {
+  since: number;
+  totals: Record<string, number>;
+  ratios: StatsRatios;
+}
+
+/** 百分比条的一段 */
+function Bar({ label, value, total }: { label: string; value: number; total: number }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-20 shrink-0 text-right text-xs text-rice-200/50">{label}</span>
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-rice-200/10">
+        <div className="h-full rounded-full bg-gilt/70" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-10 shrink-0 text-xs text-rice-200/50">{pct}%</span>
+    </div>
+  );
+}
+
+/**
+ * 可信度报告：护栏不是形容词，是可度量的数字。
+ * 数据来自 /api/stats（内存聚合，无个人信息）；服务不可用时降级为静态说明——
+ * 护栏本身不依赖这份统计，始终生效。
+ */
+function TrustReport() {
+  const [stats, setStats] = useState<StatsResponse | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    // ⚠️ 相对路径：/sources 页面在 /s/<alias>/sources 下，<base> 会正确解析
+    fetch("api/stats")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then(setStats)
+      .catch(() => setFailed(true));
+  }, []);
+
+  const chatTotal = stats ? (stats.totals.chat_reply ?? 0) : 0;
+  const basis = stats?.ratios.chatBasis ?? {};
+
+  return (
+    <div>
+      <h2 className="mb-3 text-sm tracking-wide text-gilt-light/80">AI 回答可信度报告</h2>
+      {failed ? (
+        <ul className="space-y-2">
+          <li className="text-sm leading-7 text-rice-200/60">
+            · 报告暂不可用（统计服务未启动或网络不可达）。对话护栏本身不依赖此统计，始终生效。
+          </li>
+        </ul>
+      ) : !stats ? (
+        <p className="text-sm leading-7 text-rice-200/40">正在拉取统计……</p>
+      ) : chatTotal === 0 ? (
+        <ul className="space-y-2">
+          <li className="text-sm leading-7 text-rice-200/60">
+            · 本服务启动以来还没有人向文物提问。提问后，这里会展示回答依据档位与「无法回答」占比的实时统计。
+          </li>
+        </ul>
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm leading-7 text-rice-200/60">
+            · 服务启动以来共 {chatTotal} 次对话。其中回答「无法回答」（史料没有明确答案，
+            不编造）的占比为{" "}
+            <span className="text-gilt-light">
+              {stats.ratios.chatUnknownRate === null
+                ? "—"
+                : `${Math.round(stats.ratios.chatUnknownRate * 100)}%`}
+            </span>
+            。
+          </p>
+          <div className="space-y-2">
+            <p className="text-xs tracking-widest text-gilt/60">回答依据档位</p>
+            <Bar label="已核实" value={basis.verified ?? 0} total={chatTotal} />
+            <Bar label="合理推测" value={basis.inferred ?? 0} total={chatTotal} />
+            <Bar label="无法回答" value={basis.unknown ?? 0} total={chatTotal} />
+          </div>
+          <p className="text-[11px] leading-5 text-rice-200/30">
+            统计自服务最近一次启动（{new Date(stats.since).toLocaleString("zh-CN")}）起累计，
+            为聚合计数、不含任何问题内容与个人信息；服务重启后从零开始。
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Sources() {
   return (
     <div className="relative min-h-dvh w-full px-6 py-16 sm:px-16">
@@ -90,6 +185,7 @@ export default function Sources() {
               </ul>
             </div>
           ))}
+          <TrustReport />
         </div>
       </div>
     </div>

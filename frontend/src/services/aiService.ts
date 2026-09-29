@@ -93,8 +93,10 @@ async function streamFromBackend(
  * 仍在前端本地判定，而不是要求模型输出结构化字段——理由是模型多输出一层
  * JSON 结构就多一处可能跑偏的地方，而这里的判定规则（命中的 fact 是否全部
  * verified）本身是确定性的，跟文本由谁生成无关。判定口径与 Mock 保持一致。
+ *
+ * 导出供 scripts/eval-factguard.mjs 断言（护栏评测集）。
  */
-function judgeFactBasis(
+export function judgeFactBasis(
   userMessage: string,
   context: ArtifactContext,
 ): FactConfidence | "unknown" {

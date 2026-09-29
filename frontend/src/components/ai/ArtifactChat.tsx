@@ -6,6 +6,8 @@ import { streamArtifactReply } from "../../services/aiService";
 import ChatMessage from "./ChatMessage";
 import SuggestedQuestions from "./SuggestedQuestions";
 import type { ArtifactContext, ChatMessage as ChatMessageType } from "../../types/artifact";
+import { classifyQuestion } from "../../utils/factGuard";
+import { track } from "../../utils/tracking";
 
 const OPENING_MESSAGE =
   "你可以问我任何关于「我」的问题。\n我知道的，会告诉你；我不知道的，也会告诉你。";
@@ -52,6 +54,10 @@ export default function ArtifactChat() {
     const trimmed = text.trim();
     if (!trimmed || chatLoading) return;
 
+    // 埋点：提问分流在这里判，factBasis 等 onDone 回来再合并发送
+    const questionKind = classifyQuestion(trimmed);
+    const artifactIdForTrack = artifact.id;
+
     const userMsg: ChatMessageType = {
       id: `u-${Date.now()}`,
       role: "user",
@@ -91,6 +97,11 @@ export default function ArtifactChat() {
         onDone: (full, factBasis) => {
           patchLastMessage({ content: full, factBasis });
           setChatLoading(false);
+          track("chat_reply", {
+            artifactId: artifactIdForTrack,
+            questionKind,
+            factBasis,
+          });
         },
         onError: () => setChatLoading(false),
       },

@@ -226,6 +226,95 @@ app.post('/api/chat', async (c) => {
 });
 
 // ---------------------------------------------------------------------------
+// 行为埋点（内存态）
+// ---------------------------------------------------------------------------
+
+/**
+ * 只存枚举维度与聚合计数：不存问题文本、不存 userId（userId 仅用于鉴权）。
+ * 内存存储，Pod 重启 / 蓝绿切换即清零——统计窗口如实暴露给前端（since 字段）。
+ */
+const TRACK_EVENTS = {
+  stage_reach: ['stage'],
+  artifact_select: ['artifactId', 'revisit'],
+  chapter_view: ['artifactId', 'chapterIndex'],
+  chapter_complete: ['artifactId', 'chapterIndex'],
+  hotspot_discover: ['artifactId', 'hotspotId', 'hotspotType'],
+  chat_reply: ['artifactId', 'questionKind', 'factBasis'],
+  memory_card_open: ['artifactId', 'discoveredCount'],
+  glyph_trace_done: ['artifactId'],
+  flip_card_view: ['artifactId', 'cardId', 'face'],
+  inscription_section_view: ['artifactId', 'sectionIndex'],
+};
+const TRACK_ENUMS = {
+  'chat_reply|questionKind': ['general', 'experiential', 'persona'],
+  'chat_reply|factBasis': ['verified', 'inferred', 'unknown'],
+};
+const TRACK_START = Date.now();
+const trackTotals = new Map(); // name -> count
+const trackDims = new Map();   // `${name}|${field}=${value}` -> count
+
+function trackBump(name, props) {
+  trackTotals.set(name, (trackTotals.get(name) ?? 0) + 1);
+  for (const field of TRACK_EVENTS[name]) {
+    const v = props?.[field];
+    if (v === undefined || v === null) continue;
+    const enumOk = TRACK_ENUMS[`${name}|${field}`];
+    if (enumOk && !enumOk.includes(String(v))) continue; // 枚举外的值丢弃
+    const key = `${name}|${field}=${String(v).slice(0, 40)}`;
+    trackDims.set(key, (trackDims.get(key) ?? 0) + 1);
+  }
+}
+
+app.post('/api/track', async (c) => {
+  requireUser(c); // 铁律：只在 handler 内，绝不做成全局中间件
+  const body = await c.req.json().catch(() => ({}));
+  const events = Array.isArray(body?.events) ? body.events.slice(0, 50) : [];
+  let accepted = 0;
+  for (const ev of events) {
+    if (!ev || typeof ev.name !== 'string') continue;
+    if (!Object.prototype.hasOwnProperty.call(TRACK_EVENTS, ev.name)) continue; // 白名单外静默丢弃
+    trackBump(ev.name, ev.props);
+    accepted++;
+  }
+  return c.json({ ok: true, accepted });
+});
+
+/** 某事件某维度的分桶 { value: count } */
+function trackDim(name, field) {
+  const out = {};
+  const prefix = `${name}|${field}=`;
+  for (const [k, v] of trackDims) {
+    if (k.startsWith(prefix)) out[k.slice(prefix.length)] = v;
+  }
+  return out;
+}
+
+app.get('/api/stats', (c) => {
+  // 不加 requireUser：Sources 是公开页，且数据已脱敏为聚合计数
+  const chatTotal = trackTotals.get('chat_reply') ?? 0;
+  const selects = trackTotals.get('artifact_select') ?? 0;
+  const basis = trackDim('chat_reply', 'factBasis');
+  const kinds = trackDim('chat_reply', 'questionKind');
+  const chapterCompletes = trackDim('chapter_complete', 'chapterIndex');
+  const lastChapterIdx = Object.keys(chapterCompletes)
+    .map(Number)
+    .reduce((a, b) => Math.max(a, b), -1);
+
+  return c.json({
+    since: TRACK_START,
+    totals: Object.fromEntries(trackTotals),
+    ratios: {
+      chatBasis: basis,
+      chatUnknownRate: chatTotal ? (basis.unknown ?? 0) / chatTotal : null,
+      questionMix: kinds,
+      completionRate: selects > 0 && lastChapterIdx >= 0 ? chapterCompletes[String(lastChapterIdx)] / selects : null,
+      memoryCardRate: selects ? (trackTotals.get('memory_card_open') ?? 0) / selects : null,
+      avgHotspots: selects ? (trackTotals.get('hotspot_discover') ?? 0) / selects : null,
+    },
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 静态前端托管 + SPA fallback
 // ---------------------------------------------------------------------------
 
