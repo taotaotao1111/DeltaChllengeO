@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
-import InkBackground from "../shared/InkBackground";
-import ChapterBackdrop from "../shared/ChapterBackdrop";
 import ObserveModule from "./modules/ObserveModule";
 import QaModule from "./modules/QaModule";
 import RevealModule from "./modules/RevealModule";
+import InscriptionModule from "./modules/InscriptionModule";
+import FlipCardModule from "./modules/FlipCardModule";
 import { getArtifact } from "../../data/artifacts";
 import { useGameStore } from "../../store/gameStore";
+import { track } from "../../utils/tracking";
 
 /**
  * 章节外壳：把「第几章」这件事收拢到一处。
@@ -20,6 +21,7 @@ export default function ChapterHost() {
   const chapterIndex = useGameStore((s) => s.chapterIndex);
   const setStage = useGameStore((s) => s.setStage);
   const setChapter = useGameStore((s) => s.setChapter);
+  const markDiscovered = useGameStore((s) => s.markDiscovered);
 
   const artifact = getArtifact(artifactId);
   const chapter = artifact.chapters[chapterIndex];
@@ -29,17 +31,23 @@ export default function ChapterHost() {
   const isLast = chapterIndex >= artifact.chapters.length - 1;
 
   const onBack = () => (isFirst ? setStage("gallery") : setChapter(chapterIndex - 1));
-  const onNext = () => (isLast ? setStage("timeline") : setChapter(chapterIndex + 1));
+  // 每次 onNext = 当前章完成（倒退重看不触发——setChapter 的 chapter_view 才是 view 语义）。
+  // 同时标记章节已读（chapter:<id> 约定，ChapterMenu 的目录用），幂等去重天然成立
+  const onNext = () => {
+    track("chapter_complete", { artifactId: artifactId, chapterIndex });
+    markDiscovered(`chapter:${chapter.id}`);
+    if (isLast) setStage("timeline");
+    else setChapter(chapterIndex + 1);
+  };
 
   const module = chapter.module;
 
   return (
     <div className="relative h-dvh w-full overflow-hidden">
-      {chapter.backdrop ? (
-        <ChapterBackdrop motif={chapter.backdrop} glyphs={chapter.backdropGlyphs} />
-      ) : (
-        <InkBackground glow={1} />
-      )}
+      {/*
+        章节背景层由 Home 统一铺（放在 AnimatePresence 之外）：切章的 0.6s
+        mode="wait" 空窗里背景若跟着章节卸载，整屏会闪一下黑。这里不再铺。
+      */}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
@@ -81,6 +89,10 @@ export default function ChapterHost() {
           onNext={onNext}
         />
       )}
+      {module.kind === "inscription" && (
+        <InscriptionModule artifact={artifact} data={module} onNext={onNext} />
+      )}
+      {module.kind === "flip" && <FlipCardModule artifact={artifact} data={module} onNext={onNext} />}
     </div>
   );
 }

@@ -90,6 +90,7 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
           characters={data.focus.characters}
           explainLines={data.focus.explainLines}
           facts={focusFacts}
+          sideImage={data.focus.sideImage}
           onClose={advance}
         />
       )}
@@ -136,7 +137,7 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
                 onClick={onNext}
                 className="rounded-full border border-rice-100/20 px-6 py-2.5 text-sm tracking-wide text-rice-100/80 transition hover:border-rice-100/40 hover:text-rice-100"
               >
-                看看我经历了多久 →
+                {data.nextLabel ?? "看看我经历了多久 →"}
               </button>
             </motion.div>
           </AnimatePresence>

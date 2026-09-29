@@ -188,7 +188,7 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
         >
           <SpeechReveal
             lines={LINES}
-            lineDelay={2200}
+            lineDelay={1500}
             onComplete={() => setReady(true)}
             className="max-w-md"
             textClassName="font-title text-lg leading-relaxed text-rice-100/90 sm:text-2xl"

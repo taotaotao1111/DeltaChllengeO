@@ -143,7 +143,7 @@ export const changxin: Artifact = {
 
   galleryReveal: {
     greetingLines: ["你把灯点着了吗。", "还没有。", "那先看看我——他们叫我长信宫灯。"],
-    lineDelay: 2000,
+    lineDelay: 1500,
     /**
      * 刻意不设竞猜。
      * 竞猜要立在一个「大众普遍误解、而史实能纠正」的点上；这件文物的史实
@@ -159,7 +159,7 @@ export const changxin: Artifact = {
       module: {
         kind: "qa",
         openingLines: ["我身上有两个字。", "那两个字不是我的名字。", "是拥有过我的地方的名字。"],
-        lineDelay: 2200,
+        lineDelay: 1500,
         prompt: "你想先问哪一个？",
         items: [
           {

@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useGameStore } from "../../store/gameStore";
+import ChapterMenu from "./ChapterMenu";
 
 type NavKey = "chapter" | "timeline" | "chat";
 
@@ -11,12 +13,16 @@ const ITEMS: { key: NavKey; label: string }[] = [
 
 /**
  * 全局仅有的三个入口，克制地悬浮在屏幕边缘，不做传统导航栏样式。
+ *
+ * 「认识我」展开章节目录（ChapterMenu）——章数由文物档案决定，五章之后
+ * 固定回第一章的旧导航模型跟不上了。点目录外的任何处关闭。
  */
 export default function SectionNav() {
   const stage = useGameStore((s) => s.stage);
   const setStage = useGameStore((s) => s.setStage);
-  const setChapter = useGameStore((s) => s.setChapter);
   const toggleChat = useGameStore((s) => s.toggleChat);
+
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (stage === "museum" || stage === "gallery") return null;
 
@@ -25,35 +31,47 @@ export default function SectionNav() {
       toggleChat(true);
       return;
     }
-    // 「认识我」的语义一直是"回到当前文物的第一章"
-    if (key === "chapter") setChapter(0);
+    if (key === "chapter") {
+      // 已在读章状态时再点一次 = 回第一章（快捷语义保留）；否则展开目录
+      if (stage === "chapter") setMenuOpen(true);
+      else {
+        setStage("chapter");
+        setMenuOpen(true);
+      }
+      return;
+    }
     setStage(key);
   };
 
-  const isActive = (key: string) => stage === key;
+  const isActive = (key: string) =>
+    key === "chapter" ? stage === "chapter" || menuOpen : stage === key;
 
   return (
-    <motion.nav
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.4, duration: 0.8 }}
-      className="fixed left-1/2 top-[calc(0.75rem+var(--safe-top))] z-40 -translate-x-1/2 sm:top-6"
-    >
-      <div className="flex items-center gap-0.5 rounded-full border border-gilt/25 bg-ink-900/70 px-1 py-1 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.4)] sm:gap-1 sm:px-1.5 sm:py-1.5">
-        {ITEMS.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => handleClick(item.key)}
-            className={`whitespace-nowrap rounded-full px-2.5 py-1.5 text-[12px] tracking-wide transition-colors duration-300 sm:px-4 sm:text-[13px] ${
-              isActive(item.key)
-                ? "bg-gilt/20 text-gilt-light"
-                : "text-rice-200/70 hover:text-rice-100"
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </motion.nav>
+    <>
+      <motion.nav
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.8 }}
+        className="fixed left-1/2 top-[calc(0.75rem+var(--safe-top))] z-40 -translate-x-1/2 sm:top-6"
+      >
+        <div className="flex items-center gap-0.5 rounded-full border border-gilt/25 bg-ink-900/70 px-1 py-1 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.4)] sm:gap-1 sm:px-1.5 sm:py-1.5">
+          {ITEMS.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => handleClick(item.key)}
+              className={`whitespace-nowrap rounded-full px-2.5 py-1.5 text-[12px] tracking-wide transition-colors duration-300 sm:px-4 sm:text-[13px] ${
+                isActive(item.key)
+                  ? "bg-gilt/20 text-gilt-light"
+                  : "text-rice-200/70 hover:text-rice-100"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </motion.nav>
+
+      <ChapterMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+    </>
   );
 }

@@ -6,8 +6,9 @@ import { motion } from "framer-motion";
  * - forge  第二章：铸造作坊。炉膛的火自下而上，陶范的合范缝，飘起的火星。
  * - patina 第三章：锈色与字。铜绿斑块 + 内壁上大到看不清的字影。
  * - strata 时间线：三千年。横向地层层理，越往下越暗——它有大半辈子埋在土里。
+ * - scrap  漂流记章：废品堆场。暗绿铜锈、压痕暗带、一线冷白天光——那段日子没有火。
  */
-type Motif = "forge" | "patina" | "strata";
+type Motif = "forge" | "patina" | "strata" | "scrap";
 
 interface ChapterBackdropProps {
   motif: Motif;
@@ -190,12 +191,76 @@ function StrataMotif() {
   );
 }
 
+function ScrapMotif() {
+  return (
+    <>
+      {/*
+        废品堆场：比 patina 更暗、更哑光、更「脏」。
+        底部大块暗绿锈色（无任何暖光——forge 有火，这里只有堆场），
+        斑驳锈点像刚从废铜堆里翻出来的皮壳，
+        中部一道水平压痕暗带当卡片的「桌面」，
+        顶部留一线惨白天光，暗示堆场是露天的。
+      */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 90% at 50% 108%, rgba(58,72,58,0.38) 0%, rgba(44,56,44,0.20) 42%, rgba(10,10,12,0) 78%)",
+        }}
+      />
+      {/* 斑驳锈点：固定位置的暗绿小斑点，不闪不动——废铜不需要动画 */}
+
+      <div className="absolute inset-0">
+        {[
+          { l: 14, t: 62, w: 26, h: 12 },
+          { l: 38, t: 74, w: 34, h: 16 },
+          { l: 68, t: 58, w: 22, h: 10 },
+          { l: 82, t: 78, w: 18, h: 9 },
+          { l: 8, t: 82, w: 20, h: 10 },
+          { l: 54, t: 66, w: 16, h: 8 },
+        ].map((s, i) => (
+          <div
+            key={i}
+            className="absolute rounded-[45%] blur-md"
+            style={{
+              left: `${s.l}%`,
+              top: `${s.t}%`,
+              width: `${s.w}vw`,
+              height: `${s.h}vh`,
+              background: `radial-gradient(closest-side, rgba(84,104,84,${0.10 + (i % 3) * 0.04}), transparent 72%)`,
+            }}
+          />
+        ))}
+      </div>
+      {/* 层层叠压的压痕暗带：堆场里金属堆金属的阴影线 */}
+      <div
+        className="absolute inset-x-0 top-[58%] h-[10vh] opacity-[0.5]"
+        style={{
+          background:
+            "linear-gradient(to bottom, transparent, rgba(10,12,10,0.55) 40%, rgba(10,12,10,0.55) 60%, transparent)",
+        }}
+      />
+      {/* 露天堆场的天光：冷、弱，与 strata 的地表天光区分 */}
+      <motion.div
+        className="absolute inset-x-0 top-0 h-[26vh]"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(214,216,208,0.055), rgba(214,216,208,0.012) 55%, transparent)",
+        }}
+        animate={{ opacity: [0.65, 0.9, 0.65] }}
+        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </>
+  );
+}
+
 export default function ChapterBackdrop({ motif, dim = 0, glyphs }: ChapterBackdropProps) {
   return (
     <div className="paper-noise fixed inset-0 -z-10 overflow-hidden bg-ink-900" aria-hidden>
       {motif === "forge" && <ForgeMotif />}
       {motif === "patina" && <PatinaMotif glyphs={glyphs} />}
       {motif === "strata" && <StrataMotif />}
+      {motif === "scrap" && <ScrapMotif />}
 
       {/*
         统一的舞台压暗：四边收进去，正文所在的中间带最干净。

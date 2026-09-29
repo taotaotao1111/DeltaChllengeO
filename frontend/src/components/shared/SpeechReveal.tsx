@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface SpeechRevealProps {
   lines: string[];
@@ -13,12 +13,13 @@ interface SpeechRevealProps {
 }
 
 /**
- * 逐句显现的对白组件：一次只显示一句，停顿后切换到下一句。
+ * 逐句显现的对白组件：读过的句子向上收小变暗，当前句保持全大——
+ * 像一行行往上滚动的独白，读者随时能看到上文。
  * 点击/点按可以跳过等待，立即进入下一句——避免用户觉得"被迫等待"。
  */
 export default function SpeechReveal({
   lines,
-  lineDelay = 2200,
+  lineDelay = 1500,
   onComplete,
   className = "",
   textClassName = "",
@@ -71,19 +72,28 @@ export default function SpeechReveal({
   const visibleIndex = holdLast ? Math.min(index, lines.length - 1) : index;
 
   return (
-    <div className={`cursor-pointer select-none ${className}`} onClick={advance}>
-      <AnimatePresence mode="wait">
-        <motion.p
-          key={visibleIndex}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.7, ease: "easeOut" }}
-          className={textClassName}
-        >
-          {lines[visibleIndex]}
-        </motion.p>
-      </AnimatePresence>
+    <div
+      className={`flex cursor-pointer select-none flex-col items-center gap-2.5 ${className}`}
+      onClick={advance}
+    >
+      {lines.slice(0, visibleIndex + 1).map((line, i) => {
+        const isCurrent = i === visibleIndex;
+        return (
+          <motion.p
+            key={i}
+            initial={{ opacity: 0, y: 18, scale: 0.75 }}
+            animate={
+              isCurrent
+                ? { opacity: 1, y: 0, scale: 1 }
+                : { opacity: 0.35, y: 0, scale: 0.72 }
+            }
+            transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+            className={textClassName}
+          >
+            {line}
+          </motion.p>
+        );
+      })}
     </div>
   );
 }
