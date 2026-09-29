@@ -72,12 +72,18 @@ export default function QaModule({ artifact, data, presence, onNext }: QaModuleP
                 )}
               </AnimatePresence>
 
-              <div className="flex flex-wrap justify-center gap-2.5">
+              {/* 选项按钮：定宽等长（用户反馈桌面版长短不一——「用来喝酒」4 字
+                  vs「用来纪念一件重要的事情」11 字，紧凑排布时格外明显）。
+                  w-52 容纳最长选项；窄屏 flex-wrap 换行。
+                  mx-auto 必须有：块级 flex 容器在更宽的父块里默认左对齐，
+                  justify-center 只管容器内部——少了它整个按钮串偏左 96px
+                  （用户截图「内容瘫在左半屏」的根因）。 */}
+              <div className="mx-auto flex max-w-sm flex-wrap justify-center gap-2.5">
                 {data.items.map((qa) => (
                   <button
                     key={qa.id}
                     onClick={() => handleAsk(qa)}
-                    className={`rounded-full border px-4 py-2 text-xs transition ${
+                    className={`w-52 truncate rounded-full border px-4 py-2 text-xs transition ${
                       visited.includes(qa.id)
                         ? "border-gilt/40 text-gilt-light/70"
                         : "border-rice-100/20 text-rice-100/80 hover:border-gilt/40 hover:text-gilt-light"

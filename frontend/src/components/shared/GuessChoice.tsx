@@ -47,7 +47,10 @@ export default function GuessChoice({
             <p className="font-title mb-6 text-lg leading-relaxed text-rice-100 sm:text-xl">
               {question}
             </p>
-            <div className="flex flex-col items-stretch gap-2.5 sm:items-center">
+            {/* 选项等宽：桌面版曾是 sm:items-center（hug 内容宽度，「用来喝酒」
+                和「用来纪念一件重要的事情」长短悬殊——用户反馈的长短不一）。
+                统一 items-stretch + 列定宽：三颗胶囊永远同宽同长。 */}
+            <div className="mx-auto flex w-72 flex-col items-stretch gap-2.5">
               {options.map((opt) => (
                 <button
                   key={opt.id}

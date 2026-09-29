@@ -21,10 +21,11 @@ const warnings = [];
 /**
  * 不引入 ts 运行时，直接按文本做检查——档案是手写的字面量对象，
  * 用正则读取足够可靠，也省得为一个自检脚本装一套 TS 编译链。
+ *
+ * NON_ARTIFACTS：目录里不是文物档案的辅助数据文件（如金文字形表）。
  */
-const files = fs
-  .readdirSync(DATA_DIR)
-  .filter((f) => f.endsWith(".ts") && f !== "index.ts");
+const NON_ARTIFACTS = new Set(["index.ts", "hezun-glyphs.ts"]);
+const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".ts") && !NON_ARTIFACTS.has(f));
 
 for (const file of files) {
   const src = fs.readFileSync(path.join(DATA_DIR, file), "utf8");
