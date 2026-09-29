@@ -99,8 +99,8 @@ export interface ArtifactModel {
   rotation?: [number, number, number];
 }
 
-/** 章节背景母题，对应 ChapterBackdrop 的三种视觉 */
-export type ChapterBackdropMotif = "forge" | "patina" | "strata";
+/** 章节背景母题，对应 ChapterBackdrop 的四种视觉（scrap = 废铜堆场的暗绿锈色） */
+export type ChapterBackdropMotif = "forge" | "patina" | "strata" | "scrap";
 
 /** 猜一猜的一个选项（展厅揭幕与章节内竞猜共用） */
 export interface GuessOptionData {
@@ -137,6 +137,12 @@ export interface ObserveModuleData {
   lineDelay: number;
   /** 还没看完就要往下走时的提示 */
   notAllFoundHint: string;
+  /**
+   * 自我介绍视频（可选）：开场白念完后出现的「听我完整讲一遍」入口，
+   * 全屏浮层播放，播完/关闭回出口。src 是 public 下相对路径（不带开头斜杠），
+   * durationSec 只用于入口文案（45 秒）。
+   */
+  introVideo?: { src: string; poster?: string; durationSec: number };
 }
 
 /** 问答模块：一组「你想先听哪一个」 */
@@ -159,12 +165,93 @@ export interface RevealModuleData {
   lineDelay: number;
   /** 亲手擦掉覆盖物才看得见字的那一步。leadLines 一句一行（原样保留换行） */
   derust?: { leadLines: string[]; footnote: string };
-  /** 关键字逐字浮现的特写。explainLines 一句一行 */
-  focus?: { characters: string[]; explainLines: string[]; factIds: string[] };
+  /** 关键字逐字浮现的特写。explainLines 一句一行；sideImage 可选实物配图 */
+  focus?: {
+    characters: string[];
+    explainLines: string[];
+    factIds: string[];
+    /** 实物配图（如「宅兹中国」文创摆件照片）；src 必须是 public 下的相对路径（不带开头斜杠） */
+    sideImage?: { src: string; caption?: string };
+  };
   guess?: GuessBlock;
   closingLines: string[];
   /** 看完特写就算探索过的热点 id */
   marksDiscovered?: string;
+  /** 收尾出口按钮的文案（默认「看看我经历了多久 →」；下一章不是时间线时按叙事写过渡文案） */
+  nextLabel?: string;
+}
+
+/**
+ * 铭文解读模块：122 字分节读——每节「金文原字 → 释文 → 第一人称讲述」三层渐进。
+ *
+ * 字形数据见 data/artifacts/hezun-glyphs.ts（按字索引的 SVG path），
+ * 未精摹的字以低透明度示意字位呈现（与 RustReveal 的抽象笔画块同一纪律）。
+ */
+export interface InscriptionSection {
+  id: string;
+  /** 本节金文字符（按铭文顺序）；精摹字见 glyphs 数据模块 */
+  characters: string[];
+  /** 本节在铭文全文 fullText 中的字序范围 [start, end)（start 含 end 不含）——卷面点亮与镜头定位都靠它 */
+  range: [number, number];
+  /** 今译释文（正文，不带场景注——场景注单独走 sceneNote） */
+  transcript: string;
+  /** 本节的场景小标题（如「武王告天」），显示为释文标签；编者注不混进释文正文 */
+  sceneNote?: string;
+  /** 何尊第一人称讲述，一句一行 */
+  narrationLines: string[];
+  /** 学界分歧释读标注（可选）。UI 上弱化为讲述下方的小字说明，不展开学术综述 */
+  debateNote?: string;
+  /** 本节是否为高潮节（如「宅兹中国」），以全屏逐字浮现呈现 */
+  isClimax?: boolean;
+  factIds: string[];
+}
+
+export interface InscriptionModuleData {
+  kind: "inscription";
+  openingLines: string[];
+  lineDelay: number;
+  /**
+   * 铭文全文逐字序列（含重文与损泐占位字「□」）。卷面一次性铺开整卷，
+   * 逐节 range 决定点亮与镜头位置。来源必须是可查证的通行释读，不能凭记忆编写。
+   */
+  fullText: string[];
+  sections: InscriptionSection[];
+  /** 全览态的一句提示（内容文案，进档案不硬编码） */
+  overviewHint?: string;
+  closingLines: string[];
+  /** 字形摹写的来源说明，显示在章节内（沿 RustReveal footnote 的纪律：不伪装成拓片） */
+  footnote: string;
+  /** 看完即算探索过的热点 id */
+  marksDiscovered?: string;
+}
+
+/**
+ * 翻牌卡片模块：正面 STORY 口白 / 背面 FACT 核实卡。
+ *
+ * 翻牌这个动作本身就是 FACT/STORY 双层的可视化——
+ * 用户亲手完成一次「情绪 → 求证」。
+ */
+export interface FlipCardData {
+  id: string;
+  /** 正面：STORY 层第一人称口白 */
+  front: string;
+  /** 背面：FACT 核实卡（来源 + 置信度） */
+  back: { content: string; source: string; confidence: FactConfidence; factId?: string };
+  /** 背面额外一行小字（关键卡的专属细节，如出土地点）；不配置则不显示 */
+  hint?: string;
+}
+
+export interface FlipModuleData {
+  kind: "flip";
+  openingLines: string[];
+  lineDelay: number;
+  cards: FlipCardData[];
+  /**
+   * 读完所有卡后的「合成时刻」：STORY 卡与 FACT 卡叠合、浮现这句点题文案。
+   * 不写则读完最后一张直接进 closing——不写此字段的文物没有这个仪式也成立。
+   */
+  mergeLine?: string;
+  closingLines: string[];
 }
 
 /**
@@ -173,7 +260,12 @@ export interface RevealModuleData {
  * 新增一种叙事玩法 = 加一个 kind + 一个模块组件，已有 kind 一行都不用动。
  * （长信宫灯的「光点聚形」开场就会走这个口子进来。）
  */
-export type ChapterModule = ObserveModuleData | QaModuleData | RevealModuleData;
+export type ChapterModule =
+  | ObserveModuleData
+  | QaModuleData
+  | RevealModuleData
+  | InscriptionModuleData
+  | FlipModuleData;
 
 export interface ArtifactChapter {
   id: string;
@@ -181,6 +273,8 @@ export interface ArtifactChapter {
   label: string;
   /** 「我是谁」 */
   title: string;
+  /** 章节目录浮层里的一句话钩子（未读时的引子；不写则浮层只显示标题） */
+  hook?: string;
   backdrop?: ChapterBackdropMotif;
   /** patina 母题背景里那层巨大字影用哪几个字（必须是这件文物身上有据可查的字） */
   backdropGlyphs?: string[];
@@ -267,6 +361,11 @@ export interface Artifact {
    * 答不了的问题（何尊的「谁埋的你」预设了入土情节，对别的文物并不成立）。
    */
   mock?: { extraUnknownTriggers?: string[] };
+  /**
+   * 时间线终点的「金文描红」仪式：要描哪几个字（须在 glyphs 数据模块里有精摹字形）。
+   * 不写 = 该文物没有描红步骤，记忆卡直出。何尊写「宅兹中国」四字。
+   */
+  traceGlyphs?: { chars: string[] };
 }
 
 /** 3D / 2.5D / 纯图片 三档降级展示模式 */
