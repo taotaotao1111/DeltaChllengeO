@@ -75,7 +75,6 @@ export default function RustReveal({
           threshold={0.45}
           onRevealed={onRevealed}
           hint="用手指刮一刮，看看锈下面有什么"
-          skipLabel="直接看看"
           coverImageSrc={coverImageSrc}
           // 放大刮区（用户反馈盒子小了）；高度驱动 + 2:3 贴合器物照片比例
           className="mx-auto aspect-[2/3] h-[52vh] max-h-[560px] overflow-hidden rounded-lg"

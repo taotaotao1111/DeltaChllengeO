@@ -14,7 +14,10 @@ interface FogWipeRevealProps {
    * - `rust` 铜锈，颗粒质感、偏绿，用于第三章"清理除锈"
    */
   tone?: "fog" | "rust";
-  /** 「直接看看」兜底按钮的文案 */
+  /**
+   * 跳过按钮文案：传了才渲染（第三章刮卡按用户要求不显示；
+   * 展厅雾擦需要兜底入口所以传「直接看看」）。
+   */
   skipLabel?: string;
   /**
    * 图片盖层：不传时遮罩是 canvas 程序纹理（雾/锈）；
@@ -73,7 +76,7 @@ export default function FogWipeReveal({
   hint = "在雾气上划一划，看看是谁",
   className = "",
   tone = "fog",
-  skipLabel = "直接看看",
+  skipLabel,
   coverImageSrc,
   style,
 }: FogWipeRevealProps) {
@@ -366,7 +369,7 @@ export default function FogWipeReveal({
         )}
       </AnimatePresence>
 
-      {/* 右上角进度角标（金色胶囊）：用户要的是「刮了多少」而不是跳过按钮 */}
+      {/* 右上角进度角标（金色胶囊） */}
       {!faded && (
         <span
           className="pointer-events-none absolute right-3 top-3 z-10 rounded-full border px-2.5 py-1 text-[11px] tracking-wide text-gilt-light"
@@ -376,15 +379,15 @@ export default function FogWipeReveal({
             backdropFilter: "blur(2px)",
           }}
         >
-          已刮 {progress}%
+          除锈 {progress}%
         </span>
       )}
 
-      {/* 兜底文字链挪到底部（无障碍保留，不抢角标位） */}
-      {!faded && (
+      {/* 跳过兜底（可选）：传 skipLabel 才渲染（第三章刮卡不传，按用户要求去掉） */}
+      {!faded && skipLabel && (
         <button
           onClick={forceReveal}
-          className="absolute inset-x-0 bottom-2 z-10 mx-auto w-fit text-[11px] text-rice-200/40 transition hover:text-rice-200/70"
+          className="absolute right-4 top-4 z-10 rounded-full px-2.5 py-1.5 text-[11px] text-rice-200/40 transition hover:text-rice-200/70"
         >
           {skipLabel}
         </button>

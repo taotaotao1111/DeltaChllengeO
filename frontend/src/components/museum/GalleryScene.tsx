@@ -193,6 +193,7 @@ export default function GalleryScene() {
               className="flex h-full w-full flex-col items-center justify-center px-6"
               onRevealed={() => setWiped(true)}
               hint="在雾气上划一划，看看是谁"
+              skipLabel="直接看看"
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
