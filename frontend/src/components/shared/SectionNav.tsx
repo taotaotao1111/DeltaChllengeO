@@ -2,6 +2,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useGameStore } from "../../store/gameStore";
 import ChapterMenu from "./ChapterMenu";
+import BronzeWaterClock from "./BronzeWaterClock";
+import { getArtifact } from "../../data/artifacts";
 
 type NavKey = "chapter" | "timeline" | "chat";
 
@@ -21,10 +23,18 @@ export default function SectionNav() {
   const stage = useGameStore((s) => s.stage);
   const setStage = useGameStore((s) => s.setStage);
   const toggleChat = useGameStore((s) => s.toggleChat);
+  const artifactId = useGameStore((s) => s.currentArtifactId);
+  const discovered = useGameStore((s) => s.discoveredDetails);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (stage === "museum" || stage === "gallery") return null;
+
+  // 铜漏水位：已读章数（chapter:<id> 约定，与 ChapterMenu 同源）
+  const artifact = getArtifact(artifactId);
+  const readCount = artifact.chapters.filter((c) =>
+    discovered.includes(`chapter:${c.id}`),
+  ).length;
 
   const handleClick = (key: NavKey) => {
     if (key === "chat") {
@@ -55,6 +65,10 @@ export default function SectionNav() {
         className="fixed left-1/2 top-[calc(0.75rem+var(--safe-top))] z-40 -translate-x-1/2 sm:top-6"
       >
         <div className="flex items-center gap-0.5 rounded-full border border-gilt/25 bg-ink-900/70 px-1 py-1 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.4)] sm:gap-1 sm:px-1.5 sm:py-1.5">
+          {/* 铜漏：只记录不导航（用户定调），悬在「认识我」左侧 */}
+          <span className="px-0.5" title={`陪我读了 ${readCount} / ${artifact.chapters.length} 章`}>
+            <BronzeWaterClock total={artifact.chapters.length} read={readCount} />
+          </span>
           {ITEMS.map((item) => (
             <button
               key={item.key}
