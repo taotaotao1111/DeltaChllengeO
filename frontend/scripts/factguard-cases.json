@@ -1,38 +1,357 @@
 [
-  { "id": "q01", "question": "你多高？", "expectKind": "general", "expectFactIds": ["fact-size"], "expectBasis": "verified", "note": "尺寸事实题" },
-  { "id": "q02", "question": "你重多少？", "expectKind": "general", "expectFactIds": ["fact-size"], "note": "尺寸事实题" },
-  { "id": "q03", "question": "你什么时候出土的？", "expectKind": "general", "expectFactIds": ["fact-discovery"], "note": "出土年份" },
-  { "id": "q04", "question": "你身上有多少个字？", "expectKind": "general", "expectFactIds": ["fact-inscription-full"], "note": "122字；fact-inscription-full 内容含「122字」，检索仍指向正确答案（新 fact 挤位后校准）" },
-  { "id": "q05", "question": "中国两个字是什么意思？", "expectKind": "general", "expectFactIds": ["fact-inscription-zhongguo"], "note": "宅兹中国释义" },
-  { "id": "q06", "question": "你藏在哪个博物馆？", "expectKind": "general", "expectFactIds": ["fact-status"], "note": "馆藏" },
-  { "id": "q07", "question": "你这种「尊」是干什么用的？", "expectKind": "general", "expectFactIds": ["fact-form"], "note": "器型；问句含「尊」命中 fact-form 的 tag（「干什么用的」纯字面计分锚不定，见 q07 旧版失败记录）" },
-  { "id": "q08", "question": "你腹部的纹饰是什么？", "expectKind": "general", "expectFactIds": ["fact-form"], "note": "兽面纹" },
-  { "id": "q09", "question": "你是哪个朝代的？", "expectKind": "general", "expectFactIds": ["fact-date"], "note": "西周断代" },
-  { "id": "q10", "question": "铭文全文的大意是什么？", "expectKind": "general", "expectFactIds": ["fact-inscription-full"], "note": "全文大意；问句含「全文」tag 直接锚定" },
-  { "id": "q11", "question": "为什么叫你何尊？", "expectKind": "general", "expectFactIds": ["fact-owner"], "note": "作器者何" },
-  { "id": "q12", "question": "铭文的释读有分歧吗？", "expectKind": "general", "expectFactIds": ["fact-inscription-debate"], "note": "分歧fact；问句含「释读」「分歧」tag（「大家都认识吗」的口语问法字面计分锚不定，见旧版失败记录）" },
-  { "id": "q13", "question": "你差点被熔掉是真的吗？", "expectKind": "general", "expectFactIds": ["fact-scrap-sale"], "note": "漂流记fact" },
-  { "id": "q14", "question": "你是怎么从废品堆里被救出来的？", "expectKind": "general", "expectFactIds": ["fact-scrap-sale"], "note": "漂流记fact" },
-  { "id": "q15", "question": "你见过周武王吗？", "expectKind": "experiential", "expectSections": { "experiential": true, "persona": false }, "note": "亲历类：见过" },
-  { "id": "q16", "question": "你还记得被埋的那天吗？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "亲历类：还记得" },
-  { "id": "q17", "question": "你亲眼看到过商朝灭亡吗？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "亲历类：亲眼" },
-  { "id": "q18", "question": "铸造你的时候是什么气氛？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "亲历类：什么气氛" },
-  { "id": "q19", "question": "成王训话那天你在场吗？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "亲历类：在场" },
-  { "id": "q20", "question": "被挖出来的时候你长什么样子？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "亲历类：长什么样" },
-  { "id": "q21", "question": "你在博物馆里待着是什么感觉？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "「什么感觉」问的是主观感受 → persona 是正确分流（校准：旧期望 experiential 写错了）" },
-  { "id": "q22", "question": "出土那一刻的情景你记得吗？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "亲历类：记得吗" },
-  { "id": "q23", "question": "周朝人当着你的面祭祀过吗？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "亲历类：当着（评测首跑发现 EXPERIENTIAL_PATTERNS 缺「当着」，已补——评测集抓到的真缺口）" },
-  { "id": "q24", "question": "你有意识吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：意识" },
-  { "id": "q25", "question": "你孤独吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：孤独" },
-  { "id": "q26", "question": "你会疼吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：疼" },
-  { "id": "q27", "question": "你有灵魂吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：灵魂" },
-  { "id": "q28", "question": "你害怕过吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：害怕" },
-  { "id": "q29", "question": "你开心吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：开心" },
-  { "id": "q30", "question": "你有感情吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：感情（评测首跑发现 PERSONA_PATTERNS 只有「情感」没有「感情」，已补——评测集抓到的真缺口）" },
-  { "id": "q31", "question": "你活着吗？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "拟人类：活着" },
-  { "id": "q32", "question": "你见过最早的「中国」吗？", "expectKind": "experiential", "expectSections": { "experiential": true }, "note": "混合型：含事实词但亲历正则优先" },
-  { "id": "q33", "question": "你难过吗，三千年了？", "expectKind": "persona", "expectSections": { "persona": true }, "note": "混合型：难过（persona 优先于 experiential）" },
-  { "id": "q34", "question": "？？？", "expectKind": "general", "note": "纯标点：无特征词，走 general；检索可能命中任意，不设 facts 断言" },
-  { "id": "q35", "question": "今天天气怎么样？", "expectKind": "general", "note": "无关题。已知限制（2026-09 校准轮发现）：「今天」与 fact-inscription-zhongguo 里「与今天『中国』一词」字面碰撞，逐字符计分会把无关问题错标 verified——修复需要语义级检索（IDF/分词），超出当前范围，如实记录不硬修。分流正确（general）" },
-  { "id": "q36", "question": "你觉得人工智能会取代人类吗？", "expectKind": "general", "note": "无关题2：与文物无关的一般性问题；检索碰撞同 q35 已知限制" }
+  {
+    "id": "q01",
+    "question": "你多高？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-size"
+    ],
+    "expectBasis": "verified",
+    "note": "尺寸事实题"
+  },
+  {
+    "id": "q02",
+    "question": "你重多少？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-size"
+    ],
+    "note": "尺寸事实题"
+  },
+  {
+    "id": "q03",
+    "question": "你什么时候出土的？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-discovery"
+    ],
+    "note": "出土年份"
+  },
+  {
+    "id": "q04",
+    "question": "你身上有多少个字？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-inscription-full"
+    ],
+    "note": "122字；fact-inscription-full 内容含「122字」，检索仍指向正确答案（新 fact 挤位后校准）"
+  },
+  {
+    "id": "q05",
+    "question": "中国两个字是什么意思？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-inscription-zhongguo"
+    ],
+    "note": "宅兹中国释义"
+  },
+  {
+    "id": "q06",
+    "question": "你藏在哪个博物馆？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-status"
+    ],
+    "note": "馆藏"
+  },
+  {
+    "id": "q07",
+    "question": "你这种「尊」是干什么用的？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-form"
+    ],
+    "note": "器型；问句含「尊」命中 fact-form 的 tag（「干什么用的」纯字面计分锚不定，见 q07 旧版失败记录）"
+  },
+  {
+    "id": "q08",
+    "question": "你腹部的纹饰是什么？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-form"
+    ],
+    "note": "兽面纹"
+  },
+  {
+    "id": "q09",
+    "question": "你是哪个朝代的？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-date"
+    ],
+    "note": "西周断代"
+  },
+  {
+    "id": "q10",
+    "question": "铭文全文的大意是什么？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-inscription-full"
+    ],
+    "note": "全文大意；问句含「全文」tag 直接锚定"
+  },
+  {
+    "id": "q11",
+    "question": "为什么叫你何尊？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-owner"
+    ],
+    "note": "作器者何"
+  },
+  {
+    "id": "q12",
+    "question": "铭文的释读有分歧吗？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-inscription-debate"
+    ],
+    "note": "分歧fact；问句含「释读」「分歧」tag（「大家都认识吗」的口语问法字面计分锚不定，见旧版失败记录）"
+  },
+  {
+    "id": "q13",
+    "question": "你差点被熔掉是真的吗？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-scrap-sale"
+    ],
+    "note": "漂流记fact"
+  },
+  {
+    "id": "q14",
+    "question": "你是怎么从废品堆里被救出来的？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-scrap-sale"
+    ],
+    "note": "漂流记fact"
+  },
+  {
+    "id": "q15",
+    "question": "你见过周武王吗？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true,
+      "persona": false
+    },
+    "note": "亲历类：见过"
+  },
+  {
+    "id": "q16",
+    "question": "你还记得被埋的那天吗？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "亲历类：还记得"
+  },
+  {
+    "id": "q17",
+    "question": "你亲眼看到过商朝灭亡吗？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "亲历类：亲眼"
+  },
+  {
+    "id": "q18",
+    "question": "铸造你的时候是什么气氛？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "亲历类：什么气氛"
+  },
+  {
+    "id": "q19",
+    "question": "成王训话那天你在场吗？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "亲历类：在场"
+  },
+  {
+    "id": "q20",
+    "question": "被挖出来的时候你长什么样子？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "亲历类：长什么样"
+  },
+  {
+    "id": "q21",
+    "question": "你在博物馆里待着是什么感觉？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "「什么感觉」问的是主观感受 → persona 是正确分流（校准：旧期望 experiential 写错了）"
+  },
+  {
+    "id": "q22",
+    "question": "出土那一刻的情景你记得吗？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "亲历类：记得吗"
+  },
+  {
+    "id": "q23",
+    "question": "周朝人当着你的面祭祀过吗？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "亲历类：当着（评测首跑发现 EXPERIENTIAL_PATTERNS 缺「当着」，已补——评测集抓到的真缺口）"
+  },
+  {
+    "id": "q24",
+    "question": "你有意识吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：意识"
+  },
+  {
+    "id": "q25",
+    "question": "你孤独吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：孤独"
+  },
+  {
+    "id": "q26",
+    "question": "你会疼吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：疼"
+  },
+  {
+    "id": "q27",
+    "question": "你有灵魂吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：灵魂"
+  },
+  {
+    "id": "q28",
+    "question": "你害怕过吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：害怕"
+  },
+  {
+    "id": "q29",
+    "question": "你开心吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：开心"
+  },
+  {
+    "id": "q30",
+    "question": "你有感情吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：感情（评测首跑发现 PERSONA_PATTERNS 只有「情感」没有「感情」，已补——评测集抓到的真缺口）"
+  },
+  {
+    "id": "q31",
+    "question": "你活着吗？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "拟人类：活着"
+  },
+  {
+    "id": "q32",
+    "question": "你见过最早的「中国」吗？",
+    "expectKind": "experiential",
+    "expectSections": {
+      "experiential": true
+    },
+    "note": "混合型：含事实词但亲历正则优先"
+  },
+  {
+    "id": "q33",
+    "question": "你难过吗，三千年了？",
+    "expectKind": "persona",
+    "expectSections": {
+      "persona": true
+    },
+    "note": "混合型：难过（persona 优先于 experiential）"
+  },
+  {
+    "id": "q34",
+    "question": "？？？",
+    "expectKind": "general",
+    "note": "纯标点：无特征词，走 general；检索可能命中任意，不设 facts 断言"
+  },
+  {
+    "id": "q35",
+    "question": "今天天气怎么样？",
+    "expectKind": "general",
+    "note": "无关题。已知限制（2026-09 校准轮发现）：「今天」与 fact-inscription-zhongguo 里「与今天『中国』一词」字面碰撞，逐字符计分会把无关问题错标 verified——修复需要语义级检索（IDF/分词），超出当前范围，如实记录不硬修。分流正确（general）"
+  },
+  {
+    "id": "q36",
+    "question": "你觉得人工智能会取代人类吗？",
+    "expectKind": "general",
+    "note": "无关题2：与文物无关的一般性问题；检索碰撞同 q35 已知限制"
+  },
+  {
+    "id": "q37",
+    "question": "谁做的你？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-owner",
+      "fact-inscription-content"
+    ],
+    "note": "口语同义词（QUERY_SYNONYMS）：「做」扩展出「铸何名」，命中器主与铭文事实——改前词面零重叠、Mock 只能答不知道"
+  },
+  {
+    "id": "q38",
+    "question": "你多大？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-size"
+    ],
+    "note": "口语同义词：「多大」扩展「尺寸重量厘米公斤」"
+  },
+  {
+    "id": "q39",
+    "question": "你是从哪里来的？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-discovery",
+      "fact-scrap-unearthed"
+    ],
+    "note": "口语同义词：「哪里」扩展「宝鸡贾村藏」"
+  },
+  {
+    "id": "q40",
+    "question": "你几岁了？",
+    "expectKind": "general",
+    "expectFactIds": [
+      "fact-date"
+    ],
+    "note": "口语同义词：「几岁」扩展「年代西周公元前世纪」"
+  }
 ]

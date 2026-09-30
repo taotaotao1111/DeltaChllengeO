@@ -15,15 +15,57 @@ const STOPWORDS = new Set([
 ]);
 
 function tokenize(text: string): string[] {
-  return text
-    .replace(/[，。？！、,.!?~～\s]/g, "")
-    .split("")
-    .filter((c) => !STOPWORDS.has(c) && c.trim().length > 0);
+  return Array.from(
+    new Set(
+      text
+        .replace(/[，。？！、,.!?~～\s]/g, "")
+        .split("")
+        .filter((c) => !STOPWORDS.has(c) && c.trim().length > 0),
+    ),
+  );
 }
 
-/** 简单的字符命中评分，避免引入额外分词依赖 */
+/**
+ * 口语同义改写表 —— 弥补逐字符计分对「词面不重叠」问法的失明。
+ *
+ * 用户问「谁做的」时，问句字面与事实侧的「铸」「何」「得名」零重叠，
+ * 检索命不中器主事实，Mock 只能答「不知道」；真实后端路径的档位标签
+ * （judgeFactBasis）同样失真。命中 test 就把 add 里的事实侧用语并入
+ * 查询串——一次极轻量的查询扩展，不引入分词或语义模型。
+ *
+ * 纪律：add 只放**事实文本里真实存在的字词**（对照档案 verifiedFacts 校过），
+ * 宁缺毋滥——多加一个不存在的字只会制造无关碰撞（q35 的教训）。
+ */
+const QUERY_SYNONYMS: Array<{ test: RegExp; add: string }> = [
+  // 谁做的 / 主人 → 器主「何」与铸造事实
+  { test: /谁.{0,2}(做|造|铸)|主人|做你|造你|铸你/, add: "何铸名" },
+  // 多大 / 多重 → 尺寸重量（问句字面与「厘米/公斤」零重叠）
+  { test: /多大|多重|几斤|几两/, add: "尺寸重量厘米公斤" },
+  // 几岁 / 多老 → 断代
+  { test: /几岁|多少岁|多老|多大年纪|年纪|多岁/, add: "年代西周公元前世纪" },
+  // 值多少钱 / 被卖 → 废品回收
+  { test: /多少钱|值多少|值钱|卖了|被卖/, add: "废品回收元征集" },
+  // 哪里 / 什么地方 → 出土地与现藏地（「哪里」不含地名；
+  // 注意不含「哪个博物馆」——馆藏问句自带「藏/博物馆」已锚定 fact-status，
+  // 再加地名会把出土地事实顶进 top，q06 校准过）
+  { test: /哪里|哪儿|在哪里|什么地方/, add: "宝鸡贾村藏" },
+  // 为什么叫 / 名字 → 得名缘由
+  { test: /名字|为什么叫|叫什么|得名|取的名/, add: "何名" },
+];
+
+/** 查询扩展：口语词映射为事实侧用语 */
+export function expandQuery(question: string): string {
+  let extra = "";
+  for (const { test, add } of QUERY_SYNONYMS) {
+    if (test.test(question)) extra += add;
+  }
+  return extra ? question + extra : question;
+}
+
+/** 简单的字符命中评分，避免引入额外分词依赖（口语问法先经 expandQuery 扩展） */
 export function findRelevantFacts(question: string, facts: Fact[], topN = 3): Fact[] {
-  const qChars = tokenize(question);
+  const expanded = expandQuery(question);
+  const qChars = tokenize(expanded);
   if (qChars.length === 0) return [];
 
   const scored = facts.map((fact) => {
@@ -32,9 +74,9 @@ export function findRelevantFacts(question: string, facts: Fact[], topN = 3): Fa
     for (const c of qChars) {
       if (haystack.includes(c)) score += 1;
     }
-    // tag 精确命中额外加分
+    // tag 精确命中额外加分（对扩展后的查询同样生效）
     for (const tag of fact.tags) {
-      if (question.includes(tag)) score += 3;
+      if (expanded.includes(tag)) score += 3;
     }
     return { fact, score };
   });
