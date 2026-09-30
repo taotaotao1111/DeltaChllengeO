@@ -37,12 +37,14 @@ export interface GalleryEntry {
   icon?: string;
   /** 精细插画标识（优先于 icon） */
   illustrationId?: string;
+  /** 展厅卡片实物照片（优先于插画与 icon，黑底棚拍与深色卡面融合） */
+  photo?: string;
   locked: boolean;
 }
 
 function entryOf(
   artifact: Artifact,
-  extra: { icon?: string; useIllustration?: boolean; locked?: boolean },
+  extra: { icon?: string; useIllustration?: boolean; locked?: boolean; photo?: string },
 ): GalleryEntry {
   return {
     id: artifact.id,
@@ -51,12 +53,13 @@ function entryOf(
     teaserLine: artifact.teaserLine,
     icon: extra.icon,
     illustrationId: extra.useIllustration ? artifact.illustrationId : undefined,
+    photo: extra.photo,
     locked: extra.locked ?? false,
   };
 }
 
 export const GALLERY_MANIFEST: GalleryEntry[] = [
-  entryOf(hezun, { icon: "🏺" }),
+  entryOf(hezun, { photo: "images/hezun-gallery.png" }),
   /**
    * 长信宫灯：档案与三维模型都已就绪，但**史实尚未逐条核对**，所以先不对外开放。
    * 核实完成（档案里的 confidence 从 inferred 升为 verified）之后，把 locked 去掉即可开放。

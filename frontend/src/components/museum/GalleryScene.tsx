@@ -119,7 +119,16 @@ export default function GalleryScene() {
                       : "border-gilt/30 bg-gilt/5 shadow-[0_0_30px_rgba(201,167,106,0.12)] hover:border-gilt/50 hover:bg-gilt/10"
                   }`}
                 >
-                  {item.illustrationId ? (
+                  {item.photo ? (
+                    <img
+                      src={item.photo}
+                      alt={item.name}
+                      loading="lazy"
+                      className={`mb-3 h-20 w-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)] sm:h-24 ${
+                        item.locked ? "opacity-40 grayscale" : "animate-breathe"
+                      }`}
+                    />
+                  ) : item.illustrationId ? (
                     <ArtifactIllustration
                       id={item.illustrationId}
                       className={`mb-3 h-12 w-auto transition-all sm:h-14 ${
