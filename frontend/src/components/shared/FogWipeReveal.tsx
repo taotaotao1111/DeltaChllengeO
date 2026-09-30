@@ -369,8 +369,9 @@ export default function FogWipeReveal({
         </motion.p>
       )}
 
-      {/* 右上角进度角标（金色胶囊） */}
-      {!faded && (
+      {/* 进度角标（金色胶囊）：只在配了图片盖层（除锈场景）时显示——
+          展厅初始的除雾（程序纹理）不需要，按用户要求不加 */}
+      {!faded && coverImageSrc && (
         <span
           className="pointer-events-none absolute right-3 top-3 z-10 rounded-full border px-2.5 py-1 text-[11px] tracking-wide text-gilt-light"
           style={{
