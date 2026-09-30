@@ -80,6 +80,11 @@ async function llmChat(messages, systemPrompt) {
     throw new HTTPException(503, { message: 'ai.properties 未配置' });
   }
 
+  // model 显式传：2026-09-30 起网关不再把空 model 回落到 key 绑定的模型
+  // （403 key_model_not_bound：请求模型 '' 未绑定。绑定清单里是 claude-opus-4-8）。
+  // properties 里没这个 key，从网关错误信息里拿到的确切名字写死在这。
+  const MODEL = aiProps['ai.model'] || 'claude-opus-4-8';
+
   const resp = await fetch(`${aiProps['ai.base_url']}/bedrock_runtime/model/invoke`, {
     method: 'POST',
     headers: {
@@ -88,6 +93,7 @@ async function llmChat(messages, systemPrompt) {
     },
     body: JSON.stringify({
       anthropic_version: 'bedrock-2023-05-31',
+      model: MODEL,
       max_tokens: MAX_TOKENS,
       system: systemPrompt,
       messages,
