@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import FogWipeReveal from "../shared/FogWipeReveal";
 
@@ -10,6 +10,8 @@ interface RustRevealProps {
   onRevealed: () => void;
   /** 刮开锈层后露出的器物图（除锈后状态，示意素材） */
   underImageSrc?: string;
+  /** 盖层（带锈的器物照片）：刮的就是这层锈 */
+  coverImageSrc?: string;
 }
 
 /** 铭文共122字（含重文），兜底方案的抽象笔画块示意排布，不是字形，也不是拓片 */
@@ -33,7 +35,23 @@ export default function RustReveal({
   footnote,
   onRevealed,
   underImageSrc,
+  coverImageSrc,
 }: RustRevealProps) {
+  /**
+   * 盖层图先加载完再挂 FogWipeReveal：图片 onload 是异步的，晚于 canvas
+   * 初次铺纹理就会把用户已经刮开的地方覆盖回去（实测竞态）。
+   * 加载期间渲染中性占位（加载画面短暂，可接受）。
+   */
+  const [coverLoaded, setCoverLoaded] = useState(!coverImageSrc);
+  useEffect(() => {
+    if (!coverImageSrc || coverLoaded) return;
+    const img = new Image();
+    const done = () => setCoverLoaded(true);
+    img.onload = done;
+    img.onerror = done; // 加载失败也放行——FogWipeReveal 会退回程序纹理
+    img.src = coverImageSrc;
+  }, [coverImageSrc, coverLoaded]);
+
   return (
     // pt 是给章节标题（第三章 / 我身上的秘密）留位置，手机端否则会叠在一起
     <div className="flex h-full w-full flex-col items-center justify-center px-6 pb-[calc(2.5rem+var(--safe-bottom))] pt-[calc(9.5rem+var(--safe-top))] sm:pt-32">
@@ -51,15 +69,17 @@ export default function RustReveal({
         ))}
       </motion.p>
 
-      <FogWipeReveal
-        tone="rust"
-        threshold={0.45}
-        onRevealed={onRevealed}
-        hint="用手指刮一刮，看看锈下面有什么"
-        skipLabel="直接看看"
-        // 用高度驱动尺寸（而不是 w-full），矮屏上会自动缩小而不是被裁掉
-        className="mx-auto aspect-[4/5] h-[40vh] max-h-[400px] overflow-hidden rounded-lg border border-bronze-dark/60"
-      >
+      {coverLoaded ? (
+        <FogWipeReveal
+          tone="rust"
+          threshold={0.45}
+          onRevealed={onRevealed}
+          hint="用手指刮一刮，看看锈下面有什么"
+          skipLabel="直接看看"
+          coverImageSrc={coverImageSrc}
+          // 用高度驱动尺寸（而不是 w-full），矮屏上会自动缩小而不是被裁掉
+          className="mx-auto aspect-[4/5] h-[40vh] max-h-[400px] overflow-hidden rounded-lg border border-bronze-dark/60"
+        >
         {/* 锈层之下：除锈后的器身（示意素材，暗化降饱和贴合整体色调） */}
         {underImageSrc ? (
           <img
@@ -91,7 +111,11 @@ export default function RustReveal({
             </div>
           </div>
         )}
-      </FogWipeReveal>
+        </FogWipeReveal>
+      ) : (
+        /* 盖层图加载中：中性占位（尺寸与刮卡一致，避免布局跳动） */
+        <div className="mx-auto aspect-[4/5] h-[40vh] max-h-[400px] animate-pulse overflow-hidden rounded-lg border border-bronze-dark/60 bg-ink-800/60" />
+      )}
 
       <p className="mt-4 text-center text-[10px] text-rice-200/25">{footnote}</p>
     </div>

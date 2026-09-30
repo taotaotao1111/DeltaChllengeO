@@ -479,7 +479,8 @@ export const hezun: Artifact = {
         derust: {
           leadLines: ["三千年的锈，盖住了我内壁的字。", "1975年，有人一点一点把它清理掉。"],
           footnote: "器身为示意呈现，非实物照片 · 除锈史实见资料来源页",
-          // 刮开锈壳露出除锈后的器身（示意素材）
+          // 盖层 = 带锈的器身（刮的就是这层锈），刮开露出除锈后的铜色
+          coverImageSrc: "images/hezun-derust-before.jpg",
           underImageSrc: "images/hezun-derust-after.jpg",
         },
         // 刮锈之后的前后对比（AI 示意图、器型非严格何尊——caption 如实标注）

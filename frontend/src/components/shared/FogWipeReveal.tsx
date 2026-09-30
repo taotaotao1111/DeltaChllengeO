@@ -16,6 +16,13 @@ interface FogWipeRevealProps {
   tone?: "fog" | "rust";
   /** 「直接看看」兜底按钮的文案 */
   skipLabel?: string;
+  /**
+   * 图片盖层：不传时遮罩是 canvas 程序纹理（雾/锈）；
+   * 传入 src 时盖层=这张图（如带锈的器物照片），刮开露出 children。
+   * 仍需 canvas 做擦除（destination-out 打洞），只是纹理换成图片本身。
+   * 生成纪律：图上再叠极淡的程序锈斑，让照片和颗粒质感接缝不生硬。
+   */
+  coverImageSrc?: string;
 }
 
 /** 两种遮罩各自的色板与颗粒参数 */
@@ -65,6 +72,7 @@ export default function FogWipeReveal({
   className = "",
   tone = "fog",
   skipLabel = "直接看看",
+  coverImageSrc,
 }: FogWipeRevealProps) {
   const palette = TONES[tone];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +85,23 @@ export default function FogWipeReveal({
 
   const [hintVisible, setHintVisible] = useState(true);
   const [faded, setFaded] = useState(false);
+  /** 图片盖层加载完成后重画（没加载完之前用程序纹理顶着，不空白） */
+  const [coverReady, setCoverReady] = useState(false);
+  const coverImgRef = useRef<HTMLImageElement | null>(null);
+
+  // 图片盖层：预加载，onload 后触发一次重绘（此时 canvas 尺寸已就绪）
+  useEffect(() => {
+    if (!coverImageSrc) return;
+    const img = new Image();
+    img.onload = () => {
+      coverImgRef.current = img;
+      setCoverReady(true);
+    };
+    img.src = coverImageSrc;
+    return () => {
+      img.onload = null;
+    };
+  }, [coverImageSrc]);
 
   const paintFog = useCallback(
     (canvas: HTMLCanvasElement) => {
@@ -88,7 +113,31 @@ export default function FogWipeReveal({
       ctx.globalCompositeOperation = "source-over";
       ctx.clearRect(0, 0, width, height);
 
-      // 基底渐变
+      // 图片盖层：先铺照片（cover 满版，同 <img object-cover> 的裁法），再叠程序锈斑接缝
+      const cover = coverImgRef.current;
+      if (coverImageSrc && cover) {
+        const scaleC = Math.max(width / cover.width, height / cover.height);
+        const dw = cover.width * scaleC;
+        const dh = cover.height * scaleC;
+        ctx.drawImage(cover, (width - dw) / 2, (height - dh) / 2, dw, dh);
+        // 极淡的程序锈斑覆在照片上：刮痕边缘的颗粒感和照片质感不脱节
+        const veils = Math.round((90 * (width * height)) / (400 * 700));
+        for (let i = 0; i < veils; i++) {
+          const x = Math.random() * width;
+          const y = Math.random() * height;
+          const r = (2 + Math.random() * 7) * scale;
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+          g.addColorStop(0, `rgba(${palette.tints[0]},${0.05 + Math.random() * 0.08})`);
+          g.addColorStop(1, `rgba(${palette.tints[0]},0)`);
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        return;
+      }
+
+      // 基底渐变（程序纹理方案）
       const base = ctx.createLinearGradient(0, 0, width * 0.3, height);
       base.addColorStop(0, palette.base[0]);
       base.addColorStop(0.5, palette.base[1]);
@@ -141,7 +190,7 @@ export default function FogWipeReveal({
         }
       }
     },
-    [palette],
+    [palette, coverImageSrc],
   );
 
   const resize = useCallback(() => {
@@ -156,6 +205,11 @@ export default function FogWipeReveal({
     canvas.style.height = `${rect.height}px`;
     paintFog(canvas);
   }, [paintFog]);
+
+  // 图片盖层加载完成后重画一次（此时 canvas 尺寸已由 resize 就绪）
+  useEffect(() => {
+    if (coverReady && canvasRef.current) paintFog(canvasRef.current);
+  }, [coverReady, paintFog]);
 
   useEffect(() => {
     resize();
