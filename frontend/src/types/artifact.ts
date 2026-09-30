@@ -291,7 +291,30 @@ export interface AppraiseOption {
 export interface AppraiseQuestion {
   id: string;
   question: string;
-  options: AppraiseOption[];
+  /**
+   * 选择式（默认）：题面 + 几个胶囊选项。
+   */
+  options?: AppraiseOption[];
+  /**
+   * 找茬式：出一张实物图，用户直接点图上的位置作答。
+   * 正确动作是「指认实物」而不是「选文字」——鉴宝的手感所在。
+   */
+  spot?: {
+    imageSrc: string;
+    /** 图注小字（如「除锈后的器身 · 示意」） */
+    caption?: string;
+    regions: AppraiseSpotRegion[];
+  };
+}
+
+/** 找茬题的可点区域（相对图面的矩形，0-1） */
+export interface AppraiseSpotRegion {
+  id: string;
+  /** 指认后的称谓（「你指了「口内」」） */
+  label: string;
+  correct?: boolean;
+  response: string;
+  rect: { x: number; y: number; w: number; h: number };
 }
 
 export interface AppraiseData {

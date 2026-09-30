@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import SpeechReveal from "../shared/SpeechReveal";
 import { track } from "../../utils/tracking";
-import type { AppraiseData } from "../../types/artifact";
+import type { AppraiseData, AppraiseQuestion, AppraiseSpotRegion } from "../../types/artifact";
 
 interface AppraiseGateProps {
   artifactId: string;
@@ -29,25 +29,50 @@ export default function AppraiseGate({ artifactId, data, onDone }: AppraiseGateP
   const [phase, setPhase] = useState<Phase>("opening");
   const [qIndex, setQIndex] = useState(0);
   const [pickedId, setPickedId] = useState<string | null>(null);
+  /** 找茬式：点击落点（相对图面 0-1），画指认标记用 */
+  const [spotMark, setSpotMark] = useState<{ x: number; y: number } | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
 
-  const question = data.questions[qIndex];
-  const picked = question?.options.find((o) => o.id === pickedId) ?? null;
+  const question: AppraiseQuestion | undefined = data.questions[qIndex];
+  const picked = question?.options?.find((o) => o.id === pickedId) ?? null;
+  const pickedSpot = question?.spot?.regions.find((r) => r.id === pickedId) ?? null;
   const isLastQ = qIndex >= data.questions.length - 1;
 
   const pick = (id: string) => {
     if (pickedId) return;
-    const opt = question.options.find((o) => o.id === id);
+    const opt = question?.options?.find((o) => o.id === id);
     const correct = opt?.correct ?? false;
     if (correct) setCorrectCount((c) => c + 1);
-    track("appraise_answer", { artifactId, questionId: question.id, correct: correct ? 1 : 0 });
+    track("appraise_answer", { artifactId, questionId: question!.id, correct: correct ? 1 : 0 });
     setPickedId(id);
+  };
+
+  /** 找茬式点击：坐标换算成相对图面比例，命中区域即作答 */
+  const pickSpot = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (pickedId || !question?.spot) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const rx = (e.clientX - rect.left) / rect.width;
+    const ry = (e.clientY - rect.top) / rect.height;
+    setSpotMark({ x: rx, y: ry });
+    const hit = question.spot.regions.find(
+      (r) =>
+        rx >= r.rect.x && rx <= r.rect.x + r.rect.w && ry >= r.rect.y && ry <= r.rect.y + r.rect.h,
+    );
+    const region: AppraiseSpotRegion | undefined = hit;
+    if (region) {
+      const correct = region.correct ?? false;
+      if (correct) setCorrectCount((c) => c + 1);
+      track("appraise_answer", { artifactId, questionId: question.id, correct: correct ? 1 : 0 });
+      setPickedId(region.id);
+    }
+    // 没命中任何区域：只画标记不作答（点空白处相当于「还没指到地方」）
   };
 
   const advance = () => {
     if (!isLastQ) {
       setQIndex((i) => i + 1);
       setPickedId(null);
+      setSpotMark(null);
     } else {
       setPhase("seal");
     }
@@ -96,13 +121,81 @@ export default function AppraiseGate({ artifactId, data, onDone }: AppraiseGateP
               验看 · {qIndex + 1}/{data.questions.length}
             </p>
 
-            {!picked ? (
+            {/* 找茬式：点图指认。命中区域即作答；点空白只画标记、可再点 */}
+            {question.spot ? (
+              !pickedId ? (
+                <div className="flex w-full flex-col items-center">
+                  <p className="mb-5 font-title text-lg leading-relaxed text-rice-100 sm:text-xl">
+                    {question.question}
+                  </p>
+                  <div
+                    onClick={pickSpot}
+                    className="relative mx-auto aspect-[2/3] h-[44vh] max-h-[460px] cursor-crosshair overflow-hidden rounded-lg"
+                    style={{
+                      border: "1px solid rgba(201,167,106,0.4)",
+                      boxShadow: "0 0 24px rgba(201,167,106,0.14), 0 14px 40px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    <img
+                      src={question.spot.imageSrc}
+                      alt="验看器物"
+                      draggable={false}
+                      className="h-full w-full select-none object-cover"
+                    />
+                    {spotMark && (
+                      <span
+                        className="pointer-events-none absolute z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gilt-light shadow-[0_0_12px_rgba(201,167,106,0.8)]"
+                        style={{ left: `${spotMark.x * 100}%`, top: `${spotMark.y * 100}%` }}
+                      />
+                    )}
+                  </div>
+                  {question.spot.caption && (
+                    <p className="mt-3 text-[10px] text-rice-200/30">{question.spot.caption}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex w-full flex-col items-center">
+                  <p className="mb-2 text-xs tracking-widest text-gilt-light/60">
+                    你指了「{pickedSpot?.label}」{pickedSpot?.correct ? " · 答对了" : ""}
+                  </p>
+                  <div
+                    className="relative mx-auto mb-6 aspect-[2/3] h-[30vh] max-h-[320px] overflow-hidden rounded-lg opacity-60"
+                    style={{ border: "1px solid rgba(201,167,106,0.3)" }}
+                  >
+                    <img
+                      src={question.spot.imageSrc}
+                      alt="验看器物"
+                      draggable={false}
+                      className="h-full w-full select-none object-cover"
+                    />
+                    {spotMark && (
+                      <span
+                        className="pointer-events-none absolute z-10 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-gilt-light shadow-[0_0_12px_rgba(201,167,106,0.9)]"
+                        style={{ left: `${spotMark.x * 100}%`, top: `${spotMark.y * 100}%` }}
+                      />
+                    )}
+                  </div>
+                  <p className="mb-7 max-w-md font-title text-lg leading-relaxed text-rice-100 sm:text-xl">
+                    {pickedSpot?.response}
+                  </p>
+                  <motion.button
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    onClick={advance}
+                    className="rounded-full bg-gilt/20 px-6 py-2.5 text-sm tracking-wide text-gilt-light transition hover:bg-gilt/30"
+                  >
+                    {isLastQ ? "盖印 →" : "继续验看 →"}
+                  </motion.button>
+                </div>
+              )
+            ) : !picked ? (
               <>
                 <p className="font-title mb-6 text-lg leading-relaxed text-rice-100 sm:text-xl">
                   {question.question}
                 </p>
                 <div className="mx-auto flex w-72 flex-col items-stretch gap-2.5">
-                  {question.options.map((opt) => (
+                  {question.options?.map((opt) => (
                     <button
                       key={opt.id}
                       onClick={() => pick(opt.id)}
@@ -116,10 +209,10 @@ export default function AppraiseGate({ artifactId, data, onDone }: AppraiseGateP
             ) : (
               <>
                 <p className="mb-2 text-xs tracking-widest text-gilt-light/60">
-                  你选了「{picked.label}」{picked.correct ? " · 答对了" : ""}
+                  你选了「{picked?.label}」{picked?.correct ? " · 答对了" : ""}
                 </p>
-                <p className="font-title mb-7 max-w-md text-lg leading-relaxed text-rice-100 sm:text-xl">
-                  {picked.response}
+                <p className="mb-7 max-w-md font-title text-lg leading-relaxed text-rice-100 sm:text-xl">
+                  {picked?.response}
                 </p>
                 <motion.button
                   initial={{ opacity: 0, y: 8 }}
