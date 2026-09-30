@@ -50,7 +50,7 @@ export default function SpeechReveal({
   useEffect(() => {
     if (index >= lines.length) return;
     const isLast = index === lines.length - 1;
-    const delay = Math.max(lineDelay, lines[index].length * 90);
+    const delay = Math.max(lineDelay, lines[index].length * 60);
 
     if (isLast) {
       timerRef.current = setTimeout(() => {
