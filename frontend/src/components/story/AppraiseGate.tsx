@@ -236,18 +236,29 @@ export default function AppraiseGate({ artifactId, data, onDone }: AppraiseGateP
             transition={{ duration: 0.6 }}
             className="flex w-full flex-col items-center"
           >
-            {/* 朱砂印：落印动画（大比例起跳 + 微旋转落定 + 印泥晕染） */}
+            {/* 朱砂印（落印 spring + 微旋转，印泥底光晕）。
+                做旧质感版（SVG filter / canvas 噪声）两轮实测在 img/异步渲染路径
+                下噪声层丢失或不稳定，收益配不上复杂度——按用户决定回退简洁版。 */}
             <motion.div
               initial={{ scale: 1.7, opacity: 0, rotate: -10 }}
               animate={{ scale: 1, opacity: 1, rotate: -3.5 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 260, damping: 18 }}
-              className="mb-6 flex h-24 w-24 items-center justify-center rounded-sm border-2 border-[#8c3a2e] bg-[#a03c2d]/85 shadow-[0_6px_24px_rgba(156,59,46,0.35)]"
+              className="relative mb-6"
             >
-              <div className="grid grid-cols-2 gap-x-1 px-2 font-title text-lg leading-none text-[#f3e6d0]">
-                <span>验</span>
-                <span>看</span>
-                <span>无</span>
-                <span>误</span>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 0.45, scale: 1.14 }}
+                transition={{ delay: 0.55, duration: 1.1, ease: "easeOut" }}
+                className="absolute inset-0 rounded-[10%] blur-md"
+                style={{ background: "radial-gradient(ellipse at 50% 55%, rgba(156,59,46,0.5), transparent 70%)" }}
+              />
+              <div className="flex h-24 w-24 items-center justify-center rounded-sm border-2 border-[#8c3a2e] bg-[#a03c2d]/85 shadow-[0_6px_24px_rgba(156,59,46,0.35)]">
+                <div className="grid grid-cols-2 gap-x-1 px-2 font-title text-lg leading-none text-[#f3e6d0]">
+                  <span>验</span>
+                  <span>看</span>
+                  <span>无</span>
+                  <span>误</span>
+                </div>
               </div>
             </motion.div>
 
