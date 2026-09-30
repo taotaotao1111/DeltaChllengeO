@@ -4,11 +4,12 @@ import SpeechReveal from "../../shared/SpeechReveal";
 import ArtifactPresence from "../../artifact/ArtifactPresence";
 import InscriptionFocus from "../../artifact/InscriptionFocus";
 import RustReveal from "../../artifact/RustReveal";
+import RustCompare from "../../artifact/RustCompare";
 import GuessChoice from "../../shared/GuessChoice";
 import { useGameStore } from "../../../store/gameStore";
 import type { Artifact, ArtifactChapter, RevealModuleData } from "../../../types/artifact";
 
-type Phase = "lead-in" | "derust" | "focus" | "guess" | "closing";
+type Phase = "lead-in" | "derust" | "compare" | "focus" | "guess" | "closing";
 
 interface RevealModuleProps {
   artifact: Artifact;
@@ -32,11 +33,12 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
     () => [
       "lead-in",
       ...(data.derust ? (["derust"] as const) : []),
+      ...(data.compare ? (["compare"] as const) : []),
       ...(data.focus ? (["focus"] as const) : []),
       ...(data.guess ? (["guess"] as const) : []),
       "closing",
     ],
-    [data.derust, data.focus, data.guess],
+    [data.derust, data.compare, data.focus, data.guess],
   );
 
   const advance = () => {
@@ -81,6 +83,16 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
           leadLines={data.derust.leadLines}
           footnote={data.derust.footnote}
           onRevealed={advance}
+        />
+      )}
+
+      {phase === "compare" && data.compare && (
+        <RustCompare
+          beforeSrc={data.compare.beforeSrc}
+          afterSrc={data.compare.afterSrc}
+          caption={data.compare.caption}
+          onDone={advance}
+          nextLabel={data.compare.nextLabel}
         />
       )}
 

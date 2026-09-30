@@ -411,10 +411,12 @@ export const hezun: Artifact = {
       title: "我为什么会被铸造",
       hook: "一场为了「记住」的铸造。",
       backdrop: "forge",
-      // 开场氛围图（AI 生成示意，非实物照片）
+      // 开场氛围图（AI 生成示意，非实物照片）。人像场景提亮到 0.85——
+      // 0.62 的常规档会把浇铸工匠压成剪影（用户实测反馈）
       openingArt: {
         src: "images/ch2-casting.jpg",
         caption: "青铜浇铸 · 场景示意",
+        peakOpacity: 0.85,
       },
       // 讲述者继续在场：偏到右下、压得很暗，像"刚从范里出来还在炉边"的器物
       presence: {
@@ -461,9 +463,10 @@ export const hezun: Artifact = {
       hook: "锈的下面，藏着四个字。",
       backdrop: "patina",
       backdropGlyphs: ["宅", "兹", "中", "国"],
+      // 开场画换成「带锈器身」：刮锈交互与随后的前后对比滑杆共用这组示意素材
       openingArt: {
-        src: "images/ch3-derust.jpg",
-        caption: "刮锈见字 · 场景示意",
+        src: "images/hezun-derust-before.jpg",
+        caption: "带锈的铜器 · 示意",
       },
       presence: {
         opacity: 0.13,
@@ -476,6 +479,13 @@ export const hezun: Artifact = {
         derust: {
           leadLines: ["三千年的锈，盖住了我内壁的字。", "1975年，有人一点一点把它清理掉。"],
           footnote: "字影为示意呈现，非拓片实物 · 铭文全文共122字（含重文）",
+        },
+        // 刮锈之后的前后对比（AI 示意图、器型非严格何尊——caption 如实标注）
+        compare: {
+          beforeSrc: "images/hezun-derust-before.jpg",
+          afterSrc: "images/hezun-derust-after.jpg",
+          caption: "前后对比为场景示意图，非何尊实物照片 · 除锈史实见资料来源页",
+          nextLabel: "看清这几个字 →",
         },
         focus: {
           characters: ["宅", "兹", "中", "国"],

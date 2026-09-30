@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 interface ChapterLeadArtProps {
   src: string;
   caption?: string;
+  /** 常亮透明度（默认 0.62）。第二章人像场景用 0.85——62% + 饱和度滤镜会把人压成剪影 */
+  peakOpacity?: number;
 }
 
 /**
@@ -17,7 +19,7 @@ interface ChapterLeadArtProps {
  * 像展厅射灯下的一幅氛围画，而不是一张插进界面的卡片。
  * 图为 AI 生成氛围示意（caption 如实标注），别当史料用。
  */
-export default function ChapterLeadArt({ src, caption }: ChapterLeadArtProps) {
+export default function ChapterLeadArt({ src, caption, peakOpacity = 0.62 }: ChapterLeadArtProps) {
   /** 讲述推进到该沉暗的时刻 */
   const [dimming, setDimming] = useState(false);
   /** 完全退场（组件仍挂载但不渲染） */
@@ -40,7 +42,7 @@ export default function ChapterLeadArt({ src, caption }: ChapterLeadArtProps) {
       <motion.div
         key="lead-art"
         initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: dimming ? 0.12 : 0.62, y: 0, scale: dimming ? 0.98 : 1 }}
+        animate={{ opacity: dimming ? 0.12 : peakOpacity, y: 0, scale: dimming ? 0.98 : 1 }}
         transition={{ duration: dimming ? 2.2 : 0.9, ease: [0.22, 1, 0.36, 1] }}
         className="pointer-events-none absolute inset-x-0 top-[calc(9rem+var(--safe-top))] z-0 flex flex-col items-center"
         aria-hidden
@@ -60,7 +62,9 @@ export default function ChapterLeadArt({ src, caption }: ChapterLeadArtProps) {
             src={src}
             alt={caption ?? "章节开场氛围图"}
             className="h-full w-full object-cover"
-            style={{ filter: "saturate(0.85) contrast(1.02)" }}
+            /* 摘掉饱和度滤镜（saturate 0.85 把浇铸图的暖光吃掉了）；
+               提亮一档让人物从剪影里出来（走查实测源图人像本清楚） */
+            style={{ filter: "brightness(1.14) contrast(1.02)" }}
             draggable={false}
           />
           {/* caption 藏在画内右上角：念白居中带、标题都避开的死角。

@@ -165,6 +165,16 @@ export interface RevealModuleData {
   lineDelay: number;
   /** 亲手擦掉覆盖物才看得见字的那一步。leadLines 一句一行（原样保留换行） */
   derust?: { leadLines: string[]; footnote: string };
+  /**
+   * 除锈前后对比滑杆（刮锈交互之后）：同角度两张图拖分割线对比。
+   * 素材多为 AI 示意——caption 必须如实标注「示意、非实物照片」。
+   */
+  compare?: {
+    beforeSrc: string;
+    afterSrc: string;
+    caption?: string;
+    nextLabel?: string;
+  };
   /** 关键字逐字浮现的特写。explainLines 一句一行；sideImage 可选实物配图 */
   focus?: {
     characters: string[];
@@ -286,9 +296,10 @@ export interface ArtifactChapter {
   /**
    * 章节开场插画（氛围图）：lead-in 念白期间居中淡入，随讲述推进沉暗让位给交互。
    * AI 生成氛围图、铭文为示意——caption 必须如实标注「示意」，别当史料用。
+   * peakOpacity：人像等需要看清的场景调高（默认 0.62，第二章用 0.85）。
    * 不写则该章开场纯念白（原状）。
    */
-  openingArt?: { src: string; caption?: string };
+  openingArt?: { src: string; caption?: string; peakOpacity?: number };
   /** 覆盖由 module.kind 推导出的 Scene（一般不需要） */
   scene?: Scene;
   module: ChapterModule;

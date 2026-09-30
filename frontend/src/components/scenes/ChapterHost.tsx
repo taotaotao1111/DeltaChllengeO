@@ -60,6 +60,7 @@ export default function ChapterHost() {
           key={`lead-art-${chapter.id}`}
           src={chapter.openingArt.src}
           caption={chapter.openingArt.caption}
+          peakOpacity={chapter.openingArt.peakOpacity}
         />
       )}
 
