@@ -67,6 +67,7 @@ interface StatsRatios {
   chatBasis: Record<string, number>;
   chatUnknownRate: number | null;
   questionMix: Record<string, number>;
+  visitSources: Record<string, number>;
   completionRate: number | null;
   memoryCardRate: number | null;
   avgHotspots: number | null;
@@ -111,6 +112,7 @@ function TrustReport() {
 
   const chatTotal = stats ? (stats.totals.chat_reply ?? 0) : 0;
   const basis = stats?.ratios.chatBasis ?? {};
+  const cardVisits = stats?.ratios.visitSources?.card ?? 0;
 
   return (
     <div>
@@ -128,6 +130,12 @@ function TrustReport() {
           <li className="text-sm leading-7 text-rice-200/60">
             · 本服务启动以来还没有人向文物提问。提问后，这里会展示回答依据档位与「无法回答」占比的实时统计。
           </li>
+          {cardVisits > 0 && (
+            <li className="text-sm leading-7 text-rice-200/60">
+              · 有 <span className="text-gilt-light">{cardVisits}</span> 次访问来自记忆卡上的二维码——
+              有人把我的故事带回去了。
+            </li>
+          )}
         </ul>
       ) : (
         <div className="space-y-4">
@@ -147,6 +155,11 @@ function TrustReport() {
             <Bar label="合理推测" value={basis.inferred ?? 0} total={chatTotal} />
             <Bar label="无法回答" value={basis.unknown ?? 0} total={chatTotal} />
           </div>
+          {cardVisits > 0 && (
+            <p className="text-sm leading-7 text-rice-200/60">
+              · 记忆卡二维码带来的访问：<span className="text-gilt-light">{cardVisits}</span> 次。
+            </p>
+          )}
           <p className="text-[11px] leading-5 text-rice-200/30">
             统计自服务最近一次启动（{new Date(stats.since).toLocaleString("zh-CN")}）起累计，
             为聚合计数、不含任何问题内容与个人信息；服务重启后从零开始。

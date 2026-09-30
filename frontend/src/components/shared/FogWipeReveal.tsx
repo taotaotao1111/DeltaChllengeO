@@ -28,6 +28,16 @@ interface FogWipeRevealProps {
   coverImageSrc?: string;
   /** 透传容器 style（边框等视觉定制，如黑金描边） */
   style?: React.CSSProperties;
+  /**
+   * 两段式揭示（可选）：设了才生效。到 threshold 先不揭示——切换挽留提示，
+   * 继续擦到 nudgeBar 才真正揭示；中途停手 nudgeAutoMs 后遮罩自行剥落，
+   * 不把人卡在「擦不干净也过不去」的体验里（第三章除锈用，展厅雾擦不传）。
+   */
+  nudgeBar?: number;
+  /** 挽留提示文案（配合 nudgeBar） */
+  nudgeHint?: string;
+  /** 停手后自动剥落的等待毫秒数 */
+  nudgeAutoMs?: number;
 }
 
 /** 两种遮罩各自的色板与颗粒参数 */
@@ -79,6 +89,9 @@ export default function FogWipeReveal({
   skipLabel,
   coverImageSrc,
   style,
+  nudgeBar,
+  nudgeHint,
+  nudgeAutoMs = 3200,
 }: FogWipeRevealProps) {
   const palette = TONES[tone];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,6 +109,10 @@ export default function FogWipeReveal({
   /** 已刮开百分比（进度角标用） */
   const [progress, setProgress] = useState(0);
   const coverImgRef = useRef<HTMLImageElement | null>(null);
+  /** 两段式：已进入挽留阶段（到了 threshold 但还没到 nudgeBar） */
+  const [nudged, setNudged] = useState(false);
+  const nudgedRef = useRef(false);
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 图片盖层：预加载，onload 后触发一次重绘（此时 canvas 尺寸已就绪）
   useEffect(() => {
@@ -257,6 +274,13 @@ export default function FogWipeReveal({
     }
   };
 
+  const forceReveal = useCallback(() => {
+    if (revealedRef.current) return;
+    revealedRef.current = true;
+    setFaded(true);
+    onRevealed?.();
+  }, [onRevealed]);
+
   const checkCleared = useCallback(() => {
     if (revealedRef.current) return;
     const canvas = canvasRef.current;
@@ -280,13 +304,23 @@ export default function FogWipeReveal({
     const ratio = cleared / (SZ * SZ);
     // 进度角标实时更新（四舍五入到整数，避免每帧 setState 的渲染抖动）
     setProgress(Math.round(ratio * 100));
-    if (ratio >= threshold) {
+
+    // 两段式：先到挽留线（threshold），再到揭示线（nudgeBar）
+    if (nudgeBar !== undefined && ratio >= threshold && ratio < nudgeBar && !nudgedRef.current) {
+      nudgedRef.current = true;
+      setNudged(true);
+      // 停手挽留：等 nudgeAutoMs 让遮罩自行剥落，避免「擦不干净就过不去」
+      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+      nudgeTimerRef.current = setTimeout(() => forceReveal(), nudgeAutoMs);
+    }
+
+    if (ratio >= (nudgeBar ?? threshold)) {
       revealedRef.current = true;
       setFaded(true);
       setProgress(100);
       onRevealed?.();
     }
-  }, [threshold, onRevealed]);
+  }, [threshold, nudgeBar, nudgeAutoMs, onRevealed, forceReveal]);
 
   const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -328,12 +362,13 @@ export default function FogWipeReveal({
     });
   };
 
-  const forceReveal = () => {
-    if (revealedRef.current) return;
-    revealedRef.current = true;
-    setFaded(true);
-    onRevealed?.();
-  };
+  // 挽留计时器与 raf 的清理（组件卸载/揭示后不再留悬挂回调）
+  useEffect(() => {
+    return () => {
+      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   return (
     <div ref={containerRef} className={`relative select-none ${className}`} style={style}>
@@ -366,6 +401,19 @@ export default function FogWipeReveal({
           className="pointer-events-none absolute inset-x-0 bottom-[16%] z-10 text-center text-sm tracking-wide text-rice-100"
         >
           {hint}
+        </motion.p>
+      )}
+
+      {/* 两段式挽留提示：到了 threshold 但没到 nudgeBar 时切换的文案。
+          同样不用 AnimatePresence exit（keyframes + repeat 吃 exit 的坑）。 */}
+      {nudged && !faded && nudgeHint && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.45, 0.95, 0.45] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+          className="pointer-events-none absolute inset-x-0 bottom-[16%] z-10 text-center text-sm tracking-wide text-gilt-light"
+        >
+          {nudgeHint}
         </motion.p>
       )}
 

@@ -240,6 +240,7 @@ app.post('/api/chat', async (c) => {
  * 内存存储，Pod 重启 / 蓝绿切换即清零——统计窗口如实暴露给前端（since 字段）。
  */
 const TRACK_EVENTS = {
+  visit_source: ['source'], // 进站来源（记忆卡二维码 ?from=card 等）
   stage_reach: ['stage'],
   artifact_select: ['artifactId', 'revisit'],
   chapter_view: ['artifactId', 'chapterIndex'],
@@ -252,6 +253,7 @@ const TRACK_EVENTS = {
   inscription_section_view: ['artifactId', 'sectionIndex'],
 };
 const TRACK_ENUMS = {
+  'visit_source|source': ['card'],
   'chat_reply|questionKind': ['general', 'experiential', 'persona'],
   'chat_reply|factBasis': ['verified', 'inferred', 'unknown'],
 };
@@ -301,6 +303,7 @@ app.get('/api/stats', (c) => {
   const selects = trackTotals.get('artifact_select') ?? 0;
   const basis = trackDim('chat_reply', 'factBasis');
   const kinds = trackDim('chat_reply', 'questionKind');
+  const visitSources = trackDim('visit_source', 'source');
   const chapterCompletes = trackDim('chapter_complete', 'chapterIndex');
   const lastChapterIdx = Object.keys(chapterCompletes)
     .map(Number)
@@ -313,6 +316,7 @@ app.get('/api/stats', (c) => {
       chatBasis: basis,
       chatUnknownRate: chatTotal ? (basis.unknown ?? 0) / chatTotal : null,
       questionMix: kinds,
+      visitSources,
       completionRate: selects > 0 && lastChapterIdx >= 0 ? chapterCompletes[String(lastChapterIdx)] / selects : null,
       memoryCardRate: selects ? (trackTotals.get('memory_card_open') ?? 0) / selects : null,
       avgHotspots: selects ? (trackTotals.get('hotspot_discover') ?? 0) / selects : null,
