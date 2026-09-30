@@ -2,19 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 /**
- * 环境底噪：深夜博物馆的青铜器嗡鸣（30s 无缝循环，程序合成的素材）。
+ * 背景音乐：「宅兹中国」古琴铜铃环境曲（用户 Mureka 生成，3:25 无缝循环）。
+ * 替换了初版程序合成底噪（scripts/gen-ambient.mjs 仍保留备用）。
  *
  * 播放纪律：
  * - **首次用户手势后才起播**（浏览器 autoplay 策略——museum 开场「推门进去」
- *   的点击就是天然的手势锚点，不用再发明一个「开启声音」的仪式）；
- * - 音量 5%——氛围存在感，不是「背景音乐」；
- * - 右下角常驻一个极小的静音开关（喇叭线框，不与问问我悬浮钮抢位——
- *   挂在它的正上方）；偏好不持久化（每次进站重新按 autoplay 走，别用
- *   localStorage 记忆静音——下次进来悄悄没声音会像 bug）。
- *
- * 也是 TTS 语音旁白的地基：Audio 元素与手势解锁在这里完成，
- * 以后语音直接复用同一个已解锁的 AudioContext/手势状态。
+ *   的点击就是天然的手势锚点）；
+ * - 音量压到 8%——是氛围铺底，绝不盖过讲述节奏；
+ * - 右下角常驻一个极小的静音开关（线框喇叭，挂「问问我」悬浮钮正上方）；
+ *   偏好不持久化（每次进站重新按 autoplay 走，别用 localStorage 记忆静音
+ *   ——下次进来悄悄没声音会像 bug）。
  */
+const BGM_SRC = "audio/bgm.mp3";
+const BGM_VOLUME = 0.08;
 export default function AmbientSound() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   /** 用户是否已给出过手势（起播条件） */
@@ -35,7 +35,7 @@ export default function AmbientSound() {
   useEffect(() => {
     if (!armed || muted || !audioRef.current) return;
     const a = audioRef.current;
-    a.volume = 0.05;
+    a.volume = BGM_VOLUME;
     a.play()
       .then(() => setPlaying(true))
       .catch(() => {
@@ -48,7 +48,7 @@ export default function AmbientSound() {
     const a = audioRef.current;
     if (!a) return;
     if (muted) {
-      a.volume = 0.05;
+      a.volume = BGM_VOLUME;
       a.play()
         .then(() => {
           setMuted(false);
@@ -64,7 +64,7 @@ export default function AmbientSound() {
 
   return (
     <>
-      <audio ref={audioRef} src="audio/ambient.mp3" loop preload="none" />
+      <audio ref={audioRef} src={BGM_SRC} loop preload="none" />
       {/* 静音开关：右下悬浮钮正上方（z 同层但错位，不遮不叠） */}
       <motion.button
         initial={{ opacity: 0 }}

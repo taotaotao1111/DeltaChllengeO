@@ -134,7 +134,7 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
               <div className="flex flex-wrap justify-center gap-3">
                 <button
                   onClick={onNext}
-                  className="rounded-full border border-rice-100/20 px-6 py-2.5 text-sm tracking-wide text-rice-100/80 transition hover:border-rice-100/40 hover:text-rice-100"
+                  className="rounded-full bg-gilt/20 px-6 py-2.5 text-sm tracking-wide text-gilt-light shadow-[0_0_24px_rgba(201,167,106,0.15)] transition hover:bg-gilt/35"
                 >
                   {data.nextLabel ?? "看看我经历了多久 →"}
                 </button>
