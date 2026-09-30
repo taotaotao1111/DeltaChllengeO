@@ -10,85 +10,108 @@ interface BronzeWaterClockProps {
 }
 
 /**
- * 铜漏（西周计时器）：记录「我陪你读了多少」的水位。
+ * 铜漏（漏刻）：记录「我陪你读了多少」的水位。
  *
  * 语义刻意与章节目录分开（用户定调）：铜漏只记录、不可点、不导航——
- * 读过一章滴一格水，满了金光盈盈。它不是进度条催促（不显示百分比数字），
- * 是「时间在你这边流过」的陪伴感。
+ * 读过一章滴一格水，满了金光盈盈。不是进度条催促，是陪伴感。
  *
- * 造型：青铜器剖面的壶身（宽口收颈垂腹）+ 壶内水位 + 颈口上方一滴
- * 将落未落的水珠（读新的章时滴下）。纯 SVG + framer-motion，零依赖。
+ * 造型（v2，用户嫌 v1 简陋后重画）：**双层漏刻**才是铜漏本来的样子——
+ * 上层贮水壶（漏滴）+ 下层受水壶（水位在这里涨）。方形 viewBox 器形
+ * 居中，letterbox 消失（v1 36×44 长方形 viewBox 在方形容器里被缩放错位
+ * 且壶顶 3 底 40 重心偏下——怎么调 margin 都是补救）。加口沿、圈足、
+ * 竖向刻箭（漏刻的「刻」——受水壶侧的刻度线），水珠下滴动画。
  */
 export default function BronzeWaterClock({ total, read, size = "nav" }: BronzeWaterClockProps) {
   const ratio = total > 0 ? Math.min(1, read / total) : 0;
   const big = size === "menu";
 
-  // 壶身几何（viewBox 0 0 36 44）：宽口 30、收颈、垂腹高 24
-  // 水位从壶底（y=38）随 ratio 涨到 y=18
-  const waterTopY = 38 - ratio * 20;
-  const isNewDrop = read > 0 && read < total; // 还有没读完的：滴一颗将落的水珠
+  // viewBox 0 0 24 24，器形整体居中：
+  // 上壶：口 y=2、腹 y=7..12；滴嘴 y=13；下壶：y=14..21、圈足 y=21.5
+  // 下壶水位从 y=20.3 涨到 y=15.2
+  const waterTopY = 20.3 - ratio * 5.1;
+  const stroke = ratio >= 1 ? "rgba(201,167,106,0.85)" : "rgba(201,167,106,0.55)";
+  const waterFill =
+    ratio >= 1 ? "rgba(201,167,106,0.55)" : ratio > 0 ? "rgba(201,167,106,0.35)" : "transparent";
 
   return (
     <span
-      /* 垂腹壶形在 viewBox 里顶 3 底 40（重心偏下），svg 整体渲染偏上 ~3px——
-         mt-px 光学回正（与按钮文字基线对齐） */
-      className={`relative inline-flex shrink-0 items-center justify-center mt-[2.5px] ${
-        big ? "h-11 w-9" : "h-[22px] w-[18px]"
+      className={`relative inline-flex shrink-0 items-center justify-center ${
+        big ? "h-11 w-11" : "h-[24px] w-[24px]"
       }`}
       aria-label={`铜漏：已读 ${read} / ${total} 章`}
       title={`陪我读了 ${read} / ${total} 章`}
     >
-      <svg viewBox="0 0 36 44" className="h-full w-full" aria-hidden>
-        {/* 壶身剖面：宽口 → 收颈 → 垂腹（青铜器剪影） */}
+      <svg viewBox="0 0 24 24" className="h-full w-full" aria-hidden>
+        {/* ── 上壶（贮水壶，铜漏的水从这里滴下）── */}
+        {/* 口沿：外撇的宽口 */}
         <path
-          d="M8 3 L28 3 L24 10 C30 14, 32 20, 32 27 C32 35, 26 40, 18 40 C10 40, 4 35, 4 27 C4 20, 6 14, 12 10 Z"
-          fill="rgba(13,13,15,0.6)"
-          stroke={ratio >= 1 ? "rgba(201,167,106,0.75)" : "rgba(201,167,106,0.4)"}
-          strokeWidth={big ? 1.4 : 1.8}
+          d="M7.2 2.2 H16.8 M8 3.4 L16 3.4"
+          stroke={stroke}
+          strokeWidth={big ? 0.9 : 1.2}
+          strokeLinecap="round"
+          fill="none"
         />
-        {/* 口沿双线（铜器领口） */}
+        {/* 上壶身：收颈垂腹 */}
         <path
-          d="M9 6 L27 6"
-          stroke={ratio >= 1 ? "rgba(201,167,106,0.55)" : "rgba(201,167,106,0.3)"}
-          strokeWidth={big ? 1 : 1.4}
+          d="M8.6 3.4 C9.4 5.2, 10 6.8, 10 8.2 C10 10.2, 8.8 11.4, 8.8 12.2 C8.8 12.9, 9.6 13.4, 12 13.4 C14.4 13.4, 15.2 12.9, 15.2 12.2 C15.2 11.4, 14 10.2, 14 8.2 C14 6.8, 14.6 5.2, 15.4 3.4"
+          stroke={stroke}
+          strokeWidth={big ? 1.1 : 1.5}
+          strokeLinejoin="round"
+          fill="rgba(13,13,15,0.5)"
         />
-        {/* 水位（水位金色，随读数上涨；满时更亮） */}
+        {/* ── 下壶（受水壶：水位在这里涨）── */}
+        <path
+          d="M5.5 14.4 C5.5 13.8, 6 13.5, 7 13.5 H17 C18 13.5, 18.5 13.8, 18.5 14.4 C18.5 17.5, 17 20.8, 12 20.8 C7 20.8, 5.5 17.5, 5.5 14.4 Z"
+          stroke={stroke}
+          strokeWidth={big ? 1.1 : 1.5}
+          strokeLinejoin="round"
+          fill="rgba(13,13,15,0.5)"
+        />
+        {/* 受水壶的水位（读一章涨一格） */}
         {ratio > 0 && (
           <path
-            d={`M8 ${waterTopY} C6 ${waterTopY + 2}, 5 ${waterTopY + 5}, 5 27 C5 34, 10 38.5, 18 38.5 C26 38.5, 31 34, 31 27 C31 ${waterTopY + 5}, 30 ${waterTopY + 2}, 28 ${waterTopY} C24 ${waterTopY - 1}, 12 ${waterTopY - 1}, 8 ${waterTopY} Z`}
-            fill={
-              ratio >= 1
-                ? "rgba(201,167,106,0.5)"
-                : ratio >= 0.5
-                  ? "rgba(201,167,106,0.38)"
-                  : "rgba(201,167,106,0.28)"
-            }
+            d={`M6.1 ${waterTopY + 1.2} C6.1 17.5, 7.4 20.2, 12 20.2 C16.6 20.2, 17.9 17.5, 17.9 ${waterTopY + 1.2} C17.9 ${waterTopY + 0.4}, 17.3 ${waterTopY}, 16.5 ${waterTopY} C14.5 ${waterTopY - 0.3}, 9.5 ${waterTopY - 0.3}, 7.5 ${waterTopY} C6.7 ${waterTopY}, 6.1 ${waterTopY + 0.4}, 6.1 ${waterTopY + 1.2} Z`}
+            fill={waterFill}
           />
         )}
-        {/* 水面微光（读得越多越亮） */}
+        {/* 水面微光 */}
         {ratio > 0 && (
           <ellipse
-            cx="18"
-            cy={waterTopY}
-            rx="10"
-            ry="1.6"
-            fill={`rgba(201,167,106,${0.25 + ratio * 0.35})`}
+            cx="12"
+            cy={waterTopY + 0.2}
+            rx="5.6"
+            ry="0.9"
+            fill={`rgba(201,167,106,${0.3 + ratio * 0.4})`}
           />
         )}
+        {/* 竖向刻箭（漏刻的「刻」）：受水壶右侧的刻度 */}
+        <path
+          d="M19.6 15.2 L20.4 15.2 M19.3 16.6 L20.4 16.6 M19 18 L20.4 18 M18.7 19.4 L20.4 19.4"
+          stroke="rgba(201,167,106,0.35)"
+          strokeWidth={big ? 0.7 : 0.9}
+          strokeLinecap="round"
+          fill="none"
+        />
+        {/* 圈足 */}
+        <path
+          d="M9 20.8 H15 L15.4 22 H8.6 Z"
+          stroke={stroke}
+          strokeWidth={big ? 1 : 1.3}
+          strokeLinejoin="round"
+          fill="rgba(13,13,15,0.5)"
+        />
       </svg>
 
-      {/* 颈口上方的水珠：还有未读章节时悬着一颗，呼吸明灭（暗示「下一滴等你」） */}
-      {isNewDrop && (
+      {/* 壶嘴水珠：还有未读章节时一颗水珠正从上壶滴向下壶，
+          缓慢下落循环——漏刻在走，下一滴等你 */}
+      {read > 0 && ratio < 1 && (
         <motion.span
-          className={`absolute rounded-full bg-gilt-light ${
-            big ? "h-[5px] w-[5px] -top-0.5" : "h-[3.5px] w-[3.5px] top-0"
+          className={`absolute left-1/2 -translate-x-1/2 rounded-full bg-gilt-light ${
+            big ? "h-[4.5px] w-[4.5px]" : "h-[3px] w-[3px]"
           }`}
-          style={{
-            boxShadow: "0 0 6px rgba(201,167,106,0.7)",
-            left: big ? "calc(50% - 2.5px)" : "calc(50% - 1.75px)",
-          }}
-          animate={{ opacity: [0.4, 0.95, 0.4] }}
-          transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+          style={{ boxShadow: "0 0 5px rgba(201,167,106,0.8)" }}
+          animate={{ top: [big ? "34%" : "34%", big ? "56%" : "56%"], opacity: [0, 1, 1, 0] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeIn", times: [0, 0.15, 0.85, 1] }}
         />
       )}
 
@@ -97,7 +120,7 @@ export default function BronzeWaterClock({ total, read, size = "nav" }: BronzeWa
         <motion.span
           className="absolute inset-0 rounded-full"
           style={{
-            background: "radial-gradient(closest-side, rgba(201,167,106,0.25), transparent)",
+            background: "radial-gradient(closest-side, rgba(201,167,106,0.3), transparent)",
           }}
           animate={{ opacity: [0.5, 1, 0.5] }}
           transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
