@@ -82,6 +82,7 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
         <RustReveal
           leadLines={data.derust.leadLines}
           footnote={data.derust.footnote}
+          underImageSrc={data.derust.underImageSrc}
           onRevealed={advance}
         />
       )}

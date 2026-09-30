@@ -463,10 +463,10 @@ export const hezun: Artifact = {
       hook: "锈的下面，藏着四个字。",
       backdrop: "patina",
       backdropGlyphs: ["宅", "兹", "中", "国"],
-      // 开场画换成「带锈器身」：刮锈交互与随后的前后对比滑杆共用这组示意素材
+      // 开场氛围图换回刮锈场景图（用户指定：原 ch3-derust）
       openingArt: {
-        src: "images/hezun-derust-before.jpg",
-        caption: "带锈的铜器 · 示意",
+        src: "images/ch3-derust.jpg",
+        caption: "刮锈见字 · 场景示意",
       },
       presence: {
         opacity: 0.13,
@@ -478,7 +478,9 @@ export const hezun: Artifact = {
         lineDelay: 1500,
         derust: {
           leadLines: ["三千年的锈，盖住了我内壁的字。", "1975年，有人一点一点把它清理掉。"],
-          footnote: "字影为示意呈现，非拓片实物 · 铭文全文共122字（含重文）",
+          footnote: "器身为示意呈现，非实物照片 · 除锈史实见资料来源页",
+          // 刮开锈壳露出除锈后的器身（示意素材）
+          underImageSrc: "images/hezun-derust-after.jpg",
         },
         // 刮锈之后的前后对比（AI 示意图、器型非严格何尊——caption 如实标注）
         compare: {

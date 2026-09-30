@@ -163,8 +163,10 @@ export interface RevealModuleData {
   kind: "reveal";
   leadInLines: string[];
   lineDelay: number;
-  /** 亲手擦掉覆盖物才看得见字的那一步。leadLines 一句一行（原样保留换行） */
-  derust?: { leadLines: string[]; footnote: string };
+  /** 亲手擦掉覆盖物才看得见字的那一步。leadLines 一句一行（原样保留换行）；
+   *  underImageSrc：刮开锈层露出的器物图（除锈后状态，示意素材），
+   *  不配则用内壁底色+模糊字影的兜底方案。 */
+  derust?: { leadLines: string[]; footnote: string; underImageSrc?: string };
   /**
    * 除锈前后对比滑杆（刮锈交互之后）：同角度两张图拖分割线对比。
    * 素材多为 AI 示意——caption 必须如实标注「示意、非实物照片」。
