@@ -5,16 +5,17 @@ import ChapterMenu from "./ChapterMenu";
 import BronzeWaterClock from "./BronzeWaterClock";
 import { getArtifact } from "../../data/artifacts";
 
-type NavKey = "chapter" | "timeline" | "chat";
+type NavKey = "chapter" | "timeline";
 
 const ITEMS: { key: NavKey; label: string }[] = [
   { key: "chapter", label: "认识我" },
   { key: "timeline", label: "探索历史" },
-  { key: "chat", label: "问问我" },
 ];
 
 /**
- * 全局仅有的三个入口，克制地悬浮在屏幕边缘，不做传统导航栏样式。
+ * 全局仅有的两个导航入口，克制地悬浮在屏幕边缘，不做传统导航栏样式。
+ * 「问问我」不在这里——右下角有常驻悬浮入口（ArtifactChat），
+ * 三层重复（导航+悬浮+closing）做减法只留悬浮一个（用户定调）。
  *
  * 「认识我」展开章节目录（ChapterMenu）——章数由文物档案决定，五章之后
  * 固定回第一章的旧导航模型跟不上了。点目录外的任何处关闭。
@@ -22,7 +23,6 @@ const ITEMS: { key: NavKey; label: string }[] = [
 export default function SectionNav() {
   const stage = useGameStore((s) => s.stage);
   const setStage = useGameStore((s) => s.setStage);
-  const toggleChat = useGameStore((s) => s.toggleChat);
   const artifactId = useGameStore((s) => s.currentArtifactId);
   const discovered = useGameStore((s) => s.discoveredDetails);
 
@@ -37,10 +37,6 @@ export default function SectionNav() {
   ).length;
 
   const handleClick = (key: NavKey) => {
-    if (key === "chat") {
-      toggleChat(true);
-      return;
-    }
     if (key === "chapter") {
       // 已在读章状态时再点一次 = 回第一章（快捷语义保留）；否则展开目录
       if (stage === "chapter") setMenuOpen(true);

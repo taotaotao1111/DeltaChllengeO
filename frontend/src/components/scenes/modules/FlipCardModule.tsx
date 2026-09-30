@@ -1,7 +1,6 @@
 import { type CSSProperties, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
-import { useGameStore } from "../../../store/gameStore";
 import { track } from "../../../utils/tracking";
 import type { Artifact, FlipModuleData } from "../../../types/artifact";
 
@@ -74,7 +73,6 @@ export default function FlipCardModule({
   data: FlipModuleData;
   onNext: () => void;
 }) {
-  const toggleChat = useGameStore((s) => s.toggleChat);
 
   const [phase, setPhase] = useState<Phase>("lead-in");
   const [cardIndex, setCardIndex] = useState(0);
@@ -401,12 +399,6 @@ export default function FlipCardModule({
                 textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-xl"
                 reveal={
                   <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => toggleChat(true)}
-                      className="rounded-full border border-gilt/30 px-5 py-2.5 text-xs tracking-wide text-gilt-light/80 transition hover:border-gilt/50"
-                    >
-                      问问我
-                    </button>
                     <button
                       onClick={onNext}
                       className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"

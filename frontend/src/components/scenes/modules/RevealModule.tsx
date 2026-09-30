@@ -25,7 +25,6 @@ interface RevealModuleProps {
  */
 export default function RevealModule({ artifact, data, presence, onNext }: RevealModuleProps) {
   const [phase, setPhase] = useState<Phase>("lead-in");
-  const toggleChat = useGameStore((s) => s.toggleChat);
   const markDiscovered = useGameStore((s) => s.markDiscovered);
 
   /** 实际会经过的步骤，跳过没有素材的那些 */
@@ -133,12 +132,6 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
             textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-xl"
             reveal={
               <div className="flex flex-wrap justify-center gap-3">
-                <button
-                  onClick={() => toggleChat(true)}
-                  className="rounded-full bg-gilt/25 px-6 py-2.5 text-sm tracking-wide text-gilt-light shadow-[0_0_24px_rgba(201,167,106,0.15)] transition hover:bg-gilt/35"
-                >
-                  问问我
-                </button>
                 <button
                   onClick={onNext}
                   className="rounded-full border border-rice-100/20 px-6 py-2.5 text-sm tracking-wide text-rice-100/80 transition hover:border-rice-100/40 hover:text-rice-100"
