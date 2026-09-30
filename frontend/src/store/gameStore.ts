@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { ChapterModule, ChatMessage, Scene } from "../types/artifact";
 import { DEFAULT_ARTIFACT_ID, getArtifact } from "../data/artifacts";
 import { track } from "../utils/tracking";
+import { loadProgress, saveProgress, type ProgressSnapshot } from "../utils/progressStorage";
 
 /**
  * 行为埋点说明：各 action 内的 track() 是纯发射（见 utils/tracking.ts）——
@@ -90,6 +91,12 @@ interface GameState {
   setArtifactSnapshot: (dataUrl: string) => void;
   setTracedGlyphs: (dataUrls: (string | null)[] | null) => void;
   markAppraiseDone: () => void;
+  /** 续读：按上次检查点恢复（museum 开场页的「回到上次」入口调用） */
+  resumeSession: () => void;
+  /** 上次会话是否留有可恢复的进度（museum 入口展示条件；模块加载时读一次） */
+  resumable: ProgressSnapshot | null;
+  /** 进度落盘（内部钩子用，不对外） */
+  persistCheckpoint: () => void;
   currentScene: () => Scene;
   /** 最近一条用户提问，用于记忆卡个性化「我的问题」 */
   lastUserQuestion: () => string | null;
@@ -112,10 +119,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   artifactSnapshot: null,
   tracedGlyphs: null,
   appraiseDone: false,
+  // 模块加载时读一次（SSR 安全：浏览器外为 null）
+  resumable: loadProgress(),
 
   setStage: (stage) => {
     track("stage_reach", { stage });
     set({ stage });
+    get().persistCheckpoint();
   },
 
   /** 选定一件文物：换文物 = 换一段相遇，上一段的对话、探索痕迹与纪念品都不许跟过来 */
@@ -143,6 +153,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   setChapter: (index) => {
     track("chapter_view", { artifactId: get().currentArtifactId, chapterIndex: index });
     set({ chapterIndex: index });
+    get().persistCheckpoint();
   },
 
   markDiscovered: (id) =>
@@ -158,6 +169,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       });
       return { discoveredDetails: [...s.discoveredDetails, id] };
     }),
+  // markDiscovered 自身不落盘：已读标记总伴随章节完成/场景切换写入，
+  // 那些钩子（setChapter/setStage/仪式完成）的 persistCheckpoint 会带上最新列表。
 
   toggleChat: (open) =>
     set((s) => ({ chatOpen: open ?? !s.chatOpen, memoryCardOpen: false })),
@@ -192,8 +205,50 @@ export const useGameStore = create<GameState>((set, get) => ({
   closeMemoryCard: () => set({ memoryCardOpen: false }),
   setUserLegacyLine: (line) => set({ userLegacyLine: line }),
   setArtifactSnapshot: (dataUrl) => set({ artifactSnapshot: dataUrl }),
-  setTracedGlyphs: (dataUrls) => set({ tracedGlyphs: dataUrls }),
-  markAppraiseDone: () => set({ appraiseDone: true }),
+  setTracedGlyphs: (dataUrls) => {
+    set({ tracedGlyphs: dataUrls });
+    if (dataUrls !== null) get().persistCheckpoint();
+  },
+  markAppraiseDone: () => {
+    set({ appraiseDone: true });
+    get().persistCheckpoint();
+  },
+
+  /**
+   * 检查点写入：进度推进的自然钩子（setStage/setChapter/章已读/仪式完成）统一走这里。
+   * museum 阶段不写（开场推门本身不是进度）。
+   */
+  persistCheckpoint: () => {
+    const s = get();
+    if (s.stage === "museum") return;
+    saveProgress({
+      checkpoint: { stage: s.stage, artifactId: s.currentArtifactId, chapterIndex: s.chapterIndex },
+      discovered: s.discoveredDetails,
+      appraiseDone: s.appraiseDone,
+      tracedDone: s.tracedGlyphs !== null,
+      savedAt: Date.now(),
+    });
+  },
+
+  resumeSession: () => {
+    const snap = get().resumable;
+    if (!snap) return;
+    track("session_resume", { stage: snap.checkpoint.stage });
+    // 恢复的骨架状态只有进度类：位置/已读标记/仪式完成布尔。
+    // 会话纪念品（对话历史、视角截图）不恢复——那属于上一个会话。
+    // 章内 phase 不恢复：一律回该章开头重放（章节是完整叙事单元）。
+    set({
+      currentArtifactId: snap.checkpoint.artifactId,
+      chapterIndex: snap.checkpoint.chapterIndex,
+      discoveredDetails: snap.discovered,
+      appraiseDone: snap.appraiseDone,
+      // 描红做过（含跳过）就不再弹仪式：置「全跳过」占位，出口直开记忆卡
+      tracedGlyphs: snap.tracedDone
+        ? getArtifact(snap.checkpoint.artifactId).traceGlyphs?.chars.map(() => null) ?? null
+        : null,
+      stage: snap.checkpoint.stage,
+    });
+  },
 
   currentScene: () => {
     const s = get();

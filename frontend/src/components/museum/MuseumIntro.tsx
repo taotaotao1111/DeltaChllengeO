@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import SpeechReveal from "../shared/SpeechReveal";
 import ArtifactCallout from "./ArtifactCallout";
+import { useGameStore } from "../../store/gameStore";
+import { getArtifact } from "../../data/artifacts";
 
 interface MuseumIntroProps {
   onComplete: () => void;
@@ -86,6 +88,26 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
   const [entering, setEntering] = useState(false);
   const portrait = usePortrait();
   const { src, aspect, focus } = portrait ? INTRO.portrait : INTRO.landscape;
+  const resumable = useGameStore((s) => s.resumable);
+  const resumeSession = useGameStore((s) => s.resumeSession);
+
+  /**
+   * 续读入口文案：读到中途 → 上次读到第 X 章；走完全程（末章已读 + 鉴宝过
+   * + 到过时间线）→ 「已听完我的一生」。两档都给，但语气克制——推门（全新
+   * 一次）仍是主入口，续读是次选项。
+   */
+  const resumeLabel = (() => {
+    const snap = resumable;
+    if (!snap) return null;
+    if (snap.checkpoint.stage === "timeline") return "你已听完我的一生——再进来坐坐 →";
+    if (snap.checkpoint.stage === "chapter") {
+      const artifact = getArtifact(snap.checkpoint.artifactId);
+      const chapter = artifact.chapters[snap.checkpoint.chapterIndex];
+      if (!chapter) return null; // 档案里已没有这一章（数据变更）：不当可续读
+      return `上次读到：${chapter.label} · ${chapter.title} →`;
+    }
+    return null; // gallery：刚进展厅就走了，不算进度，不显示
+  })();
 
   useEffect(() => {
     // 横屏由 SpeechReveal 念完后触发；竖屏没有念白，用定时器代替
@@ -101,6 +123,13 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
   }, [entering, onComplete]);
 
   const enter = () => setEntering(true);
+
+  /**
+   * 续读：跳过推门动效直接落回上次位置。
+   * 注意不能走 onComplete —— MuseumScene 的 onComplete 是 setStage("gallery")，
+   * 会把 resumeSession 恢复好的 stage 盖回展厅。
+   */
+  const resume = () => resumeSession();
 
   return (
     <div
@@ -196,21 +225,52 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
 
           <AnimatePresence>
             {ready && (
-              <motion.button
+              <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.6, duration: 0.8 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  enter();
-                }}
-                className="mt-8 rounded-full border border-gilt/40 bg-ink-900/40 px-7 py-3 text-sm tracking-wide text-gilt-light shadow-[0_0_30px_rgba(201,167,106,0.12)] backdrop-blur-sm transition hover:bg-gilt/10"
+                className="mt-8 flex flex-col items-center gap-3"
               >
-                推门进去 →
-              </motion.button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    enter();
+                  }}
+                  className="rounded-full border border-gilt/40 bg-ink-900/40 px-7 py-3 text-sm tracking-wide text-gilt-light shadow-[0_0_30px_rgba(201,167,106,0.12)] backdrop-blur-sm transition hover:bg-gilt/10"
+                >
+                  推门进去 →
+                </button>
+                {resumeLabel && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resume();
+                    }}
+                    className="text-xs tracking-wide text-rice-200/45 transition hover:text-rice-200/80"
+                  >
+                    {resumeLabel}
+                  </button>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
+      )}
+
+      {portrait && resumeLabel && !entering && (
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.55 }}
+          whileHover={{ opacity: 1 }}
+          transition={{ delay: 1.2, duration: 0.8 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            resume();
+          }}
+          className="absolute bottom-[calc(2.2rem+var(--safe-bottom))] left-1/2 z-10 -translate-x-1/2 text-xs tracking-wide text-rice-200/50"
+        >
+          {resumeLabel}
+        </motion.button>
       )}
 
       {/* 竖屏整屏都能点，再放一个「跳过」是重复的，还会挤在海报顶部的竖排字旁边 */}

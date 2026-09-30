@@ -252,6 +252,7 @@ const TRACK_EVENTS = {
   flip_card_view: ['artifactId', 'cardId', 'face'],
   inscription_section_view: ['artifactId', 'sectionIndex'],
   appraise_answer: ['artifactId', 'questionId', 'correct'],
+  session_resume: ['stage'],
 };
 const TRACK_ENUMS = {
   'visit_source|source': ['card'],
