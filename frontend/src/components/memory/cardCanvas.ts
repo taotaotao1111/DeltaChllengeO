@@ -195,6 +195,8 @@ function measure(ctx: CanvasRenderingContext2D, data: CardData): { blocks: Block
 export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
   await ensureFonts();
   const snapshotImg = data.snapshot ? await loadImage(data.snapshot) : null;
+  // 回流二维码（static 生成、离线已验证可扫）：透明底米色码点，画在尾部
+  const qrImg = await loadImage("images/memory-card-qr.png");
   // 描红笔迹逐张加载（null 的字画虚线占位）
   const tracedImgs = await Promise.all(
     (data.tracedGlyphs ?? []).map((t) => (t ? loadImage(t) : Promise.resolve(null))),
@@ -330,6 +332,21 @@ export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
   ctx.fillStyle = "rgba(242,234,217,0.6)";
   ctx.font = `22px ${SERIF}`;
   ctx.fillText("《物语千年》 闭馆以后，文物终于可以说话了。", PAD, footY + 92);
+
+  // ── 回流入口：二维码（「分享即入口」——存图转发的人扫码回到这里）─────
+  // 尺寸刻意小（56px）：是入口的存在感，不是第二主角；放落款行右侧、
+  // 印章左侧的空档。米色码点 + 透明底已在生成时定死，融入卡片配色。
+  if (qrImg) {
+    const qr = 56;
+    const qx = W - PAD - 70 - 24 - qr; // 印章 70 + 间距 24
+    const qy = footY + 30;
+    ctx.drawImage(qrImg, qx, qy, qr, qr);
+    ctx.fillStyle = "rgba(242,234,217,0.3)";
+    ctx.font = `15px ${SANS}`;
+    ctx.textAlign = "center";
+    ctx.fillText("扫码来听", qx + qr / 2, qy + qr + 16);
+    ctx.textAlign = "left";
+  }
 
   // 右下角一枚印章感的方印，和上面两行落款竖向居中对齐
   const seal = 70;

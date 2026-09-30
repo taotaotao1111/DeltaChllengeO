@@ -7,6 +7,7 @@ import ChapterHost from "../components/scenes/ChapterHost";
 import TimelineScene from "../components/scenes/TimelineScene";
 import SectionNav from "../components/shared/SectionNav";
 import ArtifactChat from "../components/ai/ArtifactChat";
+import AmbientSound from "../components/shared/AmbientSound";
 import MemoryCard from "../components/memory/MemoryCard";
 import InkBackground from "../components/shared/InkBackground";
 import ChapterBackdrop from "../components/shared/ChapterBackdrop";
@@ -51,6 +52,7 @@ export default function Home() {
       )}
 
       <SectionNav />
+      <AmbientSound />
 
       {/*
         场景/章节切换不用 AnimatePresence 退场动画（历史上 wait 模式下新章子树
