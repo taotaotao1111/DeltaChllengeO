@@ -283,6 +283,12 @@ export interface ArtifactChapter {
    * 第一章不写——那时主角就在主视图中央，再放一尊会打架。
    */
   presence?: { opacity: number; className: string };
+  /**
+   * 章节开场插画（氛围图）：lead-in 念白期间居中淡入，随讲述推进沉暗让位给交互。
+   * AI 生成氛围图、铭文为示意——caption 必须如实标注「示意」，别当史料用。
+   * 不写则该章开场纯念白（原状）。
+   */
+  openingArt?: { src: string; caption?: string };
   /** 覆盖由 module.kind 推导出的 Scene（一般不需要） */
   scene?: Scene;
   module: ChapterModule;

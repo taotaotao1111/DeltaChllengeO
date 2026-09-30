@@ -411,6 +411,11 @@ export const hezun: Artifact = {
       title: "我为什么会被铸造",
       hook: "一场为了「记住」的铸造。",
       backdrop: "forge",
+      // 开场氛围图（AI 生成示意，非实物照片）
+      openingArt: {
+        src: "images/ch2-casting.jpg",
+        caption: "青铜浇铸 · 场景示意",
+      },
       // 讲述者继续在场：偏到右下、压得很暗，像"刚从范里出来还在炉边"的器物
       presence: {
         opacity: 0.16,
@@ -456,6 +461,10 @@ export const hezun: Artifact = {
       hook: "锈的下面，藏着四个字。",
       backdrop: "patina",
       backdropGlyphs: ["宅", "兹", "中", "国"],
+      openingArt: {
+        src: "images/ch3-derust.jpg",
+        caption: "刮锈见字 · 场景示意",
+      },
       presence: {
         opacity: 0.13,
         className: "-left-[20vw] bottom-[-10vh] h-[56vh] w-[56vh] sm:-left-[4vw]",
@@ -531,6 +540,10 @@ export const hezun: Artifact = {
       // 与第三章同母题：刚擦完锈读铭文，视觉上是同一个场景的延续
       backdrop: "patina",
       backdropGlyphs: ["宅", "兹", "中", "国"],
+      openingArt: {
+        src: "images/ch4-scroll.jpg",
+        caption: "腹中字卷 · 场景示意",
+      },
       module: {
         kind: "inscription",
         openingLines: [

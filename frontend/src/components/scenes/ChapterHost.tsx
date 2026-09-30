@@ -4,6 +4,7 @@ import QaModule from "./modules/QaModule";
 import RevealModule from "./modules/RevealModule";
 import InscriptionModule from "./modules/InscriptionModule";
 import FlipCardModule from "./modules/FlipCardModule";
+import ChapterLeadArt from "../shared/ChapterLeadArt";
 import { getArtifact } from "../../data/artifacts";
 import { useGameStore } from "../../store/gameStore";
 import { track } from "../../utils/tracking";
@@ -48,6 +49,19 @@ export default function ChapterHost() {
         章节背景层由 Home 统一铺（放在 AnimatePresence 之外）：切章的 0.6s
         mode="wait" 空窗里背景若跟着章节卸载，整屏会闪一下黑。这里不再铺。
       */}
+
+      {/*
+        开场氛围画（档案写了 openingArt 的章）：只陪 lead-in 念白，
+        自治时间轴淡入 → 沉暗 → 退场，不与模块交互打架（z-0、pointer-events-none）。
+        key 含 chapterIndex：切章重挂载，时间轴重新播。
+      */}
+      {chapter.openingArt && (
+        <ChapterLeadArt
+          key={`lead-art-${chapter.id}`}
+          src={chapter.openingArt.src}
+          caption={chapter.openingArt.caption}
+        />
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 10 }}
