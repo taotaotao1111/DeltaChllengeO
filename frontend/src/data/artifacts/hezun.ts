@@ -681,6 +681,11 @@ export const hezun: Artifact = {
       title: "我差点消失",
       hook: "离熔炉最近的十二年。",
       backdrop: "scrap",
+      // 开场画：出土时带锈的器身——正是这章「差点消失」故事的起点
+      openingArt: {
+        src: "images/hezun-derust-before.jpg",
+        caption: "刚出土时 · 器身示意",
+      },
       module: {
         kind: "flip",
         openingLines: [

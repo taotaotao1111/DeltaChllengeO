@@ -355,19 +355,19 @@ export default function FogWipeReveal({
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {!faded && hintVisible && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0.35, 0.9, 0.35] }}
-            exit={{ opacity: 0 }}
-            transition={{ delay: 0.6, duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
-            className="pointer-events-none absolute inset-x-0 bottom-[16%] text-center text-sm tracking-wide text-rice-100"
-          >
-            {hint}
-          </motion.p>
-        )}
-      </AnimatePresence>
+      {/* 提示呼吸文案：不用 AnimatePresence exit——keyframes + repeat: Infinity
+          会吃掉 exit transition（framer-motion 坑，线上实测 hint 残留在竞猜页），
+          改为条件渲染：faded（揭示完成）一票否决，立即卸载。 */}
+      {!faded && hintVisible && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.35, 0.9, 0.35] }}
+          transition={{ delay: 0.6, duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+          className="pointer-events-none absolute inset-x-0 bottom-[16%] z-10 text-center text-sm tracking-wide text-rice-100"
+        >
+          {hint}
+        </motion.p>
+      )}
 
       {/* 右上角进度角标（金色胶囊） */}
       {!faded && (
