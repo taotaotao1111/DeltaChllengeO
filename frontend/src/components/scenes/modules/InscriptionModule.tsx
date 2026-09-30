@@ -461,7 +461,9 @@ export default function InscriptionModule({
                         const op = litOpacity(j, inCurrent);
                         return hasGlyph(c) ? (
                           <motion.span
-                            key={j}
+                            /* key 带 inCurrent：切段时该字重挂载，GlyphChar 的
+                               笔画生长（grow）才会对新段重新播一遍 */
+                            key={inCurrent ? `lit-${j}` : `dim-${j}`}
                             initial={false}
                             animate={{ opacity: op }}
                             transition={{
@@ -476,7 +478,15 @@ export default function InscriptionModule({
                                   : "text-gilt-dark"
                             }
                           >
-                            <GlyphChar char={c} className="h-[52px] w-[52px]" strokeWidth={3.4} />
+                            {/* 当前段：整字淡入换成逐笔书写（笔画生长）；
+                                growDelay 跟外层 opacity 错峰同节奏 */}
+                            <GlyphChar
+                              char={c}
+                              className="h-[52px] w-[52px]"
+                              strokeWidth={3.4}
+                              grow={inCurrent}
+                              growDelay={(j - s) * 55}
+                            />
                           </motion.span>
                         ) : (
                           /* 未精摹字 / 损泐字 □：低透明度示意字位，不伪装成摹写 */
@@ -788,10 +798,14 @@ export default function InscriptionModule({
                           : "text-rice-100/40"
                       }`}
                     >
+                      {/* key 带 lit：划亮瞬间重挂载 → 笔画以书写动画长出
+                          （像武王当面写完这个字），而不是整字突然变亮 */}
                       <GlyphChar
+                        key={lit ? `lit-${c}` : `dim-${c}`}
                         char={c}
                         className="h-[18vw] max-h-[140px] w-auto sm:h-[120px]"
                         strokeWidth={4}
+                        grow={lit}
                       />
                     </span>
                   </motion.div>
