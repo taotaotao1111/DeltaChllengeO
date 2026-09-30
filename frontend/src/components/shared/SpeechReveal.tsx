@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 
 interface SpeechRevealProps {
@@ -10,6 +10,15 @@ interface SpeechRevealProps {
   textClassName?: string;
   /** 是否在最后一行后保持显示（不触发 onComplete 后自动清空) */
   holdLast?: boolean;
+  /**
+   * 跟随讲述进度的后续内容：讲述未完成时渲染占位高度（防按钮位置跳动），
+   * 完成后淡入。用于 closing 相位的「问问我 / 继续」按钮——
+   * 出现时机必须挂在 onComplete 上，不能用固定延时
+   * （lineDelay 调快后固定延时会比讲述先到，按钮抢在第二句前出现）。
+   */
+  reveal?: ReactNode;
+  /** reveal 区占位高度（px）；不传默认 3rem（一排按钮的高度） */
+  revealPlaceholderH?: number;
 }
 
 /**
@@ -24,14 +33,18 @@ export default function SpeechReveal({
   className = "",
   textClassName = "",
   holdLast = true,
+  reveal = null,
+  revealPlaceholderH = 48,
 }: SpeechRevealProps) {
   const [index, setIndex] = useState(0);
+  const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doneRef = useRef(false);
 
   useEffect(() => {
     doneRef.current = false;
     setIndex(0);
+    setRevealed(false);
   }, [lines]);
 
   useEffect(() => {
@@ -43,6 +56,7 @@ export default function SpeechReveal({
       timerRef.current = setTimeout(() => {
         if (!doneRef.current) {
           doneRef.current = true;
+          setRevealed(true);
           onComplete?.();
         }
       }, delay);
@@ -64,6 +78,7 @@ export default function SpeechReveal({
       setIndex((i) => i + 1);
     } else if (!doneRef.current) {
       doneRef.current = true;
+      setRevealed(true);
       if (timerRef.current) clearTimeout(timerRef.current);
       onComplete?.();
     }
@@ -94,6 +109,23 @@ export default function SpeechReveal({
           </motion.p>
         );
       })}
+
+      {/* 跟随讲述进度的后续内容（closing 的按钮等）：完成前用 min-height 占位
+          （按钮位置不跳），完成后淡入。 */}
+      {reveal && (
+        <div className="mt-2 w-full" style={{ minHeight: revealPlaceholderH }}>
+          {revealed ? (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+              className="flex w-full justify-center"
+            >
+              {reveal}
+            </motion.div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

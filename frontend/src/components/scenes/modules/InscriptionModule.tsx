@@ -700,21 +700,23 @@ export default function InscriptionModule({
                 lineDelay={data.lineDelay}
                 holdLast
                 textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-xl"
+                reveal={
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => toggleChat(true)}
+                      className="rounded-full border border-gilt/30 px-5 py-2.5 text-xs tracking-wide text-gilt-light/80 transition hover:border-gilt/50"
+                    >
+                      问问我
+                    </button>
+                    <button
+                      onClick={onNext}
+                      className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
+                    >
+                      继续听我说 →
+                    </button>
+                  </div>
+                }
               />
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => toggleChat(true)}
-                  className="rounded-full border border-gilt/30 px-5 py-2.5 text-xs tracking-wide text-gilt-light/80 transition hover:border-gilt/50"
-                >
-                  问问我
-                </button>
-                <button
-                  onClick={onNext}
-                  className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
-                >
-                  继续听我说 →
-                </button>
-              </div>
               <p className="mt-6 text-center text-[10px] leading-4 text-rice-200/35">
                 {data.footnote}
               </p>

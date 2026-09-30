@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
 import ArtifactPresence from "../../artifact/ArtifactPresence";
 import InscriptionFocus from "../../artifact/InscriptionFocus";
@@ -115,32 +115,25 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
           <SpeechReveal
             lines={data.closingLines}
             lineDelay={data.lineDelay}
-            className="mb-10 max-w-lg"
+            className="mb-6 max-w-lg"
             textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-xl"
-            onComplete={() => {}}
+            reveal={
+              <div className="flex flex-wrap justify-center gap-3">
+                <button
+                  onClick={() => toggleChat(true)}
+                  className="rounded-full bg-gilt/25 px-6 py-2.5 text-sm tracking-wide text-gilt-light shadow-[0_0_24px_rgba(201,167,106,0.15)] transition hover:bg-gilt/35"
+                >
+                  问问我
+                </button>
+                <button
+                  onClick={onNext}
+                  className="rounded-full border border-rice-100/20 px-6 py-2.5 text-sm tracking-wide text-rice-100/80 transition hover:border-rice-100/40 hover:text-rice-100"
+                >
+                  {data.nextLabel ?? "看看我经历了多久 →"}
+                </button>
+              </div>
+            }
           />
-
-          <AnimatePresence>
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 2.4, duration: 0.7 }}
-              className="flex flex-wrap justify-center gap-3"
-            >
-              <button
-                onClick={() => toggleChat(true)}
-                className="rounded-full bg-gilt/25 px-6 py-2.5 text-sm tracking-wide text-gilt-light shadow-[0_0_24px_rgba(201,167,106,0.15)] transition hover:bg-gilt/35"
-              >
-                问问我
-              </button>
-              <button
-                onClick={onNext}
-                className="rounded-full border border-rice-100/20 px-6 py-2.5 text-sm tracking-wide text-rice-100/80 transition hover:border-rice-100/40 hover:text-rice-100"
-              >
-                {data.nextLabel ?? "看看我经历了多久 →"}
-              </button>
-            </motion.div>
-          </AnimatePresence>
         </motion.div>
       )}
     </>
