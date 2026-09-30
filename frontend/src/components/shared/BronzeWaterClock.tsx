@@ -30,7 +30,9 @@ export default function BronzeWaterClock({ total, read, size = "nav" }: BronzeWa
 
   return (
     <span
-      className={`relative inline-flex shrink-0 items-center justify-center ${
+      /* 垂腹壶形在 viewBox 里顶 3 底 40（重心偏下），svg 整体渲染偏上 ~3px——
+         mt-px 光学回正（与按钮文字基线对齐） */
+      className={`relative inline-flex shrink-0 items-center justify-center mt-[2.5px] ${
         big ? "h-11 w-9" : "h-[22px] w-[18px]"
       }`}
       aria-label={`铜漏：已读 ${read} / ${total} 章`}

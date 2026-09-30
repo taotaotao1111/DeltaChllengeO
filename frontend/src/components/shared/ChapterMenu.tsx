@@ -1,7 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { getArtifact } from "../../data/artifacts";
 import { useGameStore } from "../../store/gameStore";
-import BronzeWaterClock from "./BronzeWaterClock";
 
 interface ChapterMenuProps {
   open: boolean;
@@ -50,24 +49,8 @@ export default function ChapterMenu({ open, onClose }: ChapterMenuProps) {
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="fixed left-1/2 top-[calc(4.5rem+var(--safe-top))] z-50 w-[86vw] max-w-sm overflow-hidden rounded-2xl border border-gilt/25 bg-ink-800/95 shadow-2xl backdrop-blur-md"
           >
-            <p className="flex items-center gap-3 border-b border-rice-100/8 px-5 py-3 text-[11px] tracking-widest text-gilt-light/60">
-              {/* 铜漏（大号）：读过的章节都存进这里的水位里 */}
-              <BronzeWaterClock
-                total={chapters.length}
-                read={chapters.filter((c) => discovered.includes(`chapter:${c.id}`)).length}
-                size="menu"
-              />
-              <span>
-                {artifact.name} · {chapters.length} 章
-                {chapters.filter((c) => discovered.includes(`chapter:${c.id}`)).length >
-                  0 && (
-                  <span className="ml-1 text-gilt/60">
-                    · 水位{" "}
-                    {chapters.filter((c) => discovered.includes(`chapter:${c.id}`)).length}/
-                    {chapters.length}
-                  </span>
-                )}
-              </span>
+            <p className="border-b border-rice-100/8 px-5 py-3 text-[11px] tracking-widest text-gilt-light/60">
+              {artifact.name} · {chapters.length} 章
             </p>
             <div className="max-h-[54vh] overflow-y-auto overscroll-contain py-1">
               {chapters.map((c, i) => {

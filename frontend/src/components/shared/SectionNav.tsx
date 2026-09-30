@@ -30,7 +30,7 @@ export default function SectionNav() {
 
   if (stage === "museum" || stage === "gallery") return null;
 
-  // 铜漏水位：已读章数（chapter:<id> 约定，与 ChapterMenu 同源）
+  // 铜漏水位：已读章数（chapter:<id> 约定，与已读标记同源）
   const artifact = getArtifact(artifactId);
   const readCount = artifact.chapters.filter((c) =>
     discovered.includes(`chapter:${c.id}`),
@@ -65,7 +65,7 @@ export default function SectionNav() {
         className="fixed left-1/2 top-[calc(0.75rem+var(--safe-top))] z-40 -translate-x-1/2 sm:top-6"
       >
         <div className="flex items-center gap-0.5 rounded-full border border-gilt/25 bg-ink-900/70 px-1 py-1 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.4)] sm:gap-1 sm:px-1.5 sm:py-1.5">
-          {/* 铜漏：只记录不导航（用户定调），悬在「认识我」左侧 */}
+          {/* 铜漏：只记录不导航，悬在「认识我」左侧（章节目录里不放——用户定调） */}
           <span className="px-0.5" title={`陪我读了 ${readCount} / ${artifact.chapters.length} 章`}>
             <BronzeWaterClock total={artifact.chapters.length} read={readCount} />
           </span>
