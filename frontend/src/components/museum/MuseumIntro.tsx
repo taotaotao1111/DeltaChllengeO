@@ -258,6 +258,8 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
       )}
 
       {portrait && resumeLabel && !entering && (
+        /* 竖版位置（走查校准）：展柜（约至 65% 高）与「物语千年」标题（约 74% 起）
+            之间的干净暗区，约 69%；贴底会压海报烧入的「都是一段/被时光珍藏的故事」 */
         <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 0.55 }}
@@ -267,7 +269,8 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
             e.stopPropagation();
             resume();
           }}
-          className="absolute bottom-[calc(2.2rem+var(--safe-bottom))] left-1/2 z-10 -translate-x-1/2 text-xs tracking-wide text-rice-200/50"
+          className="absolute left-1/2 z-10 -translate-x-1/2 text-xs tracking-wide text-rice-200/50"
+          style={{ top: "69%" }}
         >
           {resumeLabel}
         </motion.button>
