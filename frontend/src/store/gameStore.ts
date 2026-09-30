@@ -67,6 +67,11 @@ interface GameState {
    * 与 artifactSnapshot 同模式：提前存，记忆卡打开时 canvas 已卸载截不到。
    */
   tracedGlyphs: (string | null)[] | null;
+  /**
+   * 当前文物是否已通过章末「鉴宝」。做过了就不重弹（回看章节再走到出口
+   * 直接放行，同 tracedGlyphs === null 的门控语义）；换文物时重置。
+   */
+  appraiseDone: boolean;
 
   setStage: (stage: Stage) => void;
   /** 选定一件文物（重置章序号，换文物就从第一章开始） */
@@ -84,6 +89,7 @@ interface GameState {
   setUserLegacyLine: (line: string) => void;
   setArtifactSnapshot: (dataUrl: string) => void;
   setTracedGlyphs: (dataUrls: (string | null)[] | null) => void;
+  markAppraiseDone: () => void;
   currentScene: () => Scene;
   /** 最近一条用户提问，用于记忆卡个性化「我的问题」 */
   lastUserQuestion: () => string | null;
@@ -105,6 +111,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   userLegacyLine: null,
   artifactSnapshot: null,
   tracedGlyphs: null,
+  appraiseDone: false,
 
   setStage: (stage) => {
     track("stage_reach", { stage });
@@ -128,6 +135,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             artifactSnapshot: null,
             userLegacyLine: null,
             tracedGlyphs: null,
+            appraiseDone: false,
           },
     );
   },
@@ -185,6 +193,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   setUserLegacyLine: (line) => set({ userLegacyLine: line }),
   setArtifactSnapshot: (dataUrl) => set({ artifactSnapshot: dataUrl }),
   setTracedGlyphs: (dataUrls) => set({ tracedGlyphs: dataUrls }),
+  markAppraiseDone: () => set({ appraiseDone: true }),
 
   currentScene: () => {
     const s = get();

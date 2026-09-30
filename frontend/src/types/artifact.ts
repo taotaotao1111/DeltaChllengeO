@@ -270,6 +270,41 @@ export interface FlipModuleData {
    */
   mergeLine?: string;
   closingLines: string[];
+  /**
+   * 章末「鉴宝」环节（可选）：closing 之后、去时间线之前——看完五章的用户
+   * 换位成「验看者」，用刚学到的知识掌一次眼。不写 = 没有这个环节。
+   * 放章末而不是记忆卡流程里：避免「答完题马上又描字」两个连续交互叠着。
+   */
+  appraise?: AppraiseData;
+}
+
+/** 鉴宝的单个选项 */
+export interface AppraiseOption {
+  id: string;
+  label: string;
+  /** 正确项（一题恰一个）；干扰项不标 */
+  correct?: boolean;
+  /** 选后回应（答错也有认真回应，错处即知识点） */
+  response: string;
+}
+
+export interface AppraiseQuestion {
+  id: string;
+  question: string;
+  options: AppraiseOption[];
+}
+
+export interface AppraiseData {
+  /** 开场念白（「轮到你来掌掌眼」） */
+  openingLines: string[];
+  lineDelay?: number;
+  questions: AppraiseQuestion[];
+  /** 按答对数取档位（从高到低匹配） */
+  ranks: Array<{ minCorrect: number; title: string; line: string }>;
+  /** 盖「验看无误」印之后的收束句 */
+  sealLine: string;
+  /** 完成后出口按钮文案（默认「看看我经历了多久 →」） */
+  nextLabel?: string;
 }
 
 /**

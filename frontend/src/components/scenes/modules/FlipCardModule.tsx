@@ -1,10 +1,12 @@
 import { type CSSProperties, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
+import AppraiseGate from "../../story/AppraiseGate";
+import { useGameStore } from "../../../store/gameStore";
 import { track } from "../../../utils/tracking";
 import type { Artifact, FlipModuleData } from "../../../types/artifact";
 
-type Phase = "lead-in" | "cards" | "merge" | "closing";
+type Phase = "lead-in" | "cards" | "merge" | "closing" | "appraise";
 
 /** 拖拽多远判定为一次「翻面/下一张」（占卡片宽的比例） */
 const FLIP_DRAG_RATIO = 0.25;
@@ -77,6 +79,8 @@ export default function FlipCardModule({
   const [phase, setPhase] = useState<Phase>("lead-in");
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const appraiseDone = useGameStore((s) => s.appraiseDone);
+  const markAppraiseDone = useGameStore((s) => s.markAppraiseDone);
 
   // —— 拖拽翻牌的 motionValue 链 ——
   // baseRotation：0（正面）/ 180（背面），spring 驱动翻面动画
@@ -400,13 +404,31 @@ export default function FlipCardModule({
                 reveal={
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={onNext}
+                      onClick={() => {
+                        // 档案配了鉴宝且还没考过：先掌眼再去时间线；
+                        // 考过（回看本章）直接放行，不再重弹
+                        if (data.appraise && !appraiseDone) setPhase("appraise");
+                        else onNext();
+                      }}
                       className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
                     >
-                      看看我经历了多久 →
+                      {data.appraise && !appraiseDone ? "轮到你来掌眼 →" : "看看我经历了多久 →"}
                     </button>
                   </div>
                 }
+              />
+            </motion.div>
+          )}
+
+          {phase === "appraise" && data.appraise && (
+            <motion.div key="appraise" className="h-full w-full">
+              <AppraiseGate
+                artifactId={artifact.id}
+                data={data.appraise}
+                onDone={() => {
+                  markAppraiseDone();
+                  onNext();
+                }}
               />
             </motion.div>
           )}

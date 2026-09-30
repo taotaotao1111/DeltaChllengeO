@@ -251,11 +251,13 @@ const TRACK_EVENTS = {
   glyph_trace_done: ['artifactId'],
   flip_card_view: ['artifactId', 'cardId', 'face'],
   inscription_section_view: ['artifactId', 'sectionIndex'],
+  appraise_answer: ['artifactId', 'questionId', 'correct'],
 };
 const TRACK_ENUMS = {
   'visit_source|source': ['card'],
   'chat_reply|questionKind': ['general', 'experiential', 'persona'],
   'chat_reply|factBasis': ['verified', 'inferred', 'unknown'],
+  'appraise_answer|correct': ['0', '1'],
 };
 const TRACK_START = Date.now();
 const trackTotals = new Map(); // name -> count
