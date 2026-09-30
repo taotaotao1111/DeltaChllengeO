@@ -23,6 +23,8 @@ interface FogWipeRevealProps {
    * 生成纪律：图上再叠极淡的程序锈斑，让照片和颗粒质感接缝不生硬。
    */
   coverImageSrc?: string;
+  /** 透传容器 style（边框等视觉定制，如黑金描边） */
+  style?: React.CSSProperties;
 }
 
 /** 两种遮罩各自的色板与颗粒参数 */
@@ -73,6 +75,7 @@ export default function FogWipeReveal({
   tone = "fog",
   skipLabel = "直接看看",
   coverImageSrc,
+  style,
 }: FogWipeRevealProps) {
   const palette = TONES[tone];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,6 +90,8 @@ export default function FogWipeReveal({
   const [faded, setFaded] = useState(false);
   /** 图片盖层加载完成后重画（没加载完之前用程序纹理顶着，不空白） */
   const [coverReady, setCoverReady] = useState(false);
+  /** 已刮开百分比（进度角标用） */
+  const [progress, setProgress] = useState(0);
   const coverImgRef = useRef<HTMLImageElement | null>(null);
 
   // 图片盖层：预加载，onload 后触发一次重绘（此时 canvas 尺寸已就绪）
@@ -270,9 +275,12 @@ export default function FogWipeReveal({
       if (data[i] < 80) cleared++;
     }
     const ratio = cleared / (SZ * SZ);
+    // 进度角标实时更新（四舍五入到整数，避免每帧 setState 的渲染抖动）
+    setProgress(Math.round(ratio * 100));
     if (ratio >= threshold) {
       revealedRef.current = true;
       setFaded(true);
+      setProgress(100);
       onRevealed?.();
     }
   }, [threshold, onRevealed]);
@@ -325,7 +333,7 @@ export default function FogWipeReveal({
   };
 
   return (
-    <div ref={containerRef} className={`relative select-none ${className}`}>
+    <div ref={containerRef} className={`relative select-none ${className}`} style={style}>
       {children}
 
       <AnimatePresence>
@@ -348,20 +356,35 @@ export default function FogWipeReveal({
         {!faded && hintVisible && (
           <motion.p
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            animate={{ opacity: [0.35, 0.9, 0.35] }}
             exit={{ opacity: 0 }}
-            transition={{ delay: 0.6, duration: 0.8 }}
-            className="pointer-events-none absolute inset-x-0 bottom-[18%] text-center text-sm tracking-wide text-rice-100/75"
+            transition={{ delay: 0.6, duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+            className="pointer-events-none absolute inset-x-0 bottom-[16%] text-center text-sm tracking-wide text-rice-100"
           >
             {hint}
           </motion.p>
         )}
       </AnimatePresence>
 
+      {/* 右上角进度角标（金色胶囊）：用户要的是「刮了多少」而不是跳过按钮 */}
+      {!faded && (
+        <span
+          className="pointer-events-none absolute right-3 top-3 z-10 rounded-full border px-2.5 py-1 text-[11px] tracking-wide text-gilt-light"
+          style={{
+            borderColor: "rgba(201,167,106,0.45)",
+            background: "rgba(10,10,12,0.6)",
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          已刮 {progress}%
+        </span>
+      )}
+
+      {/* 兜底文字链挪到底部（无障碍保留，不抢角标位） */}
       {!faded && (
         <button
           onClick={forceReveal}
-          className="absolute right-4 top-4 z-10 rounded-full px-2.5 py-1.5 text-[11px] text-rice-200/40 transition hover:text-rice-200/70"
+          className="absolute inset-x-0 bottom-2 z-10 mx-auto w-fit text-[11px] text-rice-200/40 transition hover:text-rice-200/70"
         >
           {skipLabel}
         </button>

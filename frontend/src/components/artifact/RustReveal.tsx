@@ -77,8 +77,12 @@ export default function RustReveal({
           hint="用手指刮一刮，看看锈下面有什么"
           skipLabel="直接看看"
           coverImageSrc={coverImageSrc}
-          // 用高度驱动尺寸（而不是 w-full），矮屏上会自动缩小而不是被裁掉
-          className="mx-auto aspect-[4/5] h-[40vh] max-h-[400px] overflow-hidden rounded-lg border border-bronze-dark/60"
+          // 放大刮区（用户反馈盒子小了）；高度驱动 + 2:3 贴合器物照片比例
+          className="mx-auto aspect-[2/3] h-[52vh] max-h-[560px] overflow-hidden rounded-lg"
+          style={{
+            border: "1px solid rgba(201,167,106,0.4)",
+            boxShadow: "0 0 24px rgba(201,167,106,0.14), 0 14px 40px rgba(0,0,0,0.5)",
+          }}
         >
         {/* 锈层之下：除锈后的器身（示意素材，暗化降饱和贴合整体色调） */}
         {underImageSrc ? (
@@ -114,7 +118,13 @@ export default function RustReveal({
         </FogWipeReveal>
       ) : (
         /* 盖层图加载中：中性占位（尺寸与刮卡一致，避免布局跳动） */
-        <div className="mx-auto aspect-[4/5] h-[40vh] max-h-[400px] animate-pulse overflow-hidden rounded-lg border border-bronze-dark/60 bg-ink-800/60" />
+        <div
+          className="mx-auto aspect-[2/3] h-[52vh] max-h-[560px] animate-pulse overflow-hidden rounded-lg bg-ink-800/60"
+          style={{
+            border: "1px solid rgba(201,167,106,0.4)",
+            boxShadow: "0 0 24px rgba(201,167,106,0.14), 0 14px 40px rgba(0,0,0,0.5)",
+          }}
+        />
       )}
 
       <p className="mt-4 text-center text-[10px] text-rice-200/25">{footnote}</p>
