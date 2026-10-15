@@ -338,6 +338,14 @@ export const hezun: Artifact = {
   shortPeriod: "西周早期",
   illustrationId: "hezun",
   sealChars: ["何", "尊"],
+  readingInvitation: {
+    durationLabel: "约 10 分钟",
+    chapterLabel: "五章故事",
+    title: "留一小会儿，\n听我慢慢讲。",
+    lines: ["有些细节，要凑近看；", "有些往事，等你读到才会明白。", "不必赶着翻页。"],
+    reassurance: "若中途离开，下次还能接着读。",
+    confirmLabel: "好，慢慢讲 →",
+  },
 
   galleryReveal: {
     greetingLines: ["你终于来了。", "我已经很久没有和人说过话了。", "他们叫我——何尊。"],

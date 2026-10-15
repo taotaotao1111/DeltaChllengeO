@@ -169,7 +169,7 @@ export default function MemoryCard() {
                     disabled={!draft.trim()}
                     className="flex-1 rounded-full bg-gilt/25 py-2.5 text-sm text-gilt-light transition hover:bg-gilt/35 disabled:opacity-30"
                   >
-                    那我替你记住
+                    写进记忆卡 →
                   </button>
                   <button
                     onClick={() => setUserLegacyLine("")}
@@ -223,7 +223,7 @@ export default function MemoryCard() {
                         「{userLegacyLine}」
                       </p>
                       <p className="mt-2 text-[11px] italic text-gilt-light/50">
-                        那我替你记住。
+                        这句话，也留在这张卡里。
                       </p>
                     </>
                   )}

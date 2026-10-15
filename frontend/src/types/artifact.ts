@@ -418,6 +418,15 @@ export interface Artifact {
    * 显式写，不从 name 截前两字——「长信宫灯」截出来是「长信」，读着像人名不像印章款。
    */
   sealChars: [string, string];
+  /** 开篇小笺；时长是包含主线探索的阅读预估，不含自由对话。 */
+  readingInvitation?: {
+    durationLabel: string;
+    chapterLabel: string;
+    title: string;
+    lines: string[];
+    reassurance: string;
+    confirmLabel: string;
+  };
   /** 展厅里被选中后的揭幕流程；竞猜可选 */
   galleryReveal?: {
     greetingLines: string[];

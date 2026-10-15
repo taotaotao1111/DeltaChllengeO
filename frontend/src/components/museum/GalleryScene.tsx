@@ -11,6 +11,7 @@ import { ARTIFACT_REGISTRY, GALLERY_MANIFEST, type GalleryEntry } from "../../da
 import { evaluateViewerMode } from "../../utils/artifactEvaluator";
 import { startModelFetch } from "../artifact/modelSource";
 import { useGameStore } from "../../store/gameStore";
+import ReadingInvitation from "./ReadingInvitation";
 
 type View = "grid" | "reveal";
 
@@ -31,6 +32,7 @@ export default function GalleryScene() {
   const [toast, setToast] = useState<string | null>(null);
   const [showGuess, setShowGuess] = useState(false);
   const [wiped, setWiped] = useState(false);
+  const [showInvitation, setShowInvitation] = useState(false);
   /** 被选中进入揭幕的文物 id */
   const [pickedId, setPickedId] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,7 +71,13 @@ export default function GalleryScene() {
     setView("reveal");
   };
 
-  const enterChapters = () => setStage("chapter");
+  const enterChapters = () => {
+    if (picked?.readingInvitation) {
+      setShowInvitation(true);
+      return;
+    }
+    setStage("chapter");
+  };
 
   const greeting = picked?.galleryReveal;
   /** 没有揭幕念白的文物，擦完雾就等于念完了 */
@@ -85,6 +93,16 @@ export default function GalleryScene() {
     <div className="relative h-dvh w-full overflow-hidden">
       <InkBackground glow={litIn ? 0.5 : 0} />
       <DustParticles count={12} />
+      <AnimatePresence>
+        {showInvitation && picked?.readingInvitation && (
+          <ReadingInvitation
+            key={picked.id}
+            invitation={picked.readingInvitation}
+            onClose={() => setShowInvitation(false)}
+            onConfirm={() => setStage("chapter")}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence mode="wait">
         {view === "grid" && (
