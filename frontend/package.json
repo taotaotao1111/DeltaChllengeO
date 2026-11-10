@@ -7,6 +7,9 @@
     "dev": "vite",
     "build": "node scripts/check-artifacts.mjs && tsc -b && vite build",
     "check:artifacts": "node scripts/check-artifacts.mjs",
+    "check:narrative": "node scripts/check-narrative.mjs",
+    "check:chat": "node scripts/check-chat.mjs",
+    "check:interactions": "node scripts/check-interactions.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "eval:guard": "node scripts/eval-factguard.mjs scripts/factguard-cases.json"

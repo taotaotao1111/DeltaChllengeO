@@ -72,7 +72,7 @@ export default function GalleryScene() {
   };
 
   const enterChapters = () => {
-    if (picked?.readingInvitation) {
+    if (picked?.readingInvitation && !picked.narrative) {
       setShowInvitation(true);
       return;
     }
@@ -264,7 +264,7 @@ export default function GalleryScene() {
                     animate={{ opacity: 1, y: 0 }}
                     className="w-full max-w-md"
                   >
-                    {greeting?.guess ? (
+                    {greeting?.guess && !picked.narrative ? (
                       <GuessChoice
                         question={greeting.guess.question}
                         options={greeting.guess.options}
@@ -273,12 +273,18 @@ export default function GalleryScene() {
                       />
                     ) : (
                       /* 没有设计竞猜的文物：擦完雾、听完自我介绍就直接进正文 */
-                      <div className="flex justify-center">
+                      <div className="flex flex-col items-center justify-center gap-4">
+                        {picked.narrative && (
+                          <div className="text-center">
+                            <p className="text-xs tracking-wide text-gilt-light/80">相遇 · 发现 · 重逢</p>
+                            <p className="mt-2 text-xs text-rice-200/55">{picked.narrative.durationLabel} · 完整铭文可自由深入 · 支持续读</p>
+                          </div>
+                        )}
                         <button
                           onClick={enterChapters}
                           className="rounded-full bg-gilt/20 px-6 py-2.5 text-sm tracking-wide text-gilt-light transition hover:bg-gilt/30"
                         >
-                          听它讲下去 →
+                          {picked.narrative ? "开始这次相遇 →" : "听它讲下去 →"}
                         </button>
                       </div>
                     )}

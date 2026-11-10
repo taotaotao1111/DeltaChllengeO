@@ -38,6 +38,8 @@ dist-ssr
 # Cowork 平台在 Pod 启动时注入的凭据文件，绝不能入库，也不能进发布 zip
 /ai.properties
 /db.properties
+# 内网 SSO 技能生成的本机登录缓存
+/.redInfo
 
 # cowork CLI 每次部署都会重写的本地记录（.cowork.json 记录 workId/alias，是入库的）
 /.cowork/

@@ -75,7 +75,7 @@ const MAX_TOKENS = 512;
  * system prompt 走**顶级 system 字段**，不塞进 messages —— 这是 Anthropic 的协议要求，
  * 塞进 messages 会让「不作亲历断言」这类硬约束的权重下降。
  */
-async function llmChat(messages, systemPrompt) {
+async function llmChat(messages, systemPrompt, maxTokens = MAX_TOKENS) {
   if (!aiProps?.['ai.base_url'] || !aiProps?.['ai.api_key']) {
     throw new HTTPException(503, { message: 'ai.properties 未配置' });
   }
@@ -94,7 +94,7 @@ async function llmChat(messages, systemPrompt) {
     body: JSON.stringify({
       anthropic_version: 'bedrock-2023-05-31',
       model: MODEL,
-      max_tokens: MAX_TOKENS,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages,
     }),
@@ -227,7 +227,7 @@ app.post('/api/chat', async (c) => {
 
   const history = normalizeHistory(body?.history);
   const messages = [...history, { role: 'user', content: message }];
-  const { text, model } = await llmChat(messages, systemPrompt);
+  const { text, model } = await llmChat(messages, systemPrompt, body?.answerMode === 'deep' ? 1024 : MAX_TOKENS);
   return c.json({ reply: text, model });
 });
 

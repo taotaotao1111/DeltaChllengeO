@@ -1,213 +1,115 @@
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useGameStore } from "../../store/gameStore";
 import { getArtifact } from "../../data/artifacts";
 import { streamArtifactReply } from "../../services/aiService";
-import ChatMessage from "./ChatMessage";
-import SuggestedQuestions from "./SuggestedQuestions";
-import type { ArtifactContext, ChatMessage as ChatMessageType } from "../../types/artifact";
+import { captureChatContext } from "../../utils/chatContext";
 import { classifyQuestion } from "../../utils/factGuard";
+import { getStoryQuestions } from "../../utils/storyQuestions";
 import { track } from "../../utils/tracking";
+import type { ArtifactContext, ChatTurnContext } from "../../types/artifact";
+import ChatSheet from "./ChatSheet";
+import FloatingAIButton from "./FloatingAIButton";
 
-const OPENING_MESSAGE =
-  "你可以问我任何关于「我」的问题。\n我知道的，会告诉你；我不知道的，也会告诉你。";
-
+/** 对话独立挂载；打开、收起均不改变舞台或幕内组件的 key。 */
 export default function ArtifactChat() {
   const stage = useGameStore((s) => s.stage);
   const chatOpen = useGameStore((s) => s.chatOpen);
-  const toggleChat = useGameStore((s) => s.toggleChat);
   const messages = useGameStore((s) => s.chatMessages);
-  const addMessage = useGameStore((s) => s.addMessage);
-  const patchLastMessage = useGameStore((s) => s.patchLastMessage);
-  const chatLoading = useGameStore((s) => s.chatLoading);
-  const setChatLoading = useGameStore((s) => s.setChatLoading);
-  const discoveredDetails = useGameStore((s) => s.discoveredDetails);
-  const currentScene = useGameStore((s) => s.currentScene);
-  const openMemoryCard = useGameStore((s) => s.openMemoryCard);
+  const loading = useGameStore((s) => s.chatLoading);
+  const hasNewReply = useGameStore((s) => s.chatHasNewReply);
+  const pending = useGameStore((s) => s.pendingChatQuestion);
+  const moment = useGameStore((s) => s.storyMoment);
+  const discovered = useGameStore((s) => s.discoveredDetails);
   const artifactId = useGameStore((s) => s.currentArtifactId);
-
+  const chapterIndex = useGameStore((s) => s.chapterIndex);
+  const toggleChat = useGameStore((s) => s.toggleChat);
+  const [draft, setDraft] = useState("");
+  const requestRef = useRef<{ controller: AbortController; messageId: string } | null>(null);
+  const scrollPosition = useRef(Number.POSITIVE_INFINITY);
   const artifact = getArtifact(artifactId);
+  const currentContext = captureChatContext(artifact, chapterIndex, useGameStore.getState().currentScene(), discovered, moment);
+  const asked = messages.filter((m) => m.role === "user").map((m) => m.content);
+  const questions = getStoryQuestions(artifact, moment, asked).slice(0, 3);
 
-  const [input, setInput] = useState("");
-  const listRef = useRef<HTMLDivElement>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    if (messages.length === 0 && chatOpen) {
-      addMessage({
-        id: "opening",
-        role: "artifact",
-        content: OPENING_MESSAGE,
-        createdAt: Date.now(),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatOpen]);
-
-  useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, chatLoading]);
-
-  if (stage === "museum" || stage === "gallery") return null;
-
-  const send = async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed || chatLoading) return;
-
-    // 埋点：提问分流在这里判，factBasis 等 onDone 回来再合并发送
-    const questionKind = classifyQuestion(trimmed);
-    const artifactIdForTrack = artifact.id;
-
-    const userMsg: ChatMessageType = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      content: trimmed,
-      createdAt: Date.now(),
-    };
-    addMessage(userMsg);
-    setInput("");
-
-    const artifactMsg: ChatMessageType = {
-      id: `a-${Date.now()}`,
-      role: "artifact",
-      content: "",
-      createdAt: Date.now(),
-    };
-    addMessage(artifactMsg);
-    setChatLoading(true);
-
-    const context: ArtifactContext = {
-      artifact,
-      verifiedFacts: artifact.verifiedFacts,
-      timeline: artifact.timeline,
-      currentScene: currentScene(),
-      discoveredDetails,
-      conversationHistory: [...messages, userMsg],
-    };
-
-    abortRef.current?.abort();
+  const send = useCallback(async (text: string, mode: "short" | "deep" = "short", savedContext?: ChatTurnContext) => {
+    const state = useGameStore.getState();
+    const question = text.trim();
+    if (!question || state.chatLoading) return;
+    const currentArtifact = getArtifact(state.currentArtifactId);
+    const turnContext = savedContext ?? captureChatContext(currentArtifact, state.chapterIndex, state.currentScene(), state.discoveredDetails, state.storyMoment);
+    const userId = crypto.randomUUID();
+    const replyId = crypto.randomUUID();
+    const userMessage = { id: userId, role: "user" as const, content: question, answerMode: mode, createdAt: Date.now() };
+    state.addMessage(userMessage);
+    state.addMessage({ id: replyId, role: "artifact", content: "", question, answerMode: mode, turnContext, createdAt: Date.now() });
+    state.setChatLoading(true);
+    setDraft("");
+    scrollPosition.current = Number.POSITIVE_INFINITY;
     const controller = new AbortController();
-    abortRef.current = controller;
-
-    await streamArtifactReply(
-      context,
-      trimmed,
-      {
-        onToken: (partial) => patchLastMessage({ content: partial }),
-        onDone: (full, factBasis) => {
-          patchLastMessage({ content: full, factBasis });
-          setChatLoading(false);
-          track("chat_reply", {
-            artifactId: artifactIdForTrack,
-            questionKind,
-            factBasis,
-          });
+    requestRef.current = { controller, messageId: replyId };
+    const context: ArtifactContext = {
+      artifact: currentArtifact,
+      verifiedFacts: currentArtifact.verifiedFacts,
+      timeline: currentArtifact.timeline,
+      ...turnContext,
+      answerMode: mode,
+      conversationHistory: [...state.chatMessages.filter((m) => m.content && !m.error), userMessage],
+    };
+    const isCurrent = () => requestRef.current?.messageId === replyId && useGameStore.getState().currentArtifactId === currentArtifact.id && !controller.signal.aborted;
+    try {
+      await streamArtifactReply(context, question, {
+        onToken: (content) => { if (isCurrent()) useGameStore.getState().patchMessage(replyId, { content }); },
+        onDone: (content, factBasis, metadata) => {
+          if (!isCurrent()) return;
+          useGameStore.getState().completeChatReply(replyId, { content, factBasis, factIds: metadata?.factIds ?? [], replySource: metadata?.source });
+          track("chat_reply", { artifactId: currentArtifact.id, questionKind: classifyQuestion(question), factBasis, answerMode: mode, momentId: turnContext.storyMoment?.id ?? "free" });
         },
-        onError: () => setChatLoading(false),
-      },
-      controller.signal,
-    );
+      }, controller.signal);
+    } catch {
+      if (isCurrent()) useGameStore.getState().patchMessage(replyId, { content: "这次没能完成回答，可以再试一次。", error: true });
+    } finally {
+      if (requestRef.current?.messageId === replyId) {
+        requestRef.current = null;
+        useGameStore.getState().setChatLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const state = useGameStore.getState();
+    if (!chatOpen || !pending || state.chatLoading || !state.pendingChatQuestion) return;
+    const question = state.pendingChatQuestion;
+    state.clearPendingChatQuestion();
+    void send(question);
+  }, [chatOpen, pending, loading, send]);
+
+  useEffect(() => () => {
+    requestRef.current?.controller.abort();
+    requestRef.current = null;
+    useGameStore.getState().setChatLoading(false);
+  }, [artifactId]);
+
+  const stop = () => {
+    const request = requestRef.current;
+    if (!request) return;
+    request.controller.abort();
+    const message = useGameStore.getState().chatMessages.find((m) => m.id === request.messageId);
+    useGameStore.getState().patchMessage(request.messageId, { content: message?.content || "回答已暂停。", error: true });
+    requestRef.current = null;
+    useGameStore.getState().setChatLoading(false);
   };
 
-  return (
-    <>
-      {/* 悬浮入口 */}
-      <AnimatePresence>
-        {!chatOpen && (
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ delay: 0.3 }}
-            onClick={() => toggleChat(true)}
-            className="fixed bottom-[calc(1.5rem+var(--safe-bottom))] right-[calc(1.5rem+var(--safe-right))] z-40 flex items-center gap-2 rounded-full border border-gilt/30 bg-ink-900/80 px-5 py-3 text-sm text-gilt-light shadow-[0_0_30px_rgba(201,167,106,0.15)] backdrop-blur-md transition hover:bg-ink-800/90 sm:bottom-8 sm:right-8"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-gilt-light animate-pulse" />
-            问问我
-          </motion.button>
-        )}
-      </AnimatePresence>
-
-      {/* 聊天抽屉 */}
-      <AnimatePresence>
-        {chatOpen && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-40 bg-ink-900/60"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => toggleChat(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: "100%" }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: "100%" }}
-              transition={{ duration: 0.45, ease: "easeOut" }}
-              className="fixed inset-x-0 bottom-0 z-50 flex h-[85dvh] flex-col rounded-t-2xl border border-gilt/20 bg-ink-900/95 shadow-2xl backdrop-blur-md sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[560px] sm:w-[400px] sm:rounded-2xl"
-            >
-              <div className="flex items-center justify-between border-b border-rice-100/10 px-5 py-3 pt-[calc(0.75rem+var(--safe-top))] sm:pt-3">
-                <div>
-                  <p className="font-title text-base text-rice-100">{artifact.name}</p>
-                  <p className="text-[11px] text-rice-200/40">正在与你对话</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => openMemoryCard()}
-                    className="rounded-full px-2.5 py-2 text-xs text-gilt-light/80 transition hover:text-gilt-light"
-                  >
-                    生成记忆卡
-                  </button>
-                  <button
-                    onClick={() => toggleChat(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full text-rice-200/50 transition hover:text-rice-100"
-                    aria-label="关闭"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-
-              <div ref={listRef} className="scrollbar-none flex-1 space-y-3 overflow-y-auto px-4 py-4">
-                {messages.map((m) => (
-                  <ChatMessage key={m.id} message={m} />
-                ))}
-              </div>
-
-              <SuggestedQuestions
-                questions={artifact.suggestedQuestions}
-                onSelect={send}
-                disabled={chatLoading}
-              />
-              <p className="px-4 pb-1 text-[11px] text-rice-200/35">或者，你自己问——</p>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  send(input);
-                }}
-                className="flex items-center gap-2 p-3 pb-[calc(0.75rem+var(--safe-bottom))]"
-              >
-                {/* input 有默认的固有宽度，光 flex-1 不会真的收缩，会把发送按钮挤出容器；
-                    min-w-0 让它可以缩，shrink-0 保证按钮永远完整 */}
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="想问问我什么？"
-                  className="min-w-0 flex-1 rounded-full border border-rice-100/15 bg-ink-800/60 px-4 py-2.5 text-base text-rice-100 outline-none placeholder:text-rice-200/30 focus:border-gilt/40 sm:text-sm"
-                />
-                <button
-                  type="submit"
-                  disabled={chatLoading || !input.trim()}
-                  className="shrink-0 whitespace-nowrap rounded-full bg-gilt/25 px-4 py-2.5 text-sm text-gilt-light transition hover:bg-gilt/35 disabled:opacity-30"
-                >
-                  发送
-                </button>
-              </form>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </>
-  );
+  if (stage === "museum" || stage === "gallery") return null;
+  return <>
+    <FloatingAIButton artifactName={artifact.name} hidden={chatOpen} hasNewReply={hasNewReply} onClick={() => toggleChat(true)} />
+    <AnimatePresence>
+      {chatOpen && <ChatSheet key={artifactId} artifact={artifact} context={currentContext} messages={messages} questions={questions}
+        loading={loading} draft={draft} onDraft={setDraft} scrollPosition={scrollPosition}
+        onSend={(question) => { void send(question); }}
+        onDeepDive={(message) => { if (message.question) void send(message.question, "deep", message.turnContext); }}
+        onRetry={(message) => { if (message.question) void send(message.question, message.answerMode, message.turnContext); }}
+        onStop={stop} onClose={() => toggleChat(false)} />}
+    </AnimatePresence>
+  </>;
 }

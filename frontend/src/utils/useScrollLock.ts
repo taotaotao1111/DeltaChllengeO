@@ -1,5 +1,8 @@
 import { useEffect } from "react";
 
+let locks = 0;
+let restore: (() => void) | null = null;
+
 /**
  * 弹层打开期间锁住页面滚动。
  *
@@ -13,6 +16,13 @@ import { useEffect } from "react";
 export function useScrollLock(active: boolean): void {
   useEffect(() => {
     if (!active) return;
+
+    locks += 1;
+    // 记忆卡上的描红会打开第二层对话框，最后一层关闭后才释放页面。
+    if (locks > 1) return () => {
+      locks -= 1;
+      if (locks === 0) { restore?.(); restore = null; }
+    };
 
     const { body } = document;
     const scrollY = window.scrollY;
@@ -30,13 +40,17 @@ export function useScrollLock(active: boolean): void {
     body.style.overflow = "hidden";
     body.style.overscrollBehavior = "none";
 
-    return () => {
+    restore = () => {
       body.style.position = prev.position;
       body.style.top = prev.top;
       body.style.width = prev.width;
       body.style.overflow = prev.overflow;
       body.style.overscrollBehavior = prev.overscrollBehavior;
       window.scrollTo(0, scrollY);
+    };
+    return () => {
+      locks -= 1;
+      if (locks === 0) { restore?.(); restore = null; }
     };
   }, [active]);
 }

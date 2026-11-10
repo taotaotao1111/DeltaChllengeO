@@ -130,6 +130,7 @@ export default function ArtifactViewer3D({
   interactive = true,
 }: ArtifactViewer3DProps) {
   const [autoRotate, setAutoRotate] = useState(true);
+  const chatOpen = useGameStore((s) => s.chatOpen);
   const [hintVisible, setHintVisible] = useState(true);
   const resumeTimer = useRef<number>();
   const glRef = useRef<WebGLRenderer | null>(null);
@@ -242,7 +243,7 @@ export default function ArtifactViewer3D({
           // 限制俯仰，避免用户转到正底面看到扫描模型的空腔
           minPolarAngle={0.6}
           maxPolarAngle={2.2}
-          autoRotate={autoRotate}
+          autoRotate={autoRotate && !chatOpen}
           autoRotateSpeed={0.4}
           onStart={pauseAutoRotate}
           onEnd={scheduleResume}

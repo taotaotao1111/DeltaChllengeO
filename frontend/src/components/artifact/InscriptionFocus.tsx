@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Fact } from "../../types/artifact";
+import { useStoryTimers } from "../../utils/useStoryTimers";
 
 interface InscriptionFocusProps {
   open: boolean;
@@ -28,6 +29,7 @@ export default function InscriptionFocus({
 }: InscriptionFocusProps) {
   const [revealCount, setRevealCount] = useState(0);
   const [showExplain, setShowExplain] = useState(false);
+  const { schedule, cancel } = useStoryTimers();
 
   useEffect(() => {
     if (!open) {
@@ -35,13 +37,13 @@ export default function InscriptionFocus({
       setShowExplain(false);
       return;
     }
-    const timers: ReturnType<typeof setTimeout>[] = [];
+    const timers: ReturnType<typeof schedule>[] = [];
     characters.forEach((_, i) => {
-      timers.push(setTimeout(() => setRevealCount(i + 1), 500 + i * 650));
+      timers.push(schedule(() => setRevealCount(i + 1), 500 + i * 650));
     });
-    timers.push(setTimeout(() => setShowExplain(true), 500 + characters.length * 650 + 500));
-    return () => timers.forEach(clearTimeout);
-  }, [open, characters]);
+    timers.push(schedule(() => setShowExplain(true), 500 + characters.length * 650 + 500));
+    return () => timers.forEach(cancel);
+  }, [open, characters, schedule, cancel]);
 
   return (
     <AnimatePresence>
@@ -90,12 +92,7 @@ export default function InscriptionFocus({
               >
                 {/* 实物配图：文字走到「这句话活到了今天」之后，给一件今天的东西看 */}
                 {sideImage && (
-                  <motion.figure
-                    initial={{ opacity: 0, scale: 0.94 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5, duration: 0.8 }}
-                    className="w-52 shrink-0 sm:w-60"
-                  >
+                  <figure className="w-52 shrink-0 sm:w-60">
                     <img
                       src={sideImage.src}
                       alt={sideImage.caption ?? "「宅兹中国」文创摆件"}
@@ -106,7 +103,7 @@ export default function InscriptionFocus({
                         {sideImage.caption}
                       </figcaption>
                     )}
-                  </motion.figure>
+                  </figure>
                 )}
                 <div className="max-w-md text-center sm:text-left">
                   <p className="text-sm leading-7 text-rice-200/80">

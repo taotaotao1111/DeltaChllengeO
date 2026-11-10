@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
+import { useGameStore } from "../../store/gameStore";
 
 interface SpeechRevealProps {
   lines: string[];
@@ -40,17 +41,25 @@ export default function SpeechReveal({
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doneRef = useRef(false);
+  const paused = useGameStore((s) => s.chatOpen);
+  const remainingRef = useRef<{ index: number; ms: number } | null>(null);
 
   useEffect(() => {
     doneRef.current = false;
     setIndex(0);
     setRevealed(false);
+    remainingRef.current = null;
   }, [lines]);
 
   useEffect(() => {
-    if (index >= lines.length) return;
+    if (index >= lines.length || paused || doneRef.current) return;
     const isLast = index === lines.length - 1;
-    const delay = Math.max(lineDelay, lines[index].length * 60);
+    const delay = remainingRef.current?.index === index ? remainingRef.current.ms : Math.max(lineDelay, lines[index].length * 60);
+    const startedAt = performance.now();
+    const cleanup = () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      remainingRef.current = { index, ms: Math.max(0, delay - (performance.now() - startedAt)) };
+    };
 
     if (isLast) {
       timerRef.current = setTimeout(() => {
@@ -60,19 +69,17 @@ export default function SpeechReveal({
           onComplete?.();
         }
       }, delay);
-      return () => {
-        if (timerRef.current) clearTimeout(timerRef.current);
-      };
+      return cleanup;
     }
 
     timerRef.current = setTimeout(() => setIndex((i) => i + 1), delay);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
+    return cleanup;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, lines, lineDelay]);
+  }, [index, lines, lineDelay, paused]);
 
   const advance = () => {
+    if (paused) return;
+    remainingRef.current = null;
     if (index < lines.length - 1) {
       if (timerRef.current) clearTimeout(timerRef.current);
       setIndex((i) => i + 1);

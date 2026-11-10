@@ -1,36 +1,14 @@
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useGameStore, type DiscoveredId } from "../../store/gameStore";
+import { useGameStore } from "../../store/gameStore";
 import { getArtifact } from "../../data/artifacts";
-import type { Artifact } from "../../types/artifact";
 import { renderCard } from "./cardCanvas";
 import { useScrollLock } from "../../utils/useScrollLock";
+import { buildExplorationMemory } from "../../utils/explorationMemory";
+import TraceGlyphs from "../story/TraceGlyphs";
+import ExtraDialog from "../shared/ExtraDialog";
 
 const LEGACY_PROMPT = "如果三千年后，有人看到今天的你，你想留下什么？";
-
-/**
- * 一次都没问过时的落款。
- *
- * 原来这里放的是一句反问（「如果你可以穿越回三千年前，你最想问何尊什么？」），
- * 配上标题「你还没问我」读起来很别扭：既在何尊的口吻里出现了第三人称的「何尊」，
- * 又像是卡片突然朝用户抛出一道题——用户反馈"云里雾里"。
- * 改成何尊自己把这件事说完，标题也不再用否定句式。
- */
-const NO_QUESTION = {
-  label: "临走前",
-  text: "这一趟你没有问我什么。下次来，随便问——包括我答不上来的。",
-};
-
-/**
- * 「我告诉过你」那一句。
- *
- * 按档案里的顺序取第一条 requires 全部命中的，都没命中用 defaultInsight —— 顺序
- * 即优先级（看过铭文的人，卡片上就该是铭文那句，而不是更浅的一条）。
- */
-function getInsight(artifact: Artifact, discovered: DiscoveredId[]): string {
-  const hit = artifact.insights.find((i) => i.requires.every((r) => discovered.includes(r)));
-  return hit?.text ?? artifact.defaultInsight;
-}
 
 function formatToday(): string {
   const d = new Date();
@@ -40,33 +18,43 @@ function formatToday(): string {
 
 export default function MemoryCard() {
   const open = useGameStore((s) => s.memoryCardOpen);
-  const close = useGameStore((s) => s.closeMemoryCard);
+  const closeCard = useGameStore((s) => s.closeMemoryCard);
   const discovered = useGameStore((s) => s.discoveredDetails);
   const selectedLine = useGameStore((s) => s.selectedMemoryLine);
-  const lastUserQuestion = useGameStore((s) => s.lastUserQuestion);
+  const messages = useGameStore((s) => s.chatMessages);
   const userLegacyLine = useGameStore((s) => s.userLegacyLine);
   const setUserLegacyLine = useGameStore((s) => s.setUserLegacyLine);
   const snapshot = useGameStore((s) => s.artifactSnapshot);
   const tracedGlyphs = useGameStore((s) => s.tracedGlyphs);
+  const setTracedGlyphs = useGameStore((s) => s.setTracedGlyphs);
   const artifactId = useGameStore((s) => s.currentArtifactId);
 
   const artifact = getArtifact(artifactId);
 
   const [draft, setDraft] = useState("");
+  const [editingLegacy, setEditingLegacy] = useState(false);
+  const [traceOpen, setTraceOpen] = useState(false);
+  const [exportError, setExportError] = useState("");
   /** 导出好的图片（dataURL）。非空时展示导出浮层，让用户长按保存或分享 */
   const [exported, setExported] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const close = () => {
+    setExported(null);
+    setEditingLegacy(false);
+    setTraceOpen(false);
+    closeCard();
+  };
 
   const memoryLine = useMemo(
     () => selectedLine ?? artifact.memoryLines[0],
     [selectedLine, artifact],
   );
-  const insight = useMemo(() => getInsight(artifact, discovered), [artifact, discovered]);
-  const asked = useMemo(() => lastUserQuestion(), [lastUserQuestion]);
-  const questionLabel = asked ? "你问过我" : NO_QUESTION.label;
-  const myQuestion = asked ?? NO_QUESTION.text;
+  const memory = useMemo(() => buildExplorationMemory(artifact, discovered, messages), [artifact, discovered, messages]);
+  const insight = memory.insight;
+  const questionLabel = "你问过的问题";
+  const myQuestion = memory.questions.slice(-3).join("\n");
   const hasLegacy = !!userLegacyLine;
-  const needsPrompt = userLegacyLine === null;
+  const needsPrompt = editingLegacy;
 
   /**
    * 弹层打开期间锁住页面滚动。
@@ -84,22 +72,28 @@ export default function MemoryCard() {
   const handleExport = async () => {
     if (exporting) return;
     setExporting(true);
+    setExportError("");
     try {
       const canvas = await renderCard({
         kicker: `${artifact.name} · ${artifact.shortPeriod}`,
         sealChars: artifact.sealChars,
         memoryLine,
         insight,
+        insightLabel: memory.insightLabel,
         questionLabel,
         myQuestion,
         legacyLine: userLegacyLine || null,
         snapshot,
         tracedGlyphs,
-        discoveredCount: discovered.length,
+        discoveredCount: memory.details.length,
+        exploredTitles: memory.details,
+        completedTitles: memory.completed,
+        storyUnit: memory.storyUnit,
       });
       setExported(canvas.toDataURL("image/png"));
     } catch (err) {
       console.warn("[MemoryCard] 生成卡片失败", err);
+      setExportError("卡片暂时没有保存成功，可以再试一次。");
     } finally {
       setExporting(false);
     }
@@ -165,17 +159,17 @@ export default function MemoryCard() {
                 />
                 <div className="mt-5 flex gap-3">
                   <button
-                    onClick={() => setUserLegacyLine(draft.trim())}
+                    onClick={() => { setUserLegacyLine(draft.trim()); setEditingLegacy(false); }}
                     disabled={!draft.trim()}
                     className="flex-1 rounded-full bg-gilt/25 py-2.5 text-sm text-gilt-light transition hover:bg-gilt/35 disabled:opacity-30"
                   >
                     写进记忆卡 →
                   </button>
                   <button
-                    onClick={() => setUserLegacyLine("")}
+                    onClick={() => setEditingLegacy(false)}
                     className="rounded-full border border-rice-100/15 px-4 py-2.5 text-sm text-rice-200/60 transition hover:text-rice-100"
                   >
-                    跳过
+                    返回卡片
                   </button>
                 </div>
               </div>
@@ -187,7 +181,8 @@ export default function MemoryCard() {
                   <p className="text-[11px] tracking-widest text-rice-200/40">
                     {artifact.name} · {artifact.dynasty}
                   </p>
-                  <p className="font-title mt-2 text-base text-rice-100/85">这是我留给你的</p>
+                  <p className="font-title mt-2 text-base text-rice-100/85">我的千年相遇</p>
+                  <p className="mt-2 text-xs leading-6 text-rice-200/55">根据你这次的探索留下，随时可以添加自己的笔迹和留言。</p>
 
                   {/* 用户转到的那个角度——每张卡都不一样 */}
                   {snapshot && (
@@ -208,11 +203,12 @@ export default function MemoryCard() {
 
                   <div className="ink-divider my-6" />
 
-                  <p className="text-[11px] tracking-widest text-gilt/60">我告诉过你</p>
+                  <p className="text-[11px] tracking-widest text-gilt/60">{memory.insightLabel}</p>
                   <p className="mt-2 text-[13px] leading-7 text-gilt-light/90">{insight}</p>
 
-                  <p className="mt-6 text-[11px] tracking-widest text-gilt/60">{questionLabel}</p>
-                  <p className="mt-2 text-[13px] leading-7 text-rice-100/70">{myQuestion}</p>
+                  {memory.details.length > 0 && <><p className="mt-6 text-[11px] tracking-widest text-gilt/60">我看过的细节 · {memory.details.length} 处</p><p className="mt-2 text-[13px] leading-7 text-rice-100/75">{memory.details.join(" · ")}</p></>}
+                  {memory.completed.length > 0 && <><p className="mt-6 text-[11px] tracking-widest text-gilt/60">我读完的故事 · {memory.completed.length} {memory.storyUnit}</p><p className="mt-2 text-[13px] leading-7 text-rice-100/75">{memory.completed.join(" / ")}</p></>}
+                  {myQuestion && <><p className="mt-6 text-[11px] tracking-widest text-gilt/60">{questionLabel}</p><p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-rice-100/70">{myQuestion}</p></>}
 
                   {hasLegacy && (
                     <>
@@ -257,7 +253,7 @@ export default function MemoryCard() {
                   <div className="flex items-end justify-between gap-4">
                     <div>
                       <p className="text-[11px] text-rice-200/40">
-                        {formatToday()} · 你打开了我 {discovered.length} 处细节
+                        {formatToday()} · {memory.details.length} 处细节 · {memory.completed.length} {memory.storyUnit}故事
                       </p>
                       <p className="font-title mt-2 text-[13px] text-rice-100/60">《物语千年》</p>
                       <p className="mt-1 text-[10px] tracking-wide text-rice-200/35">
@@ -271,7 +267,15 @@ export default function MemoryCard() {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 gap-3 border-t border-rice-100/10 p-4">
+                <div className="shrink-0 border-t border-rice-100/10 p-4">
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    <button onClick={() => { setDraft(userLegacyLine ?? ""); setEditingLegacy(true); }} className="min-h-10 rounded-full border border-gilt/25 px-3 text-xs text-gilt-light">{hasLegacy ? "编辑我的留言" : "＋ 留一句话"}</button>
+                    {artifact.traceGlyphs && <button onClick={() => setTraceOpen(true)} className="min-h-10 rounded-full border border-gilt/25 px-3 text-xs text-gilt-light">{tracedGlyphs?.some(Boolean) ? "重新描红" : "＋ 亲手描红"}</button>}
+                    {tracedGlyphs?.some(Boolean) && <button onClick={() => setTracedGlyphs(null)} className="min-h-10 px-2 text-xs text-rice-200/60">移除笔迹</button>}
+                    {hasLegacy && <button onClick={() => setUserLegacyLine("")} className="min-h-10 px-2 text-xs text-rice-200/60">移除留言</button>}
+                  </div>
+                  {exportError && <p role="alert" className="mb-3 text-xs text-cinnabar-light">{exportError}</p>}
+                  <div className="flex gap-3">
                   <button
                     onClick={handleExport}
                     disabled={exporting}
@@ -285,10 +289,13 @@ export default function MemoryCard() {
                   >
                     收起
                   </button>
+                  </div>
                 </div>
               </div>
             )}
           </motion.div>
+
+          {traceOpen && artifact.traceGlyphs && <ExtraDialog title="记忆卡编辑 · 亲手描红" onClose={() => setTraceOpen(false)}><TraceGlyphs embedded chars={artifact.traceGlyphs.chars} onComplete={(images) => { setTracedGlyphs(images); setTraceOpen(false); }} onSkip={() => setTraceOpen(false)} /></ExtraDialog>}
 
           {/* 导出浮层：iOS 不支持 a.download，只能让用户长按图片存相册 */}
           <AnimatePresence>

@@ -8,6 +8,7 @@ import ChapterLeadArt from "../shared/ChapterLeadArt";
 import { getArtifact } from "../../data/artifacts";
 import { useGameStore } from "../../store/gameStore";
 import { track } from "../../utils/tracking";
+import { getAdjacentChapter, getChapterAct } from "../../utils/narrative";
 
 /**
  * 章节外壳：把「第几章」这件事收拢到一处。
@@ -20,6 +21,7 @@ import { track } from "../../utils/tracking";
 export default function ChapterHost() {
   const artifactId = useGameStore((s) => s.currentArtifactId);
   const chapterIndex = useGameStore((s) => s.chapterIndex);
+  const chapterEntry = useGameStore((s) => s.chapterEntry);
   const setStage = useGameStore((s) => s.setStage);
   const setChapter = useGameStore((s) => s.setChapter);
   const markDiscovered = useGameStore((s) => s.markDiscovered);
@@ -28,17 +30,29 @@ export default function ChapterHost() {
   const chapter = artifact.chapters[chapterIndex];
   if (!chapter) return null;
 
-  const isFirst = chapterIndex === 0;
-  const isLast = chapterIndex >= artifact.chapters.length - 1;
+  const previousIndex = getAdjacentChapter(artifact, chapterIndex, -1);
+  const nextIndex = getAdjacentChapter(artifact, chapterIndex, 1);
+  const act = getChapterAct(artifact, chapterIndex);
+  const isOptional = artifact.narrative?.optionalChapterIds.includes(chapter.id);
+  const optionalIndex = artifact.chapters.findIndex((c, i) =>
+    i > chapterIndex && artifact.narrative?.optionalChapterIds.includes(c.id),
+  );
+  const offersDeepDive = chapter.module.kind === "reveal" && optionalIndex >= 0;
 
-  const onBack = () => (isFirst ? setStage("gallery") : setChapter(chapterIndex - 1));
+  const onBack = () => previousIndex === undefined ? setStage("gallery") : setChapter(previousIndex, isOptional ? "closing" : "start");
   // 每次 onNext = 当前章完成（倒退重看不触发——setChapter 的 chapter_view 才是 view 语义）。
   // 同时标记章节已读（chapter:<id> 约定，ChapterMenu 的目录用），幂等去重天然成立
   const onNext = () => {
     track("chapter_complete", { artifactId: artifactId, chapterIndex });
     markDiscovered(`chapter:${chapter.id}`);
-    if (isLast) setStage("timeline");
-    else setChapter(chapterIndex + 1);
+    if (nextIndex === undefined) setStage("timeline");
+    else setChapter(nextIndex);
+  };
+  const onDeepDive = () => {
+    track("deep_dive_open", { artifactId, chapterId: artifact.chapters[optionalIndex].id });
+    markDiscovered(`chapter:${chapter.id}`);
+    track("chapter_complete", { artifactId, chapterIndex });
+    setChapter(optionalIndex);
   };
 
   const module = chapter.module;
@@ -70,8 +84,13 @@ export default function ChapterHost() {
         transition={{ duration: 0.8 }}
         className="absolute left-[calc(1.5rem+var(--safe-left))] top-[calc(5rem+var(--safe-top))] z-10 sm:left-10 sm:top-24"
       >
-        <p className="text-xs tracking-widest text-gilt-light/70">{chapter.label}</p>
-        <h1 className="font-title text-2xl text-rice-100 sm:text-3xl">{chapter.title}</h1>
+        <div className="flex items-baseline gap-3">
+        <p className="shrink-0 text-xs tracking-widest text-gilt-light/70">
+          {act ? `${act.label}${isOptional ? " · 自选深入" : ""}` : chapter.label}
+        </p>
+        <h1 className="font-title text-2xl text-rice-100 sm:text-3xl">{act ? isOptional ? "完整铭文" : act.title : chapter.title}</h1>
+        </div>
+        {act && <p className="mt-2 text-xs text-rice-200/60">{chapter.title}</p>}
       </motion.div>
 
       <motion.button
@@ -82,7 +101,7 @@ export default function ChapterHost() {
         onClick={onBack}
         className="fixed left-[calc(1.5rem+var(--safe-left))] top-[calc(1.5rem+var(--safe-top))] z-20 text-xs tracking-wide text-rice-100/60 sm:left-8 sm:top-8"
       >
-        {isFirst ? "← 回到展厅" : "← 上一章"}
+        {previousIndex === undefined ? "← 回到展厅" : isOptional ? "← 回到发现" : "← 上一段"}
       </motion.button>
 
       {module.kind === "observe" && (
@@ -102,6 +121,8 @@ export default function ChapterHost() {
           data={module}
           presence={chapter.presence}
           onNext={onNext}
+          onDeepDive={offersDeepDive ? onDeepDive : undefined}
+          initialPhase={chapterEntry === "closing" ? "closing" : "lead-in"}
         />
       )}
       {module.kind === "inscription" && (

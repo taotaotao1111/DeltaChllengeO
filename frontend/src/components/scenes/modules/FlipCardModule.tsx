@@ -1,12 +1,12 @@
 import { type CSSProperties, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
-import AppraiseGate from "../../story/AppraiseGate";
-import { useGameStore } from "../../../store/gameStore";
 import { track } from "../../../utils/tracking";
 import type { Artifact, FlipModuleData } from "../../../types/artifact";
+import { useStoryMoment } from "../../../utils/useStoryMoment";
+import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
 
-type Phase = "lead-in" | "cards" | "merge" | "closing" | "appraise";
+type Phase = "lead-in" | "cards" | "merge" | "closing";
 
 /** 拖拽多远判定为一次「翻面/下一张」（占卡片宽的比例） */
 const FLIP_DRAG_RATIO = 0.25;
@@ -62,7 +62,7 @@ const paperCardClass =
  * 压暗后浮现点题句，把双层立意在章尾收束。
  *
  * 翻面手势：横向拖拽（像翻纸牌）——未翻态拖过卡片 1/4 宽自动翻面（带跟手旋转预览），
- * 已翻态左滑下一张。点击翻面与按钮保留为无障碍兜底（FogWipeReveal skip 同款纪律）。
+ * 已翻态点击或左滑继续；键盘 Enter / Space 也可翻面或继续。
  * 旋转统一由 motionValue 驱动（baseSpring 管翻面动画、dragX 管跟手预览），
  * 不用 animate prop——两者同属性会打架。
  */
@@ -79,8 +79,6 @@ export default function FlipCardModule({
   const [phase, setPhase] = useState<Phase>("lead-in");
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const appraiseDone = useGameStore((s) => s.appraiseDone);
-  const markAppraiseDone = useGameStore((s) => s.markAppraiseDone);
 
   // —— 拖拽翻牌的 motionValue 链 ——
   // baseRotation：0（正面）/ 180（背面），spring 驱动翻面动画
@@ -94,10 +92,20 @@ export default function FlipCardModule({
 
   const cardRef = useRef<HTMLDivElement>(null);
   const draggedRef = useRef(false);
+  const suppressClickUntil = useRef(0);
 
   const cards = data.cards;
   const card = cards[cardIndex];
   const isLastCard = cardIndex >= cards.length - 1;
+  useStoryMoment({
+    id: `${artifact.id}:history:${phase}:${card?.id ?? "end"}`,
+    title: phase === "cards" ? "现代发现 · 故事与证据" : "重逢 · 来到你面前",
+    summary: card && phase === "cards" ? `${card.front}\n史实：${card.back.content}` : data.closingLines.join("\n"),
+    factIds: phase === "cards" ? [...new Set([...(card?.back.factId ? [card.back.factId] : []), ...(card?.followUp?.factIds ?? [])])] : [],
+    questions: card?.followUp?.questions ?? [],
+    prompt: card?.followUp?.prompt,
+    ready: phase === "cards" && flipped,
+  });
 
   const nextCard = () => {
     if (isLastCard) {
@@ -125,6 +133,8 @@ export default function FlipCardModule({
 
   /** 拖拽结束：左滑过阈值 = 翻面（未翻）/ 下一张（已翻） */
   const handleDragEnd = (_e: unknown, info: { offset: { x: number } }) => {
+    draggedRef.current = false;
+    suppressClickUntil.current = performance.now() + 250;
     const width = cardRef.current?.getBoundingClientRect().width ?? 300;
     const threshold = width * FLIP_DRAG_RATIO;
     if (info.offset.x < -threshold) {
@@ -133,21 +143,16 @@ export default function FlipCardModule({
     }
   };
 
-  /** 点击翻面兜底：拖拽后的 click 不算（framer 拖完会补发 click） */
+  /** 卡片本身承担继续操作；忽略拖拽后的补发点击，避免一次滑动跳过两张。 */
   const handleCardClick = () => {
-    if (draggedRef.current) {
-      // 拖拽结束的 click 吞掉后复位，下一次真点击可以翻面
-      window.setTimeout(() => {
-        draggedRef.current = false;
-      }, 100);
-      return;
-    }
-    flip();
+    if (draggedRef.current || performance.now() < suppressClickUntil.current) return;
+    if (flipped) nextCard();
+    else flip();
   };
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
-      <div className="absolute inset-0 flex flex-col items-center justify-center px-6">
+    <div className="relative h-full w-full overflow-y-auto overscroll-contain">
+      <div className="relative flex min-h-full flex-col items-center justify-center px-6 pb-28 pt-40">
         <AnimatePresence mode="wait">
           {phase === "lead-in" && (
             <motion.div
@@ -204,11 +209,18 @@ export default function FlipCardModule({
                   onDragEnd={handleDragEnd}
                   style={{ x: dragX, rotateY, transformStyle: "preserve-3d" }}
                   onClick={handleCardClick}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if ((e.key === "Enter" || e.key === " ") && !e.repeat) {
+                      e.preventDefault();
+                      if (flipped) nextCard(); else flip();
+                    }
+                  }}
                   className={`relative aspect-[3/4] h-[46vh] max-h-[420px] w-auto cursor-grab active:cursor-grabbing ${
-                    flipped ? "cursor-default" : ""
+                    flipped ? "cursor-pointer" : ""
                   }`}
                   role="button"
-                  aria-label={flipped ? "事实核实卡" : "翻开看核实的事实"}
+                  aria-label={flipped ? isLastCard ? "读完这段故事" : "查看后续故事" : "翻开看核实的事实"}
                 >
                   {/* 正面：STORY 口白（做旧纸） */}
                   <div
@@ -220,9 +232,6 @@ export default function FlipCardModule({
                     </p>
                     <p className="mt-4 text-center font-title text-base leading-8 text-rice-100/95 sm:text-lg">
                       {card.front}
-                    </p>
-                    <p className="absolute bottom-5 text-[10px] tracking-widest text-rice-200/35">
-                      向左拖，翻开看核实的事实
                     </p>
                   </div>
 
@@ -257,17 +266,13 @@ export default function FlipCardModule({
                     <p className="mt-4 max-w-[85%] text-center text-[10px] leading-4 text-rice-200/40">
                       来源：{card.back.source}
                     </p>
-                    {!isLastCard && (
-                      <p className="absolute bottom-5 text-[10px] tracking-widest text-rice-200/35">
-                        向左拖，看下一张
-                      </p>
-                    )}
                   </div>
                 </motion.div>
               </div>
 
-              {/* 操作：未翻 = 引导翻面；已翻 = 下一张/读完 */}
-              <div className="flex h-10 items-center">
+              {flipped && <StoryQuestionBubble compact />}
+              {/* 只保留翻面和结尾出口，卡片本身可点击或滑动继续。 */}
+              {(!flipped || isLastCard) && <div className="flex h-10 items-center">
                 {!flipped ? (
                   <button
                     onClick={flip}
@@ -282,10 +287,10 @@ export default function FlipCardModule({
                     onClick={nextCard}
                     className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
                   >
-                    {isLastCard ? "读完了 →" : "下一张 →"}
+                    读完了 →
                   </motion.button>
                 )}
-              </div>
+              </div>}
             </motion.div>
           )}
 
@@ -404,15 +409,10 @@ export default function FlipCardModule({
                 reveal={
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => {
-                        // 档案配了鉴宝且还没考过：先掌眼再去时间线；
-                        // 考过（回看本章）直接放行，不再重弹
-                        if (data.appraise && !appraiseDone) setPhase("appraise");
-                        else onNext();
-                      }}
+                      onClick={onNext}
                       className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
                     >
-                      {data.appraise && !appraiseDone ? "轮到你来掌眼 →" : "看看我经历了多久 →"}
+                      带走这次相遇 →
                     </button>
                   </div>
                 }
@@ -420,18 +420,6 @@ export default function FlipCardModule({
             </motion.div>
           )}
 
-          {phase === "appraise" && data.appraise && (
-            <motion.div key="appraise" className="h-full w-full">
-              <AppraiseGate
-                artifactId={artifact.id}
-                data={data.appraise}
-                onDone={() => {
-                  markAppraiseDone();
-                  onNext();
-                }}
-              />
-            </motion.div>
-          )}
         </AnimatePresence>
       </div>
     </div>

@@ -5,6 +5,8 @@ import ArtifactViewer from "../../artifact/ArtifactViewer";
 import ArtifactInfo from "../../artifact/ArtifactInfo";
 import { useGameStore } from "../../../store/gameStore";
 import type { Artifact, Hotspot, HotspotType, ObserveModuleData } from "../../../types/artifact";
+import { useStoryMoment } from "../../../utils/useStoryMoment";
+import { suspendAmbientAudio } from "../../../utils/ambientAudio";
 
 /** 静场多久之后给出「跳过」入口——不打扰，但别让人卡住 */
 const SKIP_HINT_DELAY = 7000;
@@ -30,6 +32,7 @@ export default function ObserveModule({ artifact, data, onNext }: ObserveModuleP
   const [phase, setPhase] = useState<Phase>("observe");
   const [firstLook, setFirstLook] = useState<string | null>(null);
   const [activeHotspot, setActiveHotspot] = useState<Hotspot | null>(null);
+  const [lastHotspot, setLastHotspot] = useState<Hotspot | null>(null);
   const [showSkip, setShowSkip] = useState(false);
   /** 自我介绍视频播放浮层 */
   const [videoOpen, setVideoOpen] = useState(false);
@@ -58,6 +61,7 @@ export default function ObserveModule({ artifact, data, onNext }: ObserveModuleP
   }, [phase]);
 
   const handleHotspotClick = (hotspot: Hotspot) => {
+    setLastHotspot(hotspot);
     markDiscovered(hotspot.id);
     if (phase === "observe" && data.firstLookResponses[hotspot.type]) {
       setFirstLook(hotspot.type);
@@ -70,6 +74,18 @@ export default function ObserveModule({ artifact, data, onNext }: ObserveModuleP
   const activeFacts = activeHotspot
     ? artifact.verifiedFacts.filter((f) => activeHotspot.factIds.includes(f.id))
     : [];
+
+  const observedHotspot = activeHotspot ?? lastHotspot;
+  useStoryMoment({
+    id: `${artifact.id}:observe:${observedHotspot?.id ?? "overview"}`,
+    title: observedHotspot?.title ?? "观察器物",
+    summary: observedHotspot?.story ?? data.prompt,
+    factIds: [...new Set([...(observedHotspot?.factIds ?? []), ...(observedHotspot?.followUp?.factIds ?? [])])],
+    hotspotId: observedHotspot?.id,
+    questions: observedHotspot?.followUp?.questions ?? [],
+    prompt: observedHotspot?.followUp?.prompt,
+    ready: !videoOpen && (!!activeHotspot || phase === "ready"),
+  });
 
   return (
     <>
@@ -231,6 +247,8 @@ export default function ObserveModule({ artifact, data, onNext }: ObserveModuleP
  */
 function IntroVideoOverlay({ src, poster, onClose }: { src: string; poster?: string; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const releaseAudioRef = useRef<(() => void) | null>(null);
+  const closingRef = useRef(false);
   const [paused, setPaused] = useState(false);
   const [progress, setProgress] = useState(0);
   /** 静音状态：浏览器自动播放策略只放行静音起播，被拦时降级 + 给醒目的开声音按钮 */
@@ -240,12 +258,31 @@ function IntroVideoOverlay({ src, poster, onClose }: { src: string; poster?: str
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    const release = suspendAmbientAudio();
+    closingRef.current = false;
+    releaseAudioRef.current = release;
+    let active = true;
     v.play().catch(() => {
+      if (!active || closingRef.current) return;
       v.muted = true;
       setMuted(true);
-      v.play().catch(() => setPaused(true));
+      v.play().catch(() => { if (active) setPaused(true); });
     });
+    return () => {
+      active = false;
+      v.pause();
+      release();
+      if (releaseAudioRef.current === release) releaseAudioRef.current = null;
+    };
   }, []);
+
+  const closeVideo = () => {
+    closingRef.current = true;
+    videoRef.current?.pause();
+    // 在关闭按钮的用户手势内恢复音乐，不等卸载后的 effect。
+    releaseAudioRef.current?.();
+    onClose();
+  };
 
   const togglePlay = () => {
     const v = videoRef.current;
@@ -293,7 +330,7 @@ function IntroVideoOverlay({ src, poster, onClose }: { src: string; poster?: str
           const v = e.currentTarget;
           if (v.duration > 0) setProgress(v.currentTime / v.duration);
         }}
-        onEnded={onClose}
+        onEnded={closeVideo}
         className="max-h-[72vh] w-full cursor-pointer rounded-md border border-gilt/20 bg-black shadow-[0_20px_60px_rgba(0,0,0,0.7)]"
       />
 
@@ -334,7 +371,7 @@ function IntroVideoOverlay({ src, poster, onClose }: { src: string; poster?: str
       </div>
 
       <button
-        onClick={onClose}
+        onClick={closeVideo}
         className="mt-5 rounded-full border border-rice-100/20 px-5 py-2 text-[11px] tracking-wide text-rice-100/70 transition hover:border-rice-100/40 hover:text-rice-100"
       >
         先不看，继续 →

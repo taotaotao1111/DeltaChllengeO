@@ -3,6 +3,7 @@ import { useFrame, useLoader } from "@react-three/fiber";
 import { GLTFLoader, MeshoptDecoder } from "three-stdlib";
 import { Box3, Group, Vector3 } from "three";
 import type { ArtifactModel } from "../../types/artifact";
+import { useGameStore } from "../../store/gameStore";
 
 /** 归一化后的模型总高度（世界单位）。相机参数与热点 position3d 都以此为基准。 */
 const MODEL_HEIGHT = 2;
@@ -30,6 +31,7 @@ export default function ArtifactModel3D({
   src,
   autoRotateSpeed = 0,
 }: ArtifactModel3DProps) {
+  const chatOpen = useGameStore((s) => s.chatOpen);
   const { scene } = useLoader(GLTFLoader, src, (loader) => {
     // 模型用 EXT_meshopt_compression 压缩，解码器由 three-stdlib 本地提供，不走 CDN。
     // 这里不用 drei 的 useGLTF：它默认会创建 DRACOLoader 并把解码器路径指向 gstatic。
@@ -60,7 +62,7 @@ export default function ArtifactModel3D({
   }, [object, model.rotation]);
 
   useFrame((_, delta) => {
-    if (spinRef.current && autoRotateSpeed) {
+    if (spinRef.current && autoRotateSpeed && !chatOpen) {
       spinRef.current.rotation.y += autoRotateSpeed * delta;
     }
   });

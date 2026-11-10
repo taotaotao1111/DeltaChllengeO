@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ChapterModule, ChatMessage, Scene } from "../types/artifact";
+import type { ChapterModule, ChatMessage, Scene, StoryMoment } from "../types/artifact";
 import { DEFAULT_ARTIFACT_ID, getArtifact } from "../data/artifacts";
 import { track } from "../utils/tracking";
 import { loadProgress, saveProgress, type ProgressSnapshot } from "../utils/progressStorage";
@@ -43,10 +43,15 @@ interface GameState {
   currentArtifactId: string;
   /** 当前章序号（0 起） */
   chapterIndex: number;
+  chapterEntry: "start" | "closing";
 
   chatOpen: boolean;
   chatMessages: ChatMessage[];
   chatLoading: boolean;
+  chatHasNewReply: boolean;
+  storyMoment: StoryMoment | null;
+  dismissedStoryMomentIds: string[];
+  pendingChatQuestion: string | null;
 
   discoveredDetails: DiscoveredId[];
 
@@ -78,12 +83,18 @@ interface GameState {
   /** 选定一件文物（重置章序号，换文物就从第一章开始） */
   selectArtifact: (id: string) => void;
   /** 跳到第几章（不改 stage，供导航与「上一章/下一章」使用） */
-  setChapter: (index: number) => void;
+  setChapter: (index: number, entry?: "start" | "closing") => void;
   markDiscovered: (id: DiscoveredId) => void;
   toggleChat: (open?: boolean) => void;
+  askArtifact: (question: string) => void;
+  clearPendingChatQuestion: () => void;
+  setStoryMoment: (moment: StoryMoment) => void;
+  clearStoryMoment: (id: string) => void;
   addMessage: (msg: ChatMessage) => void;
   updateLastMessage: (content: string) => void;
   patchLastMessage: (patch: Partial<ChatMessage>) => void;
+  patchMessage: (id: string, patch: Partial<ChatMessage>) => void;
+  completeChatReply: (id: string, patch: Partial<ChatMessage>) => void;
   setChatLoading: (loading: boolean) => void;
   openMemoryCard: (line?: string) => void;
   closeMemoryCard: () => void;
@@ -106,10 +117,15 @@ export const useGameStore = create<GameState>((set, get) => ({
   stage: "museum",
   currentArtifactId: DEFAULT_ARTIFACT_ID,
   chapterIndex: 0,
+  chapterEntry: "start",
 
   chatOpen: false,
   chatMessages: [],
   chatLoading: false,
+  chatHasNewReply: false,
+  storyMoment: null,
+  dismissedStoryMomentIds: [],
+  pendingChatQuestion: null,
 
   discoveredDetails: [],
 
@@ -124,7 +140,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setStage: (stage) => {
     track("stage_reach", { stage });
-    set({ stage });
+    set((s) => ({ stage, storyMoment: s.stage === stage ? s.storyMoment : null, chatOpen: false, pendingChatQuestion: null }));
     get().persistCheckpoint();
   },
 
@@ -134,10 +150,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     track("artifact_select", { artifactId: id, revisit });
     set((s) =>
       s.currentArtifactId === id
-        ? { chapterIndex: 0 }
+        ? { chapterIndex: 0, chapterEntry: "start", storyMoment: null, chatOpen: false, pendingChatQuestion: null }
         : {
             currentArtifactId: id,
             chapterIndex: 0,
+            chapterEntry: "start",
+            storyMoment: null,
+            dismissedStoryMomentIds: [],
+            chatOpen: false,
+            pendingChatQuestion: null,
+            chatLoading: false,
+            chatHasNewReply: false,
             // 跨文物残留会污染 AI 上下文（新文物吃到旧文物的对话历史）
             // 与记忆卡（旧文物的视角截图、留给未来的一句话），多展品后必踩
             chatMessages: [],
@@ -150,9 +173,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     );
   },
 
-  setChapter: (index) => {
+  setChapter: (index, entry = "start") => {
     track("chapter_view", { artifactId: get().currentArtifactId, chapterIndex: index });
-    set({ chapterIndex: index });
+    set((s) => ({ chapterIndex: index, chapterEntry: entry, storyMoment: s.chapterIndex === index ? s.storyMoment : null, chatOpen: false, pendingChatQuestion: null }));
     get().persistCheckpoint();
   },
 
@@ -173,7 +196,23 @@ export const useGameStore = create<GameState>((set, get) => ({
   // 那些钩子（setChapter/setStage/仪式完成）的 persistCheckpoint 会带上最新列表。
 
   toggleChat: (open) =>
-    set((s) => ({ chatOpen: open ?? !s.chatOpen, memoryCardOpen: false })),
+    set((s) => {
+      const chatOpen = open ?? !s.chatOpen;
+      return {
+        chatOpen,
+        chatHasNewReply: chatOpen ? false : s.chatHasNewReply,
+        memoryCardOpen: false,
+        pendingChatQuestion: null,
+        dismissedStoryMomentIds: s.chatOpen && !chatOpen && s.storyMoment && !s.dismissedStoryMomentIds.includes(s.storyMoment.id)
+          ? [...s.dismissedStoryMomentIds, s.storyMoment.id]
+          : s.dismissedStoryMomentIds,
+      };
+    }),
+
+  askArtifact: (question) => set({ chatOpen: true, chatHasNewReply: false, memoryCardOpen: false, pendingChatQuestion: question }),
+  clearPendingChatQuestion: () => set({ pendingChatQuestion: null }),
+  setStoryMoment: (moment) => set({ storyMoment: moment }),
+  clearStoryMoment: (id) => { if (get().storyMoment?.id === id) set({ storyMoment: null }); },
 
   addMessage: (msg) => set((s) => ({ chatMessages: [...s.chatMessages, msg] })),
 
@@ -194,6 +233,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     }),
 
   setChatLoading: (loading) => set({ chatLoading: loading }),
+  patchMessage: (id, patch) => set((s) => ({ chatMessages: s.chatMessages.map((message) => message.id === id ? { ...message, ...patch } : message) })),
+  completeChatReply: (id, patch) => set((s) => {
+    if (!s.chatMessages.some((message) => message.id === id && message.role === "artifact")) return {};
+    return {
+      chatMessages: s.chatMessages.map((message) => message.id === id ? { ...message, ...patch } : message),
+      chatHasNewReply: !s.chatOpen,
+    };
+  }),
 
   openMemoryCard: (line) => {
     track("memory_card_open", {
@@ -240,6 +287,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({
       currentArtifactId: snap.checkpoint.artifactId,
       chapterIndex: snap.checkpoint.chapterIndex,
+      chapterEntry: "start",
       discoveredDetails: snap.discovered,
       appraiseDone: snap.appraiseDone,
       // 描红做过（含跳过）就不再弹仪式：置「全跳过」占位，出口直开记忆卡

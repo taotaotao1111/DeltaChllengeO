@@ -150,7 +150,7 @@ export function buildSystemPrompt(context: ArtifactContext, question?: string): 
   const { artifact, verifiedFacts, discoveredDetails, currentScene } = context;
 
   const factLines = verifiedFacts
-    .map((f) => `- [${f.confidence.toUpperCase()}] ${f.content}（来源：${f.source}）`)
+    .map((f) => `- [${f.confidence.toUpperCase()}] [${f.id}] ${f.content}（来源：${f.source}）`)
     .join("\n");
 
   // 未传 question 时保守起见注入全部约束段（行为等同分流前）
@@ -164,6 +164,8 @@ export function buildSystemPrompt(context: ArtifactContext, question?: string): 
   ]
     .filter(Boolean)
     .join("\n\n");
+  const moment = context.storyMoment;
+  const observed = artifact.hotspots.filter((h) => discoveredDetails.includes(h.id)).map((h) => h.title);
 
   return `你正在扮演一件真实存在的中国历史文物：${artifact.name}（${artifact.dynasty}）。
 
@@ -174,6 +176,10 @@ VERIFIED_FACTS:
 ${factLines}
 
 当前场景：${currentScene}
+${context.currentChapterTitle ? `当前正在阅读的段落：${context.currentChapterTitle}` : ""}
+${context.actTitle ? `当前幕：${context.actTitle}` : ""}
+${moment ? `用户刚才看到的内容：${moment.title}\n内容摘要（可能含文学表达，不能当作史实）：${moment.summary}\n关联史料编号：${moment.factIds.join("、") || "无"}\n当前纹饰热点：${moment.hotspotId ?? "无"}\n当前铭文段落：${moment.sectionId ?? "无"}` : ""}
+已观察的细节：${observed.join("、") || "尚未观察"}
 用户已探索过：${discoveredDetails.join("、") || "（尚未探索）"}
 （以上两项只是背景信息，供你把握语境。**不要**把它们当成话题提示，
   不要主动去讲用户没问的内容。）
@@ -202,8 +208,7 @@ ${conditional}
 
 【语言与篇幅】
 - 只使用简体中文作答，**不得混入任何英文单词或拼音**。
-- 篇幅**硬性上限 120 字**（标点计入）。这是不可协商的上限，不是建议值。
-  写之前先想好要说的两三句，说完立刻停止。
+- ${context.answerMode === "deep" ? "用户主动选择深入了解：在同一事实边界内分两三段展开，最多 360 字（标点计入）；资料不足时直接说明，不得为了扩写编造细节。" : "默认先给 60～120 字左右的简短回答；篇幅硬性上限 120 字（标点计入），资料不足时可以更短。写之前先想好要说的两三句，说完立刻停止。"}
 - 只答用户问的那一件事。不要顺带介绍别的、不要反问、不要在结尾邀请用户继续看什么。
 - 不要写升华式、抒情式的结尾（例如「这本身就是一种不朽」「等待有缘人翻开」这类）。
   把话说完就停下，不要再往上抬一层。

@@ -154,7 +154,7 @@ export const changxin: Artifact = {
   chapters: [
     {
       id: "whose-am-i",
-      label: "第一章",
+      label: "第一幕",
       title: "我是谁的",
       module: {
         kind: "qa",

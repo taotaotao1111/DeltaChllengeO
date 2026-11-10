@@ -22,6 +22,7 @@ export default function Home() {
   const stage = useGameStore((s) => s.stage);
   const currentArtifactId = useGameStore((s) => s.currentArtifactId);
   const chapterIndex = useGameStore((s) => s.chapterIndex);
+  const chatOpen = useGameStore((s) => s.chatOpen);
 
   /*
    * 章节背景放在 AnimatePresence 之外、由 store 状态直接驱动：
@@ -38,7 +39,7 @@ export default function Home() {
   // 负 z-index 的后代会画在它的背景色**之下**，整层背景于是被吃掉——这正是"第二章之后
   // 只剩纯色加文字"的真正原因。底色交给 index.css 里的 body（#0a0a0c），视觉上无差别。
   return (
-    <div className="relative h-dvh w-full font-sans">
+    <div className={`relative h-dvh w-full font-sans${chatOpen ? " story-paused" : ""}`}>
       {activeChapter ? (
         <ChapterBackdrop
           key={`backdrop-${currentArtifactId}-${chapterIndex}`}
@@ -88,7 +89,7 @@ export default function Home() {
       )}
 
       <ArtifactChat />
-      <MemoryCard />
+      <MemoryCard key={currentArtifactId} />
 
       {/*
         开场那一屏不出现溯源入口：竖版海报底部已经排满了标题与小字，

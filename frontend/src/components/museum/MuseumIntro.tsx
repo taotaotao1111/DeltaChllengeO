@@ -4,6 +4,7 @@ import SpeechReveal from "../shared/SpeechReveal";
 import ArtifactCallout from "./ArtifactCallout";
 import { useGameStore } from "../../store/gameStore";
 import { getArtifact } from "../../data/artifacts";
+import { getChapterAct } from "../../utils/narrative";
 
 interface MuseumIntroProps {
   onComplete: () => void;
@@ -104,7 +105,8 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
       const artifact = getArtifact(snap.checkpoint.artifactId);
       const chapter = artifact.chapters[snap.checkpoint.chapterIndex];
       if (!chapter) return null; // 档案里已没有这一章（数据变更）：不当可续读
-      return `上次读到：${chapter.label} · ${chapter.title} →`;
+      const act = getChapterAct(artifact, snap.checkpoint.chapterIndex);
+      return `上次读到：${act ? `${act.label} · ${act.title}` : chapter.label} · ${chapter.title} →`;
     }
     return null; // gallery：刚进展厅就走了，不算进度，不显示
   })();
@@ -287,7 +289,7 @@ export default function MuseumIntro({ onComplete }: MuseumIntroProps) {
             e.stopPropagation();
             enter();
           }}
-          className="fixed right-[calc(1.5rem+var(--safe-right))] top-[calc(1.5rem+var(--safe-top))] text-xs tracking-wide text-rice-100/60"
+          className="fixed right-[calc(6rem+var(--safe-right))] top-[calc(2.125rem+var(--safe-top))] text-xs tracking-wide text-rice-100/60"
         >
           跳过 →
         </motion.button>

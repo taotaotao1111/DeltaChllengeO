@@ -60,9 +60,17 @@ export type HotspotType =
   | "foot"
   | (string & {});
 
+/** 只在明确的剧情停顿点推荐；资料用于回答边界，问题不能复述剧情选项。 */
+export interface StoryFollowUp {
+  prompt: string;
+  questions: string[];
+  factIds: string[];
+}
+
 export interface Hotspot {
   id: string;
   type: HotspotType;
+  followUp?: StoryFollowUp;
   /** 在展示图上的相对位置（百分比，0-100），用于 2.5D 插画上定位热点 */
   position: { x: number; y: number };
   /**
@@ -152,7 +160,7 @@ export interface QaModuleData {
   lineDelay: number;
   /** 问答列表上方的引导句 */
   prompt: string;
-  items: { id: string; question: string; answer: string }[];
+  items: { id: string; question: string; answer: string; factIds?: string[]; followUp?: StoryFollowUp }[];
 }
 
 /**
@@ -161,6 +169,7 @@ export interface QaModuleData {
  */
 export interface RevealModuleData {
   kind: "reveal";
+  followUp?: StoryFollowUp;
   leadInLines: string[];
   lineDelay: number;
   /** 亲手擦掉覆盖物才看得见字的那一步。leadLines 一句一行（原样保留换行）；
@@ -207,6 +216,7 @@ export interface RevealModuleData {
  */
 export interface InscriptionSection {
   id: string;
+  followUp?: StoryFollowUp;
   /** 本节金文字符（按铭文顺序）；精摹字见 glyphs 数据模块 */
   characters: string[];
   /** 本节在铭文全文 fullText 中的字序范围 [start, end)（start 含 end 不含）——卷面点亮与镜头定位都靠它 */
@@ -251,6 +261,7 @@ export interface InscriptionModuleData {
  */
 export interface FlipCardData {
   id: string;
+  followUp?: StoryFollowUp;
   /** 正面：STORY 层第一人称口白 */
   front: string;
   /** 背面：FACT 核实卡（来源 + 置信度） */
@@ -351,6 +362,8 @@ export interface ArtifactChapter {
   title: string;
   /** 章节目录浮层里的一句话钩子（未读时的引子；不写则浮层只显示标题） */
   hook?: string;
+  /** 本段适合继续追问的问题，优先于文物的通用问题。 */
+  suggestedQuestions?: string[];
   backdrop?: ChapterBackdropMotif;
   /** patina 母题背景里那层巨大字影用哪几个字（必须是这件文物身上有据可查的字） */
   backdropGlyphs?: string[];
@@ -435,6 +448,12 @@ export interface Artifact {
   };
   /** 主线章节。长度即章数——只做一章也成立，不必凑三章 */
   chapters: ArtifactChapter[];
+  /** 首次阅读的幕结构；深入章节仍保留在原档案与目录中。 */
+  narrative?: {
+    durationLabel: string;
+    acts: { id: string; label: string; title: string; chapterIds: string[] }[];
+    optionalChapterIds: string[];
+  };
   /**
    * 「有多久没人看见我」比例条所需的两个年份（负数 = 公元前）与来源说明。
    *
@@ -479,7 +498,35 @@ export interface ChatMessage {
   content: string;
   /** AI 回答中引用的事实类型标记，用于前端展示「已知 / 推测 / 未知」小标签 */
   factBasis?: FactConfidence | "unknown";
+  question?: string;
+  answerMode?: "short" | "deep";
+  factIds?: string[];
+  replySource?: "ai" | "local";
+  turnContext?: ChatTurnContext;
+  error?: boolean;
   createdAt: number;
+}
+
+/** 当前剧情中实际看到的内容；只作上下文，不能替代 FACT 层。 */
+export interface StoryMoment {
+  id: string;
+  title: string;
+  summary: string;
+  factIds: string[];
+  questions: string[];
+  prompt?: string;
+  blockedQuestions?: string[];
+  ready: boolean;
+  hotspotId?: string;
+  sectionId?: string;
+}
+
+export interface ChatTurnContext {
+  currentScene: Scene;
+  currentChapterTitle?: string;
+  actTitle?: string;
+  storyMoment?: StoryMoment;
+  discoveredDetails: string[];
 }
 
 /** 每次向 AI 发起对话时携带的上下文 */
@@ -488,6 +535,10 @@ export interface ArtifactContext {
   verifiedFacts: Fact[];
   timeline: TimelineEvent[];
   currentScene: Scene;
+  currentChapterTitle?: string;
+  actTitle?: string;
+  storyMoment?: StoryMoment;
+  answerMode?: "short" | "deep";
   discoveredDetails: string[];
   conversationHistory: ChatMessage[];
 }

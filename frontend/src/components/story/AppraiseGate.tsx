@@ -15,9 +15,8 @@ type Phase = "opening" | "questions" | "seal";
 /**
  * 章末「鉴宝」环节：用户换位成验看者，三道题掌一次眼。
  *
- * 视觉语言完全沿用 GuessChoice（w-72 等宽胶囊、金边、回应切换），
- * 差别只在「有对错」：答对回金色，答偏的选项转暗金（呼应第一章
- * 「已探索暗金」的色彩语义——错处已被走过，但仍值得看）。
+ * 作答前的等宽胶囊统一使用中性色，悬停也不变金色，避免切题后误显答案。
+ * 作答后再切换到回应，展示是否答对与对应解释。
  *
  * 收束：盖一方朱砂「验看无误」印（scale 落印 + 微旋转，印泥晕染），
  * 出档位称号与收束句，然后放行去时间线。
@@ -198,8 +197,9 @@ export default function AppraiseGate({ artifactId, data, onDone }: AppraiseGateP
                   {question.options?.map((opt) => (
                     <button
                       key={opt.id}
+                      type="button"
                       onClick={() => pick(opt.id)}
-                      className="rounded-full border border-gilt/30 bg-ink-800/40 px-5 py-2.5 text-sm text-rice-100/90 transition hover:border-gilt/50 hover:bg-gilt/10"
+                      className="rounded-full border border-rice-100/20 bg-ink-800/40 px-5 py-2.5 text-sm text-rice-100/90 transition hover:border-rice-100/40 hover:bg-rice-100/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rice-100/60"
                     >
                       {opt.label}
                     </button>

@@ -6,6 +6,9 @@ import { hasGlyph } from "../../../data/artifacts/hezun-glyphs";
 import { useGameStore } from "../../../store/gameStore";
 import { track } from "../../../utils/tracking";
 import type { Artifact, InscriptionModuleData, InscriptionSection } from "../../../types/artifact";
+import { useStoryMoment } from "../../../utils/useStoryMoment";
+import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
+import { useStoryTimers } from "../../../utils/useStoryTimers";
 
 type Phase = "lead-in" | "scroll" | "climax" | "closing";
 type View = "overview" | "section";
@@ -76,6 +79,8 @@ export default function InscriptionModule({
   const [activeIndex, setActiveIndex] = useState(0);
   /** 讲述状态：narrating 本段讲述中 */
   const [narrating, setNarrating] = useState(false);
+  const [sectionReady, setSectionReady] = useState(false);
+  const { schedule, cancel } = useStoryTimers();
   /** 全章已读完（末段讲述完成）：全览的出口从「从头读」换成「继续听我说」 */
   const [readComplete, setReadComplete] = useState(false);
   /** 考据角标展开态 */
@@ -84,7 +89,7 @@ export default function InscriptionModule({
   const [infoOpen, setInfoOpen] = useState(false);
   const climaxDoneRef = useRef(false);
   const trackedRef = useRef(-1);
-  const autoNarrateRef = useRef<number | null>(null);
+  const autoNarrateRef = useRef<ReturnType<typeof schedule> | null>(null);
   /** 入场铺开动画只播一次（末段读完拉回全览不重播） */
   const introPlayedRef = useRef(false);
 
@@ -101,6 +106,16 @@ export default function InscriptionModule({
 
   const section: InscriptionSection | undefined = sections[activeIndex];
   const allLit = litChars.length >= CLIMAX_CHARS.length;
+  useStoryMoment({
+    id: `${artifact.id}:inscription:${phase}:${view}:${section?.id ?? "overview"}`,
+    title: view === "section" && section ? `铭文 · ${section.sceneNote}` : "完整铭文 · 全览",
+    summary: view === "section" && section ? section.transcript : data.openingLines.join("\n"),
+    factIds: view === "section" && section ? [...new Set([...section.factIds, ...(section.followUp?.factIds ?? [])])] : [],
+    sectionId: view === "section" ? section?.id : undefined,
+    questions: section?.followUp?.questions ?? [],
+    prompt: section?.followUp?.prompt,
+    ready: phase === "scroll" && view === "section" && sectionReady,
+  });
 
   const COLS = Math.ceil(fullText.length / PER_COL);
   /** 轴头宽 */
@@ -234,12 +249,13 @@ export default function InscriptionModule({
 
   /** 讲述自动开始的统一入口（切段/推近共用，先清旧计时） */
   const scheduleNarration = (idx: number, delay: number) => {
-    if (autoNarrateRef.current !== null) window.clearTimeout(autoNarrateRef.current);
+    setSectionReady(false);
+    if (autoNarrateRef.current !== null) cancel(autoNarrateRef.current);
     const target = sections[idx];
     if (target?.isClimax && !climaxDoneRef.current) {
-      autoNarrateRef.current = window.setTimeout(() => setPhase("climax"), delay + 900);
+      autoNarrateRef.current = schedule(() => setPhase("climax"), delay + 900);
     } else {
-      autoNarrateRef.current = window.setTimeout(() => setNarrating(true), delay);
+      autoNarrateRef.current = schedule(() => setNarrating(true), delay);
     }
   };
 
@@ -303,9 +319,10 @@ export default function InscriptionModule({
   /** 末段讲完：直接进 closing。不再折回全览停留——「全览一句 122 字」+ closing
    *  「一百二十二个字读完了」两屏同义（用户反馈的重复感），全览只留给「再读一遍」。 */
   const handleNarrationComplete = () => {
+    setSectionReady(true);
     if (activeIndex >= sections.length - 1) {
       setReadComplete(true);
-      window.setTimeout(() => setPhase("closing"), 400);
+      schedule(() => setPhase("closing"), 400);
     }
   };
 
@@ -319,17 +336,17 @@ export default function InscriptionModule({
   // 卸载清理
   useEffect(
     () => () => {
-      if (autoNarrateRef.current !== null) window.clearTimeout(autoNarrateRef.current);
+      if (autoNarrateRef.current !== null) cancel(autoNarrateRef.current);
     },
-    [],
+    [cancel],
   );
 
   // climax 兜底：8s 未全亮则点亮剩余
   useEffect(() => {
     if (phase !== "climax") return;
-    const t = window.setTimeout(() => setLitChars([0, 1, 2, 3]), CLIMAX_AUTO_LIGHT_MS);
-    return () => window.clearTimeout(t);
-  }, [phase]);
+    const timer = schedule(() => setLitChars([0, 1, 2, 3]), CLIMAX_AUTO_LIGHT_MS);
+    return () => cancel(timer);
+  }, [phase, schedule, cancel]);
 
   // climax 重入（重看该节）时重置点亮态
   useEffect(() => {
@@ -367,7 +384,7 @@ export default function InscriptionModule({
   const finishClimax = () => {
     climaxDoneRef.current = true;
     setPhase("scroll");
-    window.setTimeout(() => setNarrating(true), 500);
+    schedule(() => setNarrating(true), 500);
   };
 
   /** 字 j 的点亮态：已读 1 / 当前段依次亮 / 未读暗 */
@@ -665,6 +682,7 @@ export default function InscriptionModule({
                       )}
                     </div>
 
+                    {sectionReady && <div className="mx-auto mt-3 max-w-md"><StoryQuestionBubble compact /></div>}
                     {/* —— 分段导航点条：进度即导航（点哪段去哪段），末段点亮为「读完了」 —— */}
                     <div className="mt-3 flex items-center justify-center gap-2">
                       {sections.map((s, i) => {

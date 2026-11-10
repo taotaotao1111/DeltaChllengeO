@@ -1,5 +1,6 @@
 import type { ArtifactContext, FactConfidence } from "../types/artifact";
 import { findRelevantFacts, unknownAnswerTemplate, buildSystemPrompt } from "../utils/factGuard";
+import { buildChatHistory, getReplyFacts, limitReply } from "../utils/chatContext";
 
 /**
  * aiService —— 独立的 AI 调用层
@@ -19,7 +20,7 @@ import { findRelevantFacts, unknownAnswerTemplate, buildSystemPrompt } from "../
 
 export interface StreamHandlers {
   onToken: (partial: string, token: string) => void;
-  onDone: (fullText: string, factBasis: FactConfidence | "unknown") => void;
+  onDone: (fullText: string, factBasis: FactConfidence | "unknown", metadata?: { factIds: string[]; source: "ai" | "local" }) => void;
   onError?: (err: unknown) => void;
 }
 
@@ -68,23 +69,21 @@ async function streamFromBackend(
     body: JSON.stringify({
       message: userMessage,
       systemPrompt: buildSystemPrompt(context, userMessage),
-      history: context.conversationHistory.slice(-8).map((m) => ({
-        role: m.role === "artifact" ? "assistant" : "user",
-        content: m.content,
-      })),
+      answerMode: context.answerMode ?? "short",
+      history: buildChatHistory(context.conversationHistory, userMessage),
     }),
     signal,
   });
   if (!res.ok) throw new Error(`api/chat responded with ${res.status}`);
 
   const data = (await res.json()) as { reply?: string };
-  const reply = (data.reply ?? "").trim();
+  const reply = limitReply(data.reply ?? "", context.answerMode);
   if (!reply) throw new Error("api/chat returned empty reply");
 
   await wait(THINK_PAUSE_MS, signal);
   const full = await typeOut(reply, handlers.onToken, signal);
   if (signal?.aborted) return;
-  handlers.onDone(full, judgeFactBasis(userMessage, context));
+  handlers.onDone(full, judgeFactBasis(userMessage, context), { factIds: getReplyFacts(context, userMessage).map((f) => f.id), source: "ai" });
 }
 
 /**
@@ -198,12 +197,12 @@ function composeFactAnswer(question: string, context: ArtifactContext): {
   text: string;
   factBasis: FactConfidence | "unknown";
 } {
-  const facts = findRelevantFacts(question, context.verifiedFacts, 2);
+  const facts = getReplyFacts(context, question).slice(0, context.answerMode === "deep" ? 3 : 2);
   if (facts.length === 0) {
     return { text: unknownAnswerTemplate(), factBasis: "unknown" };
   }
 
-  const lead = facts.map((f) => f.content).join("\n");
+  const lead = facts.map((f) => context.answerMode === "deep" ? `资料记载：${f.content}\n资料出处：${f.source}` : f.content).join("\n\n");
   const confidence: FactConfidence = facts.every((f) => f.confidence === "verified")
     ? "verified"
     : "inferred";
@@ -245,9 +244,9 @@ async function streamMock(
   // 模拟「思考」停顿，让回答显得不是瞬间吐出来的
   await wait(THINK_PAUSE_MS, signal);
 
-  const full = await typeOut(text, handlers.onToken, signal);
+  const full = await typeOut(limitReply(text, context.answerMode), handlers.onToken, signal);
   if (signal?.aborted) return;
-  handlers.onDone(full, factBasis);
+  handlers.onDone(full, factBasis, { factIds: factBasis === "unknown" ? [] : getReplyFacts(context, userMessage).map((f) => f.id), source: "local" });
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {

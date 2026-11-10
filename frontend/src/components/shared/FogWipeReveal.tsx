@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useStoryTimers } from "../../utils/useStoryTimers";
 
 interface FogWipeRevealProps {
   children: React.ReactNode;
@@ -112,7 +113,8 @@ export default function FogWipeReveal({
   /** 两段式：已进入挽留阶段（到了 threshold 但还没到 nudgeBar） */
   const [nudged, setNudged] = useState(false);
   const nudgedRef = useRef(false);
-  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { schedule, cancel } = useStoryTimers();
+  const nudgeTimerRef = useRef<ReturnType<typeof schedule> | null>(null);
 
   // 图片盖层：预加载，onload 后触发一次重绘（此时 canvas 尺寸已就绪）
   useEffect(() => {
@@ -310,8 +312,8 @@ export default function FogWipeReveal({
       nudgedRef.current = true;
       setNudged(true);
       // 停手挽留：等 nudgeAutoMs 让遮罩自行剥落，避免「擦不干净就过不去」
-      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
-      nudgeTimerRef.current = setTimeout(() => forceReveal(), nudgeAutoMs);
+      if (nudgeTimerRef.current) cancel(nudgeTimerRef.current);
+      nudgeTimerRef.current = schedule(() => forceReveal(), nudgeAutoMs);
     }
 
     if (ratio >= (nudgeBar ?? threshold)) {
@@ -320,7 +322,7 @@ export default function FogWipeReveal({
       setProgress(100);
       onRevealed?.();
     }
-  }, [threshold, nudgeBar, nudgeAutoMs, onRevealed, forceReveal]);
+  }, [threshold, nudgeBar, nudgeAutoMs, onRevealed, forceReveal, schedule, cancel]);
 
   const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -365,10 +367,10 @@ export default function FogWipeReveal({
   // 挽留计时器与 raf 的清理（组件卸载/揭示后不再留悬挂回调）
   useEffect(() => {
     return () => {
-      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+      if (nudgeTimerRef.current) cancel(nudgeTimerRef.current);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [cancel]);
 
   return (
     <div ref={containerRef} className={`relative select-none ${className}`} style={style}>

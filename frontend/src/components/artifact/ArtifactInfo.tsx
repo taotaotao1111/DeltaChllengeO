@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { Fact, Hotspot } from "../../types/artifact";
+import StoryQuestionBubble from "../ai/StoryQuestionBubble";
 
 interface ArtifactInfoProps {
   hotspot: Hotspot | null;
@@ -31,7 +32,7 @@ export default function ArtifactInfo({ hotspot, facts, onClose, onGoTimeline }: 
             exit={{ opacity: 0, y: 40 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
           >
-            <div className="rounded-t-2xl border border-gilt/20 bg-ink-800/95 p-6 shadow-2xl backdrop-blur-md sm:rounded-2xl">
+            <div className="max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-2xl border border-gilt/20 bg-ink-800/95 p-6 shadow-2xl backdrop-blur-md sm:rounded-2xl">
               <div className="mb-1 text-xs tracking-widest text-gilt-light/70">
                 {hotspot.teaser}
               </div>
@@ -54,6 +55,7 @@ export default function ArtifactInfo({ hotspot, facts, onClose, onGoTimeline }: 
                 </div>
               )}
 
+              <div className="mt-4"><StoryQuestionBubble compact /></div>
               <div className="mt-5 flex justify-end gap-3">
                 {hotspot.type === "timeline" && onGoTimeline && (
                   <button

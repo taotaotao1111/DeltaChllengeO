@@ -51,6 +51,9 @@
 }
 
 @layer utilities {
+  .story-paused * {
+    animation-play-state: paused !important;
+  }
   .font-title {
     font-family: "Noto Serif SC", "Songti SC", serif;
   }

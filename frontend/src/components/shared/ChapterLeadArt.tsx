@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useStoryTimers } from "../../utils/useStoryTimers";
 
 interface ChapterLeadArtProps {
   src: string;
@@ -24,16 +25,17 @@ export default function ChapterLeadArt({ src, caption, peakOpacity = 0.62 }: Cha
   const [dimming, setDimming] = useState(false);
   /** 完全退场（组件仍挂载但不渲染） */
   const [gone, setGone] = useState(false);
+  const { schedule, cancel } = useStoryTimers();
 
   useEffect(() => {
     // 念白中段开始沉暗（约 3 句 × 1.5s 的中点）；10s 兜底全退
-    const t1 = window.setTimeout(() => setDimming(true), 3200);
-    const t2 = window.setTimeout(() => setGone(true), 9500);
+    const t1 = schedule(() => setDimming(true), 3200);
+    const t2 = schedule(() => setGone(true), 9500);
     return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+      cancel(t1);
+      cancel(t2);
     };
-  }, []);
+  }, [schedule, cancel]);
 
   if (gone) return null;
 
@@ -60,7 +62,7 @@ export default function ChapterLeadArt({ src, caption, peakOpacity = 0.62 }: Cha
         >
           <img
             src={src}
-            alt={caption ?? "章节开场氛围图"}
+            alt={caption ?? "故事开场氛围图"}
             className="h-full w-full object-cover"
             /* 摘掉饱和度滤镜（saturate 0.85 把浇铸图的暖光吃掉了）；
                提亮一档让人物从剪影里出来（走查实测源图人像本清楚） */

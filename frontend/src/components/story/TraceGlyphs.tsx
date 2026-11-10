@@ -15,16 +15,17 @@ interface TraceGlyphsProps {
   chars: string[];
   onComplete: (dataUrls: (string | null)[]) => void;
   onSkip: () => void;
+  embedded?: boolean;
 }
 
 /**
- * 金文描红：时间线终点、记忆卡之前的仪式。
+ * 金文描红：记忆卡编辑中的自选纪念玩法。
  *
  * 不判对错、不打分——写歪了就歪着，那就是你的字。
  * 笔画用 pointer events 画在 canvas 上，底层是 glyphs 表的淡色字模。
  * 每字「下一个」时当场 toDataURL（canvas 随即被下一字清空重画）。
  */
-export default function TraceGlyphs({ chars, onComplete, onSkip }: TraceGlyphsProps) {
+export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = false }: TraceGlyphsProps) {
   const [index, setIndex] = useState(0);
   const resultsRef = useRef<(string | null)[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -134,7 +135,7 @@ export default function TraceGlyphs({ chars, onComplete, onSkip }: TraceGlyphsPr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[65] flex flex-col items-center justify-center bg-ink-900/95 px-6"
+      className={`${embedded ? "relative min-h-full py-8" : "fixed inset-0 z-[65]"} flex flex-col items-center justify-center bg-ink-900/95 px-6`}
     >
       <p className="text-xs tracking-widest text-gilt-light/70">
         把这几个字，亲手描一遍
@@ -170,13 +171,13 @@ export default function TraceGlyphs({ chars, onComplete, onSkip }: TraceGlyphsPr
           onClick={onSkip}
           className="text-[11px] text-rice-200/35 underline-offset-2 transition hover:text-rice-200/60"
         >
-          跳过，直接看卡片
+          返回记忆卡
         </button>
         <button
           onClick={next}
           className="rounded-full bg-gilt/20 px-6 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
         >
-          {hasInkRef.current ? "描好了，下一个 →" : "随手写写也行，下一个 →"}
+          {index === chars.length - 1 ? "完成，放进记忆卡 →" : "下一个字 →"}
         </button>
       </div>
 

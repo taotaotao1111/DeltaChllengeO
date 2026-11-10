@@ -1,20 +1,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { getArtifact } from "../../data/artifacts";
 import { useGameStore } from "../../store/gameStore";
+import { getStoryActs } from "../../utils/narrative";
 
 interface ChapterMenuProps {
   open: boolean;
   onClose: () => void;
 }
 
-/**
- * 章节目录浮层：「认识我」的展开态。
- *
- * 五章之后「读完只能回第一章」的导航模型跟不上了——这里给出全章直达：
- * 章号 + 标题 + 一句话钩子（档案的 hook 字段）+ 已读标记。
- * 已读判定走 discoveredDetails 的 `chapter:<id>` 约定（ChapterHost 的 onNext
- * 统一标记，换文物自动清空），配色语义沿用热点探索的反转：未读朱砂、已读暗金。
- */
+/** 面向用户的目录以幕组织；幕内内容节点继续使用原 ID 记录进度。 */
 export default function ChapterMenu({ open, onClose }: ChapterMenuProps) {
   const artifactId = useGameStore((s) => s.currentArtifactId);
   const chapterIndex = useGameStore((s) => s.chapterIndex);
@@ -22,87 +16,57 @@ export default function ChapterMenu({ open, onClose }: ChapterMenuProps) {
   const discovered = useGameStore((s) => s.discoveredDetails);
   const setChapter = useGameStore((s) => s.setChapter);
   const setStage = useGameStore((s) => s.setStage);
-
   const artifact = getArtifact(artifactId);
-  const chapters = artifact.chapters;
+  const acts = getStoryActs(artifact);
+  const enter = (index: number) => {
+    setChapter(index);
+    setStage("chapter");
+    onClose();
+  };
 
   return (
     <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            key="chapter-menu-mask"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-ink-900/60"
-            onClick={onClose}
-          />
-          <motion.div
-            key="chapter-menu"
-            /* ⚠️ 居中只能用 motion 的 x，不能混 Tailwind 的 -translate-x-1/2——
-               framer-motion 的内联 transform 会整段覆盖 class 里的 transform，
-               混用会让水平居中失效（实测：浮层从中线向右溢出半个屏宽） */
-            initial={{ opacity: 0, y: -10, x: "-50%" }}
-            animate={{ opacity: 1, y: 0, x: "-50%" }}
-            exit={{ opacity: 0, y: -10, x: "-50%" }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed left-1/2 top-[calc(4.5rem+var(--safe-top))] z-50 w-[86vw] max-w-sm overflow-hidden rounded-2xl border border-gilt/25 bg-ink-800/95 shadow-2xl backdrop-blur-md"
-          >
-            <p className="border-b border-rice-100/8 px-5 py-3 text-[11px] tracking-widest text-gilt-light/60">
-              {artifact.name} · {chapters.length} 章
-            </p>
-            <div className="max-h-[54vh] overflow-y-auto overscroll-contain py-1">
-              {chapters.map((c, i) => {
-                const isCurrent = stage === "chapter" && chapterIndex === i;
-                const isRead = discovered.includes(`chapter:${c.id}`);
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      setChapter(i);
-                      setStage("chapter");
-                      onClose();
-                    }}
-                    className={`flex w-full items-center gap-3 px-5 py-3 text-left transition-colors ${
-                      isCurrent ? "bg-gilt/15" : "hover:bg-rice-100/5"
-                    }`}
-                  >
-                    {/* 已读/未读标记：未读朱砂（还有没读的），已读暗金（看过的让位） */}
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                        isRead ? "bg-gilt/60" : "bg-cinnabar-light"
-                      }`}
-                    />
-                    <span className="w-12 shrink-0 text-[10px] tracking-widest text-rice-200/40">
-                      {c.label}
-                    </span>
+      {open && <>
+        <motion.div key="story-menu-mask" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-40 bg-ink-900/60" onClick={onClose} />
+        {/* 桌面跟随导航右对齐；窄屏贴近控件组右侧，避免宽目录越出左边缘。 */}
+        <div key="story-menu" className="fixed right-[calc(0.75rem+var(--safe-right))] top-[calc(4.5rem+var(--safe-top))] z-50 w-[86vw] max-w-sm sm:right-[calc(6rem+var(--safe-right))]">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3, ease: "easeOut" }} className="overflow-hidden rounded-2xl border border-gilt/25 bg-ink-800/95 shadow-2xl backdrop-blur-md">
+          <p className="border-b border-rice-100/10 px-5 py-3 text-[11px] tracking-widest text-gilt-light/60">
+            {artifact.name} · {artifact.narrative ? `三幕故事 · ${artifact.narrative.durationLabel}` : "故事目录"}
+          </p>
+          <div className="max-h-[54vh] overflow-y-auto overscroll-contain py-2">
+            {acts.map((act) => {
+              const isCurrent = stage === "chapter" && act.chapterIndices.includes(chapterIndex);
+              const isRead = act.mainIndices.length > 0 && act.mainIndices.every((i) => discovered.includes(`chapter:${artifact.chapters[i].id}`));
+              const target = act.mainIndices[0] ?? act.chapterIndices[0];
+              if (target === undefined) return null;
+              return (
+                <div key={act.id} className={isCurrent ? "bg-gilt/10" : ""}>
+                  <button onClick={() => enter(target)} className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-rice-100/5">
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isRead ? "bg-gilt/60" : "bg-cinnabar-light"}`} />
+                    <span className="w-12 shrink-0 text-[11px] tracking-widest text-rice-200/60">{act.label}</span>
                     <span className="min-w-0 flex-1">
-                      <span
-                        className={`font-title block truncate text-sm ${
-                          isCurrent ? "text-gilt-light" : "text-rice-100/90"
-                        }`}
-                      >
-                        {c.title}
-                      </span>
-                      {!isRead && c.hook && (
-                        <span className="mt-0.5 block truncate text-[11px] leading-4 text-rice-200/35">
-                          {c.hook}
-                        </span>
-                      )}
+                      <span className={`font-title block text-base ${isCurrent ? "text-gilt-light" : "text-rice-100/90"}`}>{act.title}</span>
+                      <span className="mt-1 block text-[11px] leading-5 text-rice-200/50">{act.mainIndices.map((i) => artifact.chapters[i].title).join(" · ")}</span>
                     </span>
-                    {isCurrent && (
-                      <span className="shrink-0 text-[10px] tracking-widest text-gilt/70">
-                        在读
-                      </span>
-                    )}
+                    <span className="shrink-0 text-[10px] text-gilt-light/70">{isCurrent ? "在读" : isRead ? "已读" : ""}</span>
                   </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        </>
-      )}
+                  {act.optionalIndices.map((index) => {
+                    const chapter = artifact.chapters[index];
+                    return <button key={chapter.id} onClick={() => enter(index)} className="mb-3 ml-12 block min-h-10 rounded-full border border-gilt/20 px-4 py-2 text-left text-xs text-gilt-light/80 transition hover:bg-gilt/10">
+                      自选深入 · {chapter.module.kind === "inscription" ? "完整铭文" : chapter.title}
+                      {discovered.includes(`chapter:${chapter.id}`) ? " · 已读" : " →"}
+                    </button>;
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </motion.div>
+        </div>
+      </>}
     </AnimatePresence>
   );
 }

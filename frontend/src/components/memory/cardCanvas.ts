@@ -16,9 +16,13 @@ export interface CardData {
   memoryLine: string;
   /** 「我告诉过你」——本次体验解锁的那条史实 */
   insight: string;
-  /** 这一段的小标题（问过 / 没问过时说法不同，由调用方决定） */
+  insightLabel?: string;
+  exploredTitles?: string[];
+  completedTitles?: string[];
+  storyUnit?: string;
+  /** 问题段落标题；没有提问时整段不展示。 */
   questionLabel: string;
-  /** 用户问过的问题；没问过时是何尊自己的一句临别话 */
+  /** 用户真实问过的问题。 */
   myQuestion: string;
   /** 用户留给三千年后的话，可能没有 */
   legacyLine: string | null;
@@ -154,8 +158,10 @@ function measure(ctx: CanvasRenderingContext2D, data: CardData): { blocks: Block
 
   // 主角：何尊留下的那句话
   push(null, data.memoryLine, 46, SERIF, COLOR_RICE, 0);
-  push("我告诉过你", data.insight, 26, SERIF, COLOR_GILT, 64);
-  push(
+  push(data.insightLabel ?? "这次记住的一点", data.insight, 26, SERIF, COLOR_GILT, 64);
+  if (data.exploredTitles?.length) push("我看过的细节", data.exploredTitles.join(" · "), 24, SERIF, "rgba(242,234,217,0.78)", 52);
+  if (data.completedTitles?.length) push("我读完的故事", data.completedTitles.join(" · "), 24, SERIF, "rgba(242,234,217,0.78)", 52);
+  if (data.myQuestion) push(
     data.questionLabel,
     data.myQuestion,
     26,
@@ -233,7 +239,7 @@ export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
 
   ctx.fillStyle = COLOR_RICE;
   ctx.font = `34px ${SERIF}`;
-  ctx.fillText("这是我留给你的", PAD, TITLE_Y);
+  ctx.fillText("我的千年相遇", PAD, TITLE_Y);
 
   // ── 截图：用户转到的那个角度 ───────────────────────────────────────
   if (snapshotImg) {
@@ -324,7 +330,7 @@ export async function renderCard(data: CardData): Promise<HTMLCanvasElement> {
   ctx.fillStyle = "rgba(242,234,217,0.45)";
   ctx.font = `20px ${SANS}`;
   ctx.fillText(
-    `${formatToday()} · 你打开了我 ${data.discoveredCount} 处细节`,
+    `${formatToday()} · ${data.discoveredCount} 处细节 · ${data.completedTitles?.length ?? 0} ${data.storyUnit ?? "段"}故事`,
     PAD,
     footY + 44,
   );

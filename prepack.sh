@@ -2,6 +2,12 @@
 # cowork pack 在副本里跑 — 用户原工程已 build 时直接复用,避免重跑 30-90s 的 npm ci + build
 # 触发 OpenClaw pi-agent waitForIdle 30s cleanup bug (#8643)
 set -e
+# cowork pack 会先移除副本的 manifest。仅清理打包副本，保留原工程的登录态和开发记录。
+if [ ! -f .cowork.json ]; then
+  rm -f .redInfo ai.properties db.properties
+  rm -rf .valos
+fi
+
 if ! command -v npm >/dev/null 2>&1; then
   echo "[prepack] ❌ npm not found; react-hono-monorepo needs Node.js"
   exit 1

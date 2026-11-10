@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
 import ArtifactPresence from "../../artifact/ArtifactPresence";
 import { useGameStore } from "../../../store/gameStore";
 import type { Artifact, ArtifactChapter, QaModuleData } from "../../../types/artifact";
+import { useStoryMoment } from "../../../utils/useStoryMoment";
+import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
 
 type QA = QaModuleData["items"][number];
 
@@ -25,12 +27,20 @@ export default function QaModule({ artifact, data, presence, onNext }: QaModuleP
   const [introDone, setIntroDone] = useState(false);
   const [activeQA, setActiveQA] = useState<QA | null>(null);
   const [visited, setVisited] = useState<string[]>([]);
-
-  useEffect(() => {
-    markDiscovered("history");
-  }, [markDiscovered]);
+  const followUp = activeQA?.followUp;
+  useStoryMoment({
+    id: `${artifact.id}:qa:${activeQA?.id ?? "opening"}`,
+    title: activeQA?.question ?? "铸造的故事",
+    summary: activeQA?.answer ?? data.openingLines.join("\n"),
+    factIds: [...new Set([...(activeQA?.factIds ?? []), ...(followUp?.factIds ?? [])])],
+    questions: followUp?.questions ?? [],
+    prompt: followUp?.prompt,
+    blockedQuestions: data.items.map((item) => item.question),
+    ready: introDone && !!activeQA,
+  });
 
   const handleAsk = (qa: QA) => {
+    markDiscovered("history");
     setActiveQA(qa);
     setVisited((v) => (v.includes(qa.id) ? v : [...v, qa.id]));
   };
@@ -41,8 +51,8 @@ export default function QaModule({ artifact, data, presence, onNext }: QaModuleP
         <ArtifactPresence artifact={artifact} opacity={presence.opacity} className={presence.className} />
       )}
 
-      <div className="relative flex h-dvh w-full flex-col items-center justify-center overflow-hidden px-6">
-        <div className="relative z-10 flex w-full max-w-xl flex-col items-center text-center">
+      <div className="relative flex h-dvh w-full flex-col items-center justify-center overflow-y-auto px-6 pb-28 pt-40">
+        <div className="relative z-10 flex max-h-[calc(100dvh-12rem)] w-full max-w-xl flex-col items-center overflow-y-auto overscroll-contain text-center">
           {!introDone ? (
             <SpeechReveal
               lines={data.openingLines}
@@ -94,6 +104,7 @@ export default function QaModule({ artifact, data, presence, onNext }: QaModuleP
                 ))}
               </div>
 
+              {activeQA && <div className="mt-5 flex justify-center"><StoryQuestionBubble compact /></div>}
               <AnimatePresence>
                 {visited.length > 0 && (
                   <motion.button

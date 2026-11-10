@@ -8,6 +8,8 @@ import RustCompare from "../../artifact/RustCompare";
 import GuessChoice from "../../shared/GuessChoice";
 import { useGameStore } from "../../../store/gameStore";
 import type { Artifact, ArtifactChapter, RevealModuleData } from "../../../types/artifact";
+import { useStoryMoment } from "../../../utils/useStoryMoment";
+import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
 
 type Phase = "lead-in" | "derust" | "compare" | "focus" | "guess" | "closing";
 
@@ -16,6 +18,8 @@ interface RevealModuleProps {
   data: RevealModuleData;
   presence?: ArtifactChapter["presence"];
   onNext: () => void;
+  onDeepDive?: () => void;
+  initialPhase?: "lead-in" | "closing";
 }
 
 /**
@@ -23,9 +27,19 @@ interface RevealModuleProps {
  *
  * 中间三步都可选：没有除锈素材的文物会从念白直接进特写，没有关键字的直接进竞猜。
  */
-export default function RevealModule({ artifact, data, presence, onNext }: RevealModuleProps) {
-  const [phase, setPhase] = useState<Phase>("lead-in");
+export default function RevealModule({ artifact, data, presence, onNext, onDeepDive, initialPhase = "lead-in" }: RevealModuleProps) {
+  const [phase, setPhase] = useState<Phase>(initialPhase);
   const markDiscovered = useGameStore((s) => s.markDiscovered);
+  const [closingReady, setClosingReady] = useState(false);
+  useStoryMoment({
+    id: `${artifact.id}:reveal:${phase}`,
+    title: phase === "closing" || phase === "guess" || phase === "focus" ? "铭文初现 · 宅兹中国" : "除锈发现",
+    summary: phase === "closing" ? [...(data.focus?.explainLines ?? []), ...data.closingLines].join("\n") : phase === "guess" || phase === "focus" ? data.focus?.explainLines.join("\n") ?? "" : data.leadInLines.join("\n"),
+    factIds: phase === "closing" || phase === "guess" || phase === "focus" ? [...new Set([...(data.focus?.factIds ?? []), ...(data.followUp?.factIds ?? [])])] : [],
+    questions: data.followUp?.questions ?? [],
+    prompt: data.followUp?.prompt,
+    ready: phase === "closing" && closingReady,
+  });
 
   /** 实际会经过的步骤，跳过没有素材的那些 */
   const steps = useMemo<Phase[]>(
@@ -123,23 +137,34 @@ export default function RevealModule({ artifact, data, presence, onNext }: Revea
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="flex h-full w-full flex-col items-center justify-center px-6 text-center"
+          className="flex h-full w-full flex-col items-center overflow-y-auto overscroll-contain px-6 pb-28 pt-[calc(10rem+var(--safe-top))] text-center sm:justify-center"
         >
           <SpeechReveal
             lines={data.closingLines}
+            onComplete={() => setClosingReady(true)}
             lineDelay={data.lineDelay}
             className="mb-6 max-w-lg"
             textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-xl"
             reveal={
-              <div className="flex flex-wrap justify-center gap-3">
+              <div className="w-full">
+                <div className="mb-4 flex justify-center"><StoryQuestionBubble /></div>
+                {onDeepDive && <p className="mb-4 text-xs leading-6 text-rice-200/60">秘密已经读懂。接着听我的故事，或留步读完这 122 个字。</p>}
+                <div className="flex flex-col justify-center gap-3 sm:flex-row">
                 <button
                   onClick={onNext}
                   className="rounded-full bg-gilt/20 px-6 py-2.5 text-sm tracking-wide text-gilt-light shadow-[0_0_24px_rgba(201,167,106,0.15)] transition hover:bg-gilt/35"
                 >
-                  {data.nextLabel ?? "看看我经历了多久 →"}
+                  {onDeepDive ? "继续故事 →" : data.nextLabel ?? "看看我经历了多久 →"}
                 </button>
+                {onDeepDive && (
+                  <button onClick={onDeepDive} className="rounded-full border border-gilt/35 px-6 py-2.5 text-sm text-rice-100/85 transition hover:bg-gilt/10">
+                    展开完整铭文
+                  </button>
+                )}
+                </div>
               </div>
             }
+            revealPlaceholderH={onDeepDive ? 280 : 180}
           />
         </motion.div>
       )}

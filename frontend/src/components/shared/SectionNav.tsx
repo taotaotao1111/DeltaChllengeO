@@ -44,11 +44,13 @@ export default function SectionNav() {
 
   return (
     <>
+      {/* 与喇叭的 44px 点击区固定相隔 12px，窄屏也作为同一组右对齐。 */}
+      <div className="fixed right-[calc(4.25rem+var(--safe-right))] top-[calc(0.75rem+var(--safe-top))] z-40 w-max sm:right-[calc(6rem+var(--safe-right))] sm:top-[calc(1.5rem+var(--safe-top))]">
       <motion.nav
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.8 }}
-        className="fixed left-1/2 top-[calc(0.75rem+var(--safe-top))] z-40 -translate-x-1/2 sm:top-6"
+        aria-label="故事导航"
       >
         <div className="flex items-center gap-0.5 rounded-full border border-gilt/25 bg-ink-900/70 px-1 py-1 backdrop-blur-md shadow-[0_0_30px_rgba(0,0,0,0.4)] sm:gap-1 sm:px-1.5 sm:py-1.5">
           {ITEMS.map((item) => (
@@ -66,6 +68,7 @@ export default function SectionNav() {
           ))}
         </div>
       </motion.nav>
+      </div>
 
       <ChapterMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>

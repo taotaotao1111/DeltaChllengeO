@@ -226,6 +226,11 @@ export const hezun: Artifact = {
   hotspots: [
     {
       id: "hotspot-pattern",
+      followUp: {
+        prompt: "纹饰看得见，它的含义也能确定吗？",
+        questions: ["把纹饰说成“敬畏”，是史料记载还是一种解读？"],
+        factIds: ["fact-form"],
+      },
       type: "pattern",
       position: { x: 50, y: 46 },
       // 腹部兽面纹：偏到中轴扉棱右侧，正好落在兽面的眼睛上，也比压在亮色扉棱上更清楚
@@ -339,12 +344,22 @@ export const hezun: Artifact = {
   illustrationId: "hezun",
   sealChars: ["何", "尊"],
   readingInvitation: {
-    durationLabel: "约 10 分钟",
-    chapterLabel: "五章故事",
-    title: "留一小会儿，\n听我慢慢讲。",
-    lines: ["有些细节，要凑近看；", "有些往事，等你读到才会明白。", "不必赶着翻页。"],
+    durationLabel: "约 3～5 分钟",
+    chapterLabel: "三幕故事",
+    title: "一次相遇，\n读懂三千年。",
+    lines: ["相遇，看看我的样子；", "发现，读懂我身上的秘密；", "重逢，听我怎样来到你面前。"],
     reassurance: "若中途离开，下次还能接着读。",
     confirmLabel: "好，慢慢讲 →",
+  },
+
+  narrative: {
+    durationLabel: "约 3～5 分钟",
+    acts: [
+      { id: "encounter", label: "第一幕", title: "相遇", chapterIds: ["who-am-i", "why-cast"] },
+      { id: "discovery", label: "第二幕", title: "发现", chapterIds: ["my-secret", "read-my-words"] },
+      { id: "reunion", label: "第三幕", title: "重逢", chapterIds: ["almost-gone"] },
+    ],
+    optionalChapterIds: ["read-my-words"],
   },
 
   galleryReveal: {
@@ -375,9 +390,10 @@ export const hezun: Artifact = {
   chapters: [
     {
       id: "who-am-i",
-      label: "第一章",
+      label: "第一幕",
       title: "我是谁",
       hook: "先自己看看我——你的第一眼落在哪里？",
+      suggestedQuestions: ["这些纹饰有什么特点？", "你有多大、多重？", "你原来是做什么用的？"],
       module: {
         kind: "observe",
         prompt: "先别急着听我说。你自己看看我——你的第一眼，最先注意到了哪里？",
@@ -415,9 +431,10 @@ export const hezun: Artifact = {
     },
     {
       id: "why-cast",
-      label: "第二章",
+      label: "第一幕",
       title: "我为什么会被铸造",
       hook: "一场为了「记住」的铸造。",
+      suggestedQuestions: ["为什么要铸造你？", "何是谁？", "你的名字是怎么来的？"],
       backdrop: "forge",
       // 开场氛围图（AI 生成示意，非实物照片）。人像场景提亮到 0.85——
       // 0.62 的常规档会把浇铸工匠压成剪影（用户实测反馈）
@@ -439,24 +456,33 @@ export const hezun: Artifact = {
         items: [
           {
             id: "why",
+            factIds: ["fact-inscription-content"],
             question: "为什么要铸造你？",
             answer:
               "青铜在那个年代，不会被随便浇铸。重要的赏赐、重要的嘱托，常常需要被长久地记住——于是它们被铸进青铜。我，就是因为有一段话需要被记住，才被铸了出来。",
           },
           {
             id: "who",
+            factIds: ["fact-owner"],
             question: "谁使用你？",
             answer:
               "铭文里提到一个名字——「何」。他是那时宗室里的一位年轻子弟。后来的人，就用这个名字称呼我：何尊。",
           },
           {
             id: "carve",
+            factIds: ["fact-inscription-basic", "fact-inscription-content"],
+            followUp: {
+              prompt: "有些名字，历史没有留下……",
+              questions: ["既然工匠姓名没有记载，哪些内容仍能从铭文确认？"],
+              factIds: ["fact-inscription-basic", "fact-inscription-content", "fact-owner"],
+            },
             question: "你身上的字是谁刻的？",
             answer:
               "史料没有留下那位刻字工匠的名字。我只知道，在我还很新的时候，那122个字被小心地留在了我的内壁——这是史料没有回答的部分，我也不会替它编一个名字。",
           },
           {
             id: "mind",
+            factIds: ["fact-inscription-zhongguo", "fact-inscription-content"],
             question: "那个时代的人在想什么？",
             answer:
               "从我身上的话来看，那时的人，正在思考「天下的中心应该在哪里」这样的问题——那关系到如何治理，如何让远方也归于秩序。「宅兹中国」，就是那个思考留下的痕迹。",
@@ -466,9 +492,10 @@ export const hezun: Artifact = {
     },
     {
       id: "my-secret",
-      label: "第三章",
+      label: "第二幕",
       title: "我身上的秘密",
       hook: "锈的下面，藏着四个字。",
+      suggestedQuestions: ["「宅兹中国」是什么意思？", "这里的「中国」和今天一样吗？", "铭文是怎么被发现的？"],
       backdrop: "patina",
       backdropGlyphs: ["宅", "兹", "中", "国"],
       // 开场氛围图换回刮锈场景图（用户指定：原 ch3-derust）
@@ -482,6 +509,11 @@ export const hezun: Artifact = {
       },
       module: {
         kind: "reveal",
+        followUp: {
+          prompt: "读懂这几个字，也要读懂证据的边界。",
+          questions: ["“目前所见最早”，为什么还要加上这个限定？"],
+          factIds: ["fact-inscription-zhongguo"],
+        },
         leadInLines: ["你还记得，我说过我身上刻着字吗？", "现在，我想让你看看。"],
         lineDelay: 1500,
         derust: {
@@ -555,7 +587,8 @@ export const hezun: Artifact = {
     },
     {
       id: "read-my-words",
-      label: "第四章",
+      suggestedQuestions: ["铭文里都写了什么？", "哪些字的释读还有争议？", "何为什么要把这些话留下来？"],
+      label: "第二幕 · 自选深入",
       title: "读我腹中的字",
       hook: "122 个字，一段一段读给你听。",
       // 与第三章同母题：刚擦完锈读铭文，视觉上是同一个场景的延续
@@ -593,6 +626,11 @@ export const hezun: Artifact = {
         sections: [
           {
             id: "sec-opening",
+            followUp: {
+              prompt: "同一个字，学者也可能读出不同的意思。",
+              questions: ["有些字的释读有分歧，还能怎样理解这段铭文？"],
+              factIds: ["fact-inscription-debate", "fact-inscription-full"],
+            },
             characters: ["唯", "王", "成", "周", "武", "天"],
             range: [0, 16],
             transcript: "王初迁居成周，举行祭礼，禀告武王与上天。",
@@ -685,7 +723,8 @@ export const hezun: Artifact = {
     },
     {
       id: "almost-gone",
-      label: "第五章",
+      suggestedQuestions: ["你是怎么被重新发现的？", "你真的被送进过熔炉吗？", "你现在收藏在哪里？"],
+      label: "第三幕",
       title: "我差点消失",
       hook: "离熔炉最近的十二年。",
       backdrop: "scrap",
@@ -761,6 +800,11 @@ export const hezun: Artifact = {
           },
           {
             id: "card-1975",
+            followUp: {
+              prompt: "被找到，与被读懂，是两次相遇。",
+              questions: ["出土、入藏和读出铭文，为什么是三个不同的时间点？"],
+              factIds: ["fact-scrap-unearthed", "fact-scrap-sale", "fact-scrap-1975"],
+            },
             front: "一九七五年，我入选出国展览的名单。\n出发前，有人把我身上的锈，一点一点清掉。\n然后——那个人愣住了。",
             back: {
               content:
@@ -789,7 +833,7 @@ export const hezun: Artifact = {
          */
         mergeLine: "记忆和事实，都是我的一部分",
         closingLines: [
-          "你刚才读的那 122 个字，差一点，谁都没机会读。",
+          "藏在我内底的那 122 个字，差一点，谁都没机会读。",
           "所以被看见这件事，本身就是运气——我的，也是你的。",
         ],
         /**
@@ -896,7 +940,7 @@ export const hezun: Artifact = {
             { minCorrect: 0, title: "初入门", line: "无妨——当年认出我的人，也用了十年。" },
           ],
           sealLine: "你验看无误的，是 1965 年按 30 元废铜收进的那一件。",
-          nextLabel: "看看我经历了多久 →",
+          nextLabel: "回到故事之后 →",
         },
       },
     },
