@@ -13,8 +13,10 @@
 .glass-fog__ornament { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; color: #dac29b99; font-size: 11px; }
 .glass-fog__ornament::before, .glass-fog__ornament::after { content: ""; width: 42px; height: 1px; background: linear-gradient(90deg, transparent, #dac29b99); }
 .glass-fog__ornament::after { transform: rotate(180deg); }
-.glass-fog__skip { position: absolute; z-index: 5; top: calc(4.5rem + var(--safe-top)); right: max(16px, var(--safe-right)); display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 8px 12px; color: #e4d2b3; font-size: 13px; line-height: 1; }
-.glass-fog__skip > svg { display: block; width: 14px; height: 14px; flex-shrink: 0; }
+.glass-fog__skip { position: absolute; z-index: 5; top: calc(4.5rem + var(--safe-top)); right: max(16px, var(--safe-right)); display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 8px 12px; color: #e4d2b3; font-size: 13px; line-height: 20px; }
+.glass-fog__skip > span { display: block; line-height: 20px; }
+/* 与文字共用 20px 高度，再补偿中文字体的视觉中心偏移。 */
+.glass-fog__skip > svg { display: block; width: 14px; height: 20px; flex-shrink: 0; transform: translateY(.5px); }
 .glass-fog__skip:focus-visible { outline: 2px solid #e4c489; outline-offset: 2px; border-radius: 6px; }
 .glass-fog.is-revealed .glass-fog__glass { opacity: 0; }
 .gallery-reveal-artifact-position { position: absolute; top: 44%; right: 0; left: 0; display: flex; justify-content: center; transform: translateY(-50%); pointer-events: none; }

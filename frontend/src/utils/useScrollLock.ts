@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 let locks = 0;
 let restore: (() => void) | null = null;
@@ -14,7 +14,8 @@ let restore: (() => void) | null = null;
  * 滚回原处——这样文档在弹层期间根本不可滚动，也就没有可穿透的滚动容器。
  */
 export function useScrollLock(active: boolean): void {
-  useEffect(() => {
+  // 在首帧绘制前锁定页面，避免原页面先滚动/重排一帧再显示弹窗。
+  useLayoutEffect(() => {
     if (!active) return;
 
     locks += 1;

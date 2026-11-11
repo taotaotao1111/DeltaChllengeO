@@ -85,7 +85,7 @@ async function streamFromBackend(
   if (!reply) throw new Error("api/chat returned empty reply");
   const factIds = decoded.factIds ?? getReplyFacts(context, userMessage).map((fact) => fact.id);
   const suggestedActions = classifyQuestion(userMessage) !== "general" ? []
-    : decoded.suggestedActions.length ? decoded.suggestedActions : deriveEvidenceActions(context.artifact, reply, factIds);
+    : decoded.suggestedActions.length ? decoded.suggestedActions : deriveEvidenceActions(context.artifact, reply, factIds, userMessage);
   const factBasis = decoded.factIds === undefined ? judgeFactBasis(userMessage, context)
     : !factIds.length ? "unknown" : factIds.every((id) => context.verifiedFacts.find((fact) => fact.id === id)?.confidence === "verified") ? "verified" : "inferred";
 
@@ -259,7 +259,7 @@ async function streamMock(
   const full = await typeOut(text.trim(), handlers.onToken, signal);
   if (signal?.aborted) return;
   const factIds = factBasis === "unknown" ? [] : getReplyFacts(context, userMessage).map((f) => f.id);
-  handlers.onDone(full, factBasis, { factIds, suggestedActions: classifyQuestion(userMessage) === "general" ? deriveEvidenceActions(context.artifact, full, factIds) : [], source: "local" });
+  handlers.onDone(full, factBasis, { factIds, suggestedActions: classifyQuestion(userMessage) === "general" ? deriveEvidenceActions(context.artifact, full, factIds, userMessage) : [], source: "local" });
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {

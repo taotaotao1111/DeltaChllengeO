@@ -20,9 +20,10 @@ const result = await build({
       import ArchiveCardStack from "./src/components/scenes/modules/ArchiveCardStack";
       import FlipCardProgress from "./src/components/scenes/modules/FlipCardProgress";
       import { useGameStore } from "./src/store/gameStore";
-      assert.equal(getInitialHistoryPhase(hezun,1,[]),"casting");
-      assert.equal(getInitialHistoryPhase(hezun,2,[]),"rediscovery");
-      assert.equal(getInitialHistoryPhase(hezun,4,hezun.chapters.map(c=>"chapter:"+c.id)),"today");
+      assert.equal(getInitialHistoryPhase(hezun,1),"casting");
+      assert.equal(getInitialHistoryPhase(hezun,2),"rediscovery");
+      assert.equal(getInitialHistoryPhase(hezun,4),"rediscovery");
+      assert.equal(getInitialHistoryPhase(hezun,-1),"casting");
       // 浏览记录与当前选中分开：向后切换、返回旧节点、关闭故事均不会熄灭已读节点和弧线。
       const state = useGameStore.getState();
       state.selectArtifact("hezun");

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Bounds, Html, OrbitControls } from "@react-three/drei";
+import { Bounds, Html, OrbitControls, useBounds } from "@react-three/drei";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Vector3 } from "three";
 import type { WebGLRenderer } from "three";
-import type { ArtifactModel, Hotspot, HotspotType } from "../../types/artifact";
+import type { ArtifactModel, Hotspot, HotspotFocusView, HotspotType } from "../../types/artifact";
+import { getHotspotFocusPosition } from "../../utils/hotspotFocus";
 import { useGameStore } from "../../store/gameStore";
 import ArtifactModel3D, { ArtifactLights } from "./ArtifactModel3D";
 import ArtifactHotspot from "./ArtifactHotspot";
@@ -18,6 +20,26 @@ interface ArtifactViewer3DProps {
   onHotspotClick?: (hotspot: Hotspot) => void;
   activeHotspotType?: HotspotType | null;
   interactive?: boolean;
+  focusView?: HotspotFocusView;
+  onFocusComplete?: () => void;
+}
+
+/** 复用 Bounds 的相机动画；用户拖动立即接管，证据层不改变原场景的相机。 */
+function HotspotCameraFocus({ view, onComplete }: { view: HotspotFocusView; onComplete?: () => void }) {
+  const bounds = useBounds();
+  const controls = useThree((state) => state.controls) as OrbitControlsImpl | null;
+  const size = useThree((state) => state.size);
+  const reducedMotion = useReducedMotion();
+  useEffect(() => {
+    if (!controls) return;
+    const { center, distance } = bounds.refresh().clip().getSize();
+    bounds.moveTo(getHotspotFocusPosition(distance, view, center.toArray())).lookAt({ target: center });
+    const timer = window.setTimeout(() => onComplete?.(), reducedMotion ? 0 : 850);
+    const takeOver = () => { window.clearTimeout(timer); onComplete?.(); };
+    controls.addEventListener("start", takeOver);
+    return () => { window.clearTimeout(timer); controls.removeEventListener("start", takeOver); };
+  }, [bounds, controls, size.width, size.height, view, onComplete, reducedMotion]);
+  return null;
 }
 
 /** 用户停止拖拽后，多久恢复自动旋转（毫秒） */
@@ -128,6 +150,8 @@ export default function ArtifactViewer3D({
   onHotspotClick,
   activeHotspotType = null,
   interactive = true,
+  focusView,
+  onFocusComplete,
 }: ArtifactViewer3DProps) {
   const [autoRotate, setAutoRotate] = useState(true);
   const chatOpen = useGameStore((s) => s.chatOpen);
@@ -135,6 +159,7 @@ export default function ArtifactViewer3D({
   const resumeTimer = useRef<number>();
   const glRef = useRef<WebGLRenderer | null>(null);
   const setArtifactSnapshot = useGameStore((s) => s.setArtifactSnapshot);
+  const reducedMotion = useReducedMotion();
 
   const handleGlReady = useCallback((gl: WebGLRenderer) => {
     glRef.current = gl;
@@ -147,6 +172,8 @@ export default function ArtifactViewer3D({
    * 这里只会拿到一张全透明的图。缩放到固定尺寸是为了别把一大串 dataURL 塞进内存。
    */
   const captureSnapshot = useCallback(() => {
+    // 证据观察使用自己的模型，不覆盖主线为记忆卡保存的截图。
+    if (focusView) return;
     const gl = glRef.current;
     if (!gl) return;
     const source = gl.domElement;
@@ -168,7 +195,7 @@ export default function ArtifactViewer3D({
     } catch {
       // 极少数环境下读画布会被安全策略拦住；记忆卡自己有无截图的降级版式
     }
-  }, [setArtifactSnapshot]);
+  }, [setArtifactSnapshot, focusView]);
 
   const pauseAutoRotate = useCallback(() => {
     window.clearTimeout(resumeTimer.current);
@@ -217,8 +244,9 @@ export default function ArtifactViewer3D({
         {/* 何尊喇叭口的直径和器身高度接近，窄屏下按高度取景会左右出框，
             所以交给 Bounds 按包围球 + 当前画布比例自动取景（observe：窗口变化时重新适配）。
             热点放在 Bounds 之外，避免把浮层也算进包围盒。 */}
-        <Bounds fit clip observe margin={1.15}>
+        <Bounds fit clip observe margin={1.15} maxDuration={focusView ? (reducedMotion ? 0 : 0.7) : 1}>
           <ArtifactModel3D model={model} src={src} />
+          {focusView && <HotspotCameraFocus view={focusView} onComplete={onFocusComplete} />}
         </Bounds>
 
         {placed.map((h, i) => (
@@ -243,7 +271,7 @@ export default function ArtifactViewer3D({
           // 限制俯仰，避免用户转到正底面看到扫描模型的空腔
           minPolarAngle={0.6}
           maxPolarAngle={2.2}
-          autoRotate={autoRotate && !chatOpen}
+          autoRotate={autoRotate && !chatOpen && !focusView}
           autoRotateSpeed={0.4}
           onStart={pauseAutoRotate}
           onEnd={scheduleResume}

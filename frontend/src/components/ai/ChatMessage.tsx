@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
 import type { AIAction, Artifact, ChatMessage as Message, Fact } from "../../types/artifact";
-import { resolveEvidenceTarget, validateEvidenceAction } from "../../utils/evidenceActions";
+import { getEvidenceActionPresentation, validateEvidenceAction } from "../../utils/evidenceActions";
 
 interface Props {
   artifact: Artifact;
@@ -25,6 +25,7 @@ export default function ChatMessage({ artifact, message, facts, sourcesOpen, loa
     const valid = validateEvidenceAction(artifact, candidate, message.factIds ?? [], message.content);
     return valid ? [valid] : [];
   })[0] : undefined;
+  const actionPresentation = action ? getEvidenceActionPresentation(artifact, action) : null;
   return <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className={`flex items-start gap-2 ${isUser ? "justify-end" : "justify-start"}`}>
     {!isUser && <span aria-hidden="true" className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gilt/35 bg-[#211b13] text-xs text-gilt-light">
       {artifact.images.avatar && !avatarFailed
@@ -39,9 +40,9 @@ export default function ChatMessage({ artifact, message, facts, sourcesOpen, loa
       </div>
       {complete && <>
         <p className="mt-1.5 px-1 text-[10px] text-rice-200/45">{message.replySource === "local" ? "本地档案回答 · " : ""}{LABELS[message.factBasis!]}</p>
-        {action && <button type="button" disabled={loading} onClick={() => onExplore(action)}
+        {action && actionPresentation && <button type="button" disabled={loading} onClick={() => onExplore(action)}
           className="mt-3 flex min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-gilt/35 bg-gilt/10 px-3 py-2.5 text-left text-gilt-light transition hover:bg-gilt/20 disabled:opacity-40">
-          <span><span className="block text-sm">带我看看证据</span><span className="mt-1 block text-[10px] text-gilt-light/60">定位铭文 · {resolveEvidenceTarget(artifact, action.targetId)?.target.label}</span></span>
+          <span><span className="block text-sm">{actionPresentation.label}</span><span className="mt-1 block text-[10px] text-gilt-light/60">{actionPresentation.detail}</span></span>
           <span aria-hidden="true">↗</span>
         </button>}
         <div className="mt-2 flex flex-wrap gap-2">

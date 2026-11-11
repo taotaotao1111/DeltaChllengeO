@@ -122,7 +122,7 @@ export default function ArtifactChat() {
         }}
         onStop={stop} onClose={() => toggleChat(false)} />}
     </AnimatePresence>
-    {chatOpen && evidenceAction?.artifactId === artifactId && <EvidenceExplorer artifact={artifact} action={evidenceAction}
+    {chatOpen && evidenceAction?.artifactId === artifactId && <EvidenceExplorer key={`${evidenceAction.type}:${evidenceAction.targetId}`} artifact={artifact} action={evidenceAction}
       onBack={() => setEvidenceAction(null)} onReturnStory={() => { setEvidenceAction(null); toggleChat(false); }} />}
   </>;
 }

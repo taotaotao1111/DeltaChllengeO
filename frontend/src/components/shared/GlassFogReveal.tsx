@@ -190,8 +190,8 @@ export default function GlassFogReveal({ children, className = "", threshold = 0
       </div>}
       <button type="button" className="glass-fog__skip" onClick={complete}>
         <span>{skipLabel}</span>
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="m6 3 5 5-5 5" />
+        <svg viewBox="0 0 14 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="m4.5 5 5 5-5 5" />
         </svg>
       </button>
     </>}

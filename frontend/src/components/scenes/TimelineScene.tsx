@@ -35,7 +35,7 @@ export default function TimelineScene() {
   const [activePhaseId, setActivePhaseId] = useState<string | null>(null);
   const [focusedPhaseId, setFocusedPhaseId] = useState(() => {
     const state = useGameStore.getState();
-    return getInitialHistoryPhase(getArtifact(state.currentArtifactId), state.chapterIndex, state.discoveredDetails);
+    return getInitialHistoryPhase(getArtifact(state.currentArtifactId), state.chapterIndex);
   });
   const focusPhase = useCallback((id: string) => {
     setFocusedPhaseId(id);

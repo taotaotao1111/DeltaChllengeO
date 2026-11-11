@@ -10,7 +10,8 @@
 .archive-card-group { display: flex; width: 100%; max-width: 780px; flex-direction: column; align-items: center; gap: 8px; }
 .archive-cards-layout--reading { justify-content: flex-start; }
 .flip-card-progress { display: flex; flex-shrink: 0; align-items: center; justify-content: center; margin-bottom: 6px; }
-.flip-card-progress__button { display: grid; place-items: center; width: 28px; height: 24px; padding: 0; border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.flip-card-progress__button { display: grid; place-items: center; width: 20px; height: 24px; padding: 0; border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.flip-card-progress__button.is-current { width: 28px; }
 .flip-card-progress__dot { width: 6px; height: 6px; border-radius: 999px; background: #e6dcc326; transition: width .2s, background .2s; }
 .flip-card-progress__button.is-read .flip-card-progress__dot { background: #a8863f80; }
 .flip-card-progress__button.is-current .flip-card-progress__dot { width: 20px; background: #c9a76ab3; }

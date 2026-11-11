@@ -1,6 +1,6 @@
-import { lazy, useMemo, useRef, useState } from "react";
+import { lazy, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import type { Artifact, Hotspot, HotspotType } from "../../types/artifact";
+import type { Artifact, Hotspot, HotspotFocusView, HotspotType } from "../../types/artifact";
 import { evaluateViewerMode } from "../../utils/artifactEvaluator";
 import ArtifactIllustration from "./ArtifactIllustration";
 import ArtifactHotspot from "./ArtifactHotspot";
@@ -18,6 +18,15 @@ interface ArtifactViewerProps {
   activeHotspotType?: HotspotType | null;
   interactive?: boolean;
   className?: string;
+  focusView?: HotspotFocusView;
+  onFocusComplete?: () => void;
+}
+
+function FocusFallback({ children, onReady }: { children: ReactNode; onReady?: () => void }) {
+  useEffect(() => { onReady?.(); }, [onReady]);
+  return <div className="relative flex h-full w-full items-center justify-center">
+    {children}<p className="absolute inset-x-0 bottom-0 text-center text-[10px] text-rice-200/55">当前为插画示意，三维模型暂不可用</p>
+  </div>;
 }
 
 /**
@@ -38,6 +47,8 @@ export default function ArtifactViewer({
   activeHotspotType = null,
   interactive = true,
   className = "",
+  focusView,
+  onFocusComplete,
 }: ArtifactViewerProps) {
   const viewerMode = useMemo(() => evaluateViewerMode(artifact), [artifact]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -76,7 +87,7 @@ export default function ArtifactViewer({
   // 2.5D 插画视图：既是 WebGL 不可用时的正式展示，也是 3D 加载中 / 失败时的兜底画面
   const illustrationView = (
     <motion.div
-      className="relative inline-block animate-breathe"
+      className={focusView ? "relative inline-flex h-full items-center justify-center" : "relative inline-block animate-breathe"}
       style={
         viewerMode === "image"
           ? undefined
@@ -86,7 +97,7 @@ export default function ArtifactViewer({
     >
       <ArtifactIllustration
         id={artifact.illustrationId}
-        className="h-[52vh] max-h-[460px] w-auto drop-shadow-[0_30px_60px_rgba(0,0,0,0.55)] sm:h-[58vh]"
+        className={focusView ? "h-full max-h-full w-auto max-w-full" : "h-[52vh] max-h-[460px] w-auto drop-shadow-[0_30px_60px_rgba(0,0,0,0.55)] sm:h-[58vh]"}
         activeHotspot={activeHotspotType}
       />
 
@@ -104,6 +115,7 @@ export default function ArtifactViewer({
       </div>
     </motion.div>
   );
+  const fallback = focusView ? <FocusFallback onReady={onFocusComplete}>{illustrationView}</FocusFallback> : illustrationView;
 
   return (
     <div
@@ -117,11 +129,11 @@ export default function ArtifactViewer({
       {viewerMode === "3d" && artifact.model ? (
         <ArtifactModelGate
           model={artifact.model}
-          fallback={illustrationView}
-          placeholderClassName="h-[52vh] max-h-[460px] sm:h-[58vh]"
+          fallback={fallback}
+          placeholderClassName={focusView ? "h-full" : "h-[52vh] max-h-[460px] sm:h-[58vh]"}
         >
           {(src) => (
-            <div className="h-full w-full animate-breathe">
+            <div className={focusView ? "h-full w-full" : "h-full w-full animate-breathe"}>
               <ArtifactViewer3D
                 model={artifact.model!}
                 src={src}
@@ -130,12 +142,14 @@ export default function ArtifactViewer({
                 onHotspotClick={onHotspotClick}
                 activeHotspotType={activeHotspotType}
                 interactive={interactive}
+                focusView={focusView}
+                onFocusComplete={onFocusComplete}
               />
             </div>
           )}
         </ArtifactModelGate>
       ) : (
-        illustrationView
+        fallback
       )}
     </div>
   );

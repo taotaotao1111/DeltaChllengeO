@@ -7,7 +7,6 @@ import ArtifactPresence from "../../artifact/ArtifactPresence";
 import { useGameStore } from "../../../store/gameStore";
 import type { Artifact, ArtifactChapter, QaModuleData } from "../../../types/artifact";
 import { useStoryMoment } from "../../../utils/useStoryMoment";
-import { getChapterAct } from "../../../utils/narrative";
 import { storyVideoCompletionKey } from "../../../utils/storyVideo";
 import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
 import "./QaModule.css";
@@ -32,9 +31,6 @@ export default function QaModule({ artifact, data, presence, onNext }: QaModuleP
   const duration = reduceMotion ? 0 : 0.4;
   const followUp = activeQA?.followUp;
   const hasUnheardStories = data.items.some((item) => item.id !== activeQA?.id && !visited.includes(item.id));
-  const chapterIndex = artifact.chapters.findIndex((chapter) => chapter.module === data);
-  const act = getChapterAct(artifact, chapterIndex);
-  const actLabel = act ? `${act.label} · ${act.title}` : artifact.chapters[chapterIndex]?.label;
 
   useStoryMoment({
     id: `${artifact.id}:qa:${activeQA?.id ?? "opening"}`,
@@ -103,7 +99,6 @@ export default function QaModule({ artifact, data, presence, onNext }: QaModuleP
                 }}>
                 <header className="qa-story-detail__heading">
                   <div className="qa-story-detail__meta">
-                    <span>{actLabel}</span>
                     <span>{String(data.items.indexOf(activeQA) + 1).padStart(2, "0")} / {String(data.items.length).padStart(2, "0")}</span>
                   </div>
                   <h2 ref={headingRef} tabIndex={-1}>{activeQA.question}</h2>

@@ -41,6 +41,23 @@ export const hezun: Artifact = {
       boundary: "不能将现代国家概念直接套回西周用语；‘中国’的具体释义也存在学术讨论。本页字形是手工摹写示意，不能代替原器或拓片。",
       answerTerms: ["宅兹中国", "中国"],
     }],
+    hotspotTargets: [{
+      hotspotId: "hotspot-pattern",
+      label: "兽面纹",
+      factIds: ["fact-form"],
+      interpretation: "先看何尊腹部凸起的兽面纹，通常称为饕餮纹，两侧可见扉棱。现有资料可以确认这些纹饰的形态；至于它们具体象征什么，不能只凭图案就下定论。",
+      boundary: "把兽面纹解释为‘秩序与敬畏’，是作品的文学化解读，并非何尊铭文直接记载的含义。三维扫描用于观察器身形态，不能代替纹饰寓意的史料证据。",
+      answerTerms: ["兽面", "饕餮"],
+      view: { azimuth: 0.54, polar: 1.6 },
+    }],
+    timelineTargets: [{
+      phaseId: "rediscovery",
+      label: "1963 年 · 重逢",
+      factIds: ["fact-scrap-unearthed", "fact-scrap-sale", "fact-scrap-1975"],
+      interpretation: "1963 年，何尊在宝鸡贾村镇取土时被挖出，先藏于村民家中。1965 年，经废品回收门市部转入博物馆收藏。1975 年，清理锈垢才发现内底铭文；出土、入藏和读出铭文是三个不同的时间点。",
+      boundary: "时间线中的第一人称讲述属于文学表达，日期和发现经过以对应史料为依据。场景配图为氛围示意，不是 1963 年现场照片；早期流转、入土经过仍有未知。",
+      answerTerms: ["1963", "贾村", "取土", "出土"],
+    }],
   },
   /**
    * 3D 模型（见 utils/artifactEvaluator.ts：有 url + license 且环境支持 WebGL 才启用 3D，
@@ -237,8 +254,16 @@ export const hezun: Artifact = {
       year: "1963年",
       title: "被发现",
       narration: "1963年，陕西宝鸡贾村镇，我重新见到了光——虽然一开始，没有人认出我。",
-      factIds: ["fact-discovery"],
+      factIds: ["fact-discovery", "fact-scrap-unearthed"],
       sceneMood: "excavation",
+    },
+    {
+      id: "tl-collected",
+      year: "1965年",
+      title: "被征集收藏",
+      narration: "1965年，经过废品回收门市部，我进入了博物馆。器物被保存下来，内底的文字还要再等十年才被读到。",
+      factIds: ["fact-scrap-sale"],
+      sceneMood: "museum",
     },
     {
       id: "tl-museum",
@@ -246,7 +271,7 @@ export const hezun: Artifact = {
       title: "被认出",
       narration:
         "1975年，有人清理掉我身上的锈，发现了那122个字。从那以后，我的名字，被重新念了出来。",
-      factIds: ["fact-inscription-basic"],
+      factIds: ["fact-inscription-basic", "fact-scrap-1975"],
       sceneMood: "museum",
     },
     {
@@ -1046,7 +1071,7 @@ export const hezun: Artifact = {
     phases: [
       { id: "casting", title: "被铸造", period: "约公元前11世纪", image: "images/history/casting.webp", eventIds: ["tl-cast", "tl-inscribed"], chapterIds: ["who-am-i", "why-cast", "read-my-words"] },
       { id: "quiet", title: "沉寂", period: "流转经过尚待考证", image: "images/history/quiet-years.webp", eventIds: ["tl-buried"] },
-      { id: "rediscovery", title: "重逢", period: "1963年重新出土", image: "images/history/rediscovery.webp", eventIds: ["tl-found", "tl-museum"], chapterIds: ["my-secret", "almost-gone"] },
+      { id: "rediscovery", title: "重逢", period: "1963年重新出土", image: "images/history/rediscovery.webp", eventIds: ["tl-found", "tl-collected", "tl-museum"], chapterIds: ["my-secret", "almost-gone"] },
       { id: "today", title: "今天", period: "走进更多人的生活", image: "images/history/museum-today.webp", eventIds: ["tl-today"] },
     ],
     appraisalImage: "images/history/appraisal.webp",

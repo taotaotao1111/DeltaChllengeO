@@ -11,6 +11,7 @@
     "check:chat": "node scripts/check-chat.mjs",
     "check:interactions": "node scripts/check-interactions.mjs",
     "check:evidence": "node scripts/check-evidence.mjs",
+    "check:memory": "node scripts/check-memory.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "eval:guard": "node scripts/eval-factguard.mjs scripts/factguard-cases.json"

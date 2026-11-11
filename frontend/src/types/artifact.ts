@@ -434,11 +434,13 @@ export interface Artifact {
   timeline: TimelineEvent[];
   hotspots: Hotspot[];
   suggestedQuestions: string[];
-  /** 受控的证据探索入口；目标必须对应真实铭文段落及其史料。 */
+  /** 受控的证据探索入口；目标必须对应真实选段、热点或历史节点。 */
   evidenceGuide?: {
     question: string;
     answer: string;
     targets: InscriptionEvidenceTarget[];
+    hotspotTargets?: HotspotEvidenceTarget[];
+    timelineTargets?: TimelineEvidenceTarget[];
   };
   /** 记忆卡上「一句话记住我」候选文案 */
   memoryLines: string[];
@@ -554,13 +556,37 @@ export interface InscriptionEvidenceTarget {
   answerTerms: string[];
 }
 
-/** 首版只允许定位已登记的铭文，不接受 DOM 选择器、网址或代码。 */
-export interface AIAction {
-  type: "FOCUS_INSCRIPTION";
+export interface HotspotFocusView {
+  /** 相机绕器物的方位角和俯仰角，单位为弧度。 */
+  azimuth: number;
+  polar: number;
+}
+
+export interface HotspotEvidenceTarget {
+  hotspotId: string;
+  label: string;
+  factIds: string[];
+  interpretation: string;
+  boundary: string;
+  answerTerms: string[];
+  view: HotspotFocusView;
+}
+
+export interface TimelineEvidenceTarget {
+  phaseId: string;
+  label: string;
+  factIds: string[];
+  interpretation: string;
+  boundary: string;
+  answerTerms: string[];
+}
+
+/** 只允许定位已登记的文物内容，不接受 DOM 选择器、网址或代码。 */
+export type AIAction = {
   artifactId: string;
   targetId: string;
   factIds: string[];
-}
+} & ({ type: "FOCUS_INSCRIPTION" } | { type: "FOCUS_HOTSPOT" } | { type: "OPEN_TIMELINE" });
 
 /** 当前剧情中实际看到的内容；只作上下文，不能替代 FACT 层。 */
 export interface StoryMoment {

@@ -11,10 +11,16 @@ const result = await build({
     import { buildSystemPrompt } from "./src/utils/factGuard";
     import { streamArtifactReply } from "./src/services/aiService";
     import { buildExplorationMemory } from "./src/utils/explorationMemory";
+    import { getRegisteredEvidenceActions, resolveActionTarget, getEvidenceActionPresentation, getEvidenceDiscoveryKeys, getEvidenceIntentAnswer } from "./src/utils/evidenceActions";
+    import { getHotspotFocusPosition } from "./src/utils/hotspotFocus";
+    import { getInitialHistoryPhase } from "./src/utils/historyTimeline";
     import { useGameStore } from "./src/store/gameStore";
     import { createElement } from "react";
     import { renderToStaticMarkup } from "react-dom/server";
     import InscriptionModule from "./src/components/scenes/modules/InscriptionModule";
+    import ArtifactViewer from "./src/components/artifact/ArtifactViewer";
+    import HistoryTimeline from "./src/components/story/HistoryTimeline";
+    import ChatMessage from "./src/components/ai/ChatMessage";
     const target = getEvidenceTargets(hezun)[0];
     assert.ok(target); assert.equal(target.section.id,"sec-climax");
     assert.deepEqual(getEvidenceTargets(changxin),[]);
@@ -73,6 +79,64 @@ const result = await build({
     const memory = buildExplorationMemory(hezun,useGameStore.getState().discoveredDetails,[]);
     assert.deepEqual(memory.evidence,["宅兹中国"]); assert.deepEqual(memory.completed,[]);
     assert.deepEqual(buildExplorationMemory(hezun,[],[]).evidence,[]);
+    // B/C 必须能定位真实内容；类型、目标与全部史料须相互匹配。
+    const registry = getRegisteredEvidenceActions(hezun);
+    assert.equal(registry.length,3);
+    const patternAction = registry.find(item=>item.type==="FOCUS_HOTSPOT");
+    const timelineAction = registry.find(item=>item.type==="OPEN_TIMELINE");
+    const scenarios = [
+      {action:patternAction,questions:["何尊身上的兽面纹有什么意义？","饕餮纹为什么像一张脸？"],label:"带我看纹饰 · 兽面纹",key:"hotspot-pattern"},
+      {action:timelineAction,questions:["何尊是怎么被发现的？","你在哪里出土？","何尊重新见天日的经过是什么？"],label:"带我回到 1963 年 · 重逢",key:"history:phase:rediscovery"},
+    ];
+    for(const scenario of scenarios) {
+      assert.ok(scenario.action);
+      const info = resolveActionTarget(hezun,scenario.action);
+      const text = getEvidenceIntentAnswer(hezun,scenario.questions[0]);
+      assert.equal(text,info.target.interpretation);
+      assert.deepEqual(validateEvidenceAction(hezun,scenario.action,scenario.action.factIds,text),scenario.action);
+      for(const question of scenario.questions) {
+        assert.deepEqual(getEvidenceIntentFactIds(hezun,question),scenario.action.factIds);
+        assert.deepEqual(deriveEvidenceActions(hezun,text,scenario.action.factIds,question),[scenario.action]);
+        assert.ok(scenario.action.factIds.every(id=>getReplyFacts(context,question).some(fact=>fact.id===id)));
+      }
+      for(const wrong of [{...scenario.action,targetId:"document.body"},{...scenario.action,type:"FOCUS_INSCRIPTION"},{...scenario.action,artifactId:"changxin"},{...scenario.action,factIds:[]},{...scenario.action,factIds:["fact-inscription-zhongguo"]}]) {
+        assert.equal(validateEvidenceAction(hezun,wrong,scenario.action.factIds,text),null);
+      }
+      assert.equal(validateEvidenceAction(hezun,scenario.action,[],text),null);
+      assert.equal(validateEvidenceAction(hezun,scenario.action,scenario.action.factIds,"没有回答当前内容"),null);
+      const json = decodeEvidenceReply(JSON.stringify({answer:text,factIds:scenario.action.factIds,suggestedActions:[scenario.action]}),hezun);
+      assert.deepEqual(json.suggestedActions,[scenario.action]);
+      assert.equal(getEvidenceActionPresentation(hezun,scenario.action).label,scenario.label);
+      const before = useGameStore.getState();
+      const beforeChapter = before.chapterIndex, beforeStage=before.stage, beforeMoment=before.storyMoment;
+      getEvidenceDiscoveryKeys(hezun,scenario.action).forEach(key=>state.markDiscovered(key));
+      assert.ok(useGameStore.getState().discoveredDetails.includes(scenario.key));
+      assert.equal(useGameStore.getState().chapterIndex,beforeChapter);
+      assert.equal(useGameStore.getState().stage,beforeStage);
+      assert.equal(useGameStore.getState().storyMoment,beforeMoment);
+      const markup = renderToStaticMarkup(createElement(ChatMessage,{artifact:hezun,message:{id:"test",role:"artifact",content:text,factBasis:"verified",factIds:scenario.action.factIds,suggestedActions:[scenario.action]},facts:[],sourcesOpen:false,loading:false,onSources:()=>{},onDeepDive:()=>{},onRetry:()=>{},onExplore:()=>{}}));
+      assert.ok(markup.includes(scenario.label));
+    }
+    assert.deepEqual(getEvidenceDiscoveryKeys(hezun,{...timelineAction,targetId:"today"}),[]);
+    assert.deepEqual(getRegisteredEvidenceActions({...hezun,hotspots:[]}).filter(a=>a.type==="FOCUS_HOTSPOT"),[]);
+    assert.deepEqual(getRegisteredEvidenceActions({...hezun,timeline:[]}).filter(a=>a.type==="OPEN_TIMELINE"),[]);
+    assert.deepEqual(getEvidenceIntentFactIds(hezun,"内底铭文是什么时候被发现的？"),[]);
+    const pose = resolveActionTarget(hezun,patternAction);
+    const camera = getHotspotFocusPosition(4.2,pose.target.view);
+    assert.ok(Math.abs(Math.hypot(...camera)-4.2)<1e-9);
+    const [hx,,hz] = pose.hotspot.position3d;
+    assert.ok((hx*camera[0]+hz*camera[2])/(Math.hypot(hx,hz)*Math.hypot(camera[0],camera[2]))>.99);
+    const fallback = renderToStaticMarkup(createElement(ArtifactViewer,{artifact:hezun,hotspots:[pose.hotspot],activeHotspotType:pose.hotspot.type,focusView:pose.target.view,className:"h-full"}));
+    assert.ok(fallback.includes("当前为插画示意") && fallback.includes("器身纹饰"));
+    const timelineMarkup = renderToStaticMarkup(createElement(HistoryTimeline,{artifact:hezun,focusedId:"rediscovery",activeId:"rediscovery",visitedIds:[],onFocus:()=>{},onSelect:()=>{},evidenceInitiallyOpen:true}));
+    assert.ok(timelineMarkup.includes('aria-current="step"') && timelineMarkup.includes('aria-expanded="true"'));
+    for(const year of ["1963","1965","1975"]) assert.ok(timelineMarkup.includes(year));
+    assert.ok(timelineMarkup.includes('<details open=""'));
+    for(const id of timelineAction.factIds) assert.ok(timelineMarkup.includes(hezun.verifiedFacts.find(f=>f.id===id).source));
+    assert.equal(getInitialHistoryPhase(hezun,4),"rediscovery");
+    const allMemory = buildExplorationMemory(hezun,useGameStore.getState().discoveredDetails,[]);
+    assert.deepEqual(allMemory.evidence,["宅兹中国","兽面纹","1963 年 · 重逢"]);
+    assert.deepEqual(allMemory.completed,[]);
     state.toggleChat(false); assert.equal(useGameStore.getState().chapterIndex,4);
     assert.ok(buildSystemPrompt(context,variants[0]).includes("suggestedActions"));
     const originalFetch = globalThis.fetch, originalTimeout = globalThis.setTimeout, originalWarn = console.warn;
@@ -96,8 +160,19 @@ const result = await build({
         assert.ok(local.text.includes("中国")); assert.deepEqual(local.metadata.suggestedActions,[action]);
       }
       const unknown=await reply("谁把你埋进土里的？"); assert.deepEqual(unknown.metadata.suggestedActions,[]);
+      for(const scenario of scenarios) {
+        const text=getEvidenceIntentAnswer(hezun,scenario.questions[0]);
+        globalThis.fetch=async()=>({ok:true,json:async()=>({reply:JSON.stringify({answer:text,factIds:scenario.action.factIds,suggestedActions:[scenario.action]})})});
+        const live=await reply(scenario.questions[0]);
+        assert.equal(live.metadata.source,"ai"); assert.deepEqual(live.metadata.suggestedActions,[scenario.action]);
+        globalThis.fetch=async()=>({ok:true,json:async()=>({reply:text})});
+        assert.deepEqual((await reply(scenario.questions[0])).metadata.suggestedActions,[scenario.action]);
+        globalThis.fetch=async()=>{throw new Error("offline")};
+        const local=await reply(scenario.questions[0]);
+        assert.equal(local.metadata.source,"local"); assert.deepEqual(local.metadata.suggestedActions,[scenario.action]);
+      }
     } finally { globalThis.fetch=originalFetch; globalThis.setTimeout=originalTimeout; console.warn=originalWarn; }
-    console.log("✅ 证据入口、多种问法、动作登记校验、AI JSON/旧响应/离线回退、原进度保留与记忆记录通过");
+    console.log("✅ 铭文、兽面纹、重逢时间线：入口校验、相机目标、来源、原进度与记忆、AI/旧响应/离线回退通过");
   `},
   bundle:true,platform:"node",format:"esm",write:false,jsx:"automatic",loader:{".css":"empty"},
   banner:{js:`import { createRequire } from "node:module"; const require = createRequire(${JSON.stringify(fileURLToPath(new URL("../package.json", import.meta.url)))});`},

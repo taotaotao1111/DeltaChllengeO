@@ -1,5 +1,5 @@
-import { useEffect, useId, useMemo, useRef, type KeyboardEvent } from "react";
-import type { Artifact } from "../../types/artifact";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import type { Artifact, Fact } from "../../types/artifact";
 import "./HistoryTimeline.css";
 
 interface Props {
@@ -9,10 +9,24 @@ interface Props {
   visitedIds: string[];
   onFocus: (id: string) => void;
   onSelect: (id: string | null) => void;
+  evidenceInitiallyOpen?: boolean;
+  onViewEvidence?: (factIds: string[]) => void;
+}
+
+function TimelineSources({ facts, initiallyOpen, onView }: { facts: Fact[]; initiallyOpen: boolean; onView?: (ids: string[]) => void }) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return <details open={open} onToggle={(event) => {
+    const expanded = event.currentTarget.open;
+    setOpen(expanded);
+    if (expanded) onView?.(facts.map((fact) => fact.id));
+  }}>
+    <summary><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 5c-2-1.5-4-1.5-7-1v12c3-.5 5-.5 7 1 2-1.5 4-1.5 7-1V4c-3-.5-5-.5-7 1Zm0 0v12" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>查看史料依据</summary>
+    {facts.map((fact) => <p key={fact.id} className="history-phase-detail__fact">{fact.content}<span>来源：{fact.source}</span></p>)}
+  </details>;
 }
 
 /** 四段往事并排，当前图片轻微前凸；金线串起时间，点选节点直接展开故事。 */
-export default function HistoryTimeline({ artifact, focusedId, activeId, visitedIds, onFocus, onSelect }: Props) {
+export default function HistoryTimeline({ artifact, focusedId, activeId, visitedIds, onFocus, onSelect, evidenceInitiallyOpen = false, onViewEvidence }: Props) {
   const phases = useMemo(() => artifact.historyEnding?.phases ?? [], [artifact.historyEnding]);
   const focusedIndex = Math.max(0, phases.findIndex((phase) => phase.id === focusedId));
   const isLit = (index: number) => !!phases[index] && (index === focusedIndex || visitedIds.includes(phases[index].id));
@@ -81,10 +95,7 @@ export default function HistoryTimeline({ artifact, focusedId, activeId, visited
             <button type="button" onClick={() => onSelect(null)}>收起 <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4"><path d="m5 12 5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
           </div>
           <p className="history-phase-detail__story">{events.map((event) => event.narration).join(" ")}</p>
-          {facts.length > 0 && <details key={active.id}>
-            <summary><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 5c-2-1.5-4-1.5-7-1v12c3-.5 5-.5 7 1 2-1.5 4-1.5 7-1V4c-3-.5-5-.5-7 1Zm0 0v12" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" /></svg>查看史料依据</summary>
-            {facts.map((fact) => <p key={fact.id} className="history-phase-detail__fact">{fact.content}<span>来源：{fact.source}</span></p>)}
-          </details>}
+          {facts.length > 0 && <TimelineSources key={active.id} facts={facts} initiallyOpen={evidenceInitiallyOpen} onView={onViewEvidence} />}
         </section>}
       </div>
       <p className="history-timeline-hint"><span className="history-timeline-hint__mobile">左右滑动，</span>点选节点读往事 <span aria-hidden="true">·</span> 配图为氛围示意</p>

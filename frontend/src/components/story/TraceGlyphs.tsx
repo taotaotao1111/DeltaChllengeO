@@ -17,6 +17,7 @@ interface TraceGlyphsProps {
   onSkip: () => void;
   embedded?: boolean;
   returnLabel?: string;
+  compact?: boolean;
 }
 
 /**
@@ -26,7 +27,7 @@ interface TraceGlyphsProps {
  * 笔画用 pointer events 画在 canvas 上，底层是 glyphs 表的淡色字模。
  * 每字「下一个」时当场 toDataURL（canvas 随即被下一字清空重画）。
  */
-export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = false, returnLabel = "返回记忆卡" }: TraceGlyphsProps) {
+export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = false, returnLabel = "返回记忆卡", compact = false }: TraceGlyphsProps) {
   const [index, setIndex] = useState(0);
   const resultsRef = useRef<(string | null)[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -136,7 +137,7 @@ export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = fals
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className={`${embedded ? "relative min-h-full py-8" : "fixed inset-0 z-[65]"} flex flex-col items-center justify-center bg-ink-900/95 px-6`}
+      className={`${embedded ? compact ? "relative min-h-0 py-4" : "relative min-h-full py-8" : "fixed inset-0 z-[65]"} flex flex-col items-center justify-center ${compact ? "px-2" : "bg-ink-900/95 px-6"}`}
     >
       <p className="text-xs tracking-widest text-gilt-light/70">
         把这几个字，亲手描一遍
@@ -150,7 +151,7 @@ export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = fals
         <GlyphChar char={char} className="h-full w-full" strokeWidth={4} />
       </div>
 
-      <div className="mt-6 aspect-square h-[52vh] max-h-[440px] max-w-[86vw]">
+      <div className={compact ? "mt-4 aspect-square h-[28dvh] max-h-[250px] max-w-full" : "mt-6 aspect-square h-[52vh] max-h-[440px] max-w-[86vw]"}>
         <canvas
           ref={canvasRef}
           onPointerDown={handlePointerDown}
