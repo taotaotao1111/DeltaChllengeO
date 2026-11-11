@@ -1,6 +1,8 @@
-import type { ArtifactContext, FactConfidence } from "../types/artifact";
-import { findRelevantFacts, unknownAnswerTemplate, buildSystemPrompt } from "../utils/factGuard";
-import { buildChatHistory, getReplyFacts, limitReply } from "../utils/chatContext";
+import type { AIAction, ArtifactContext, FactConfidence } from "../types/artifact";
+import { findRelevantFacts, unknownAnswerTemplate, buildSystemPrompt, classifyQuestion } from "../utils/factGuard";
+import { buildChatHistory, getReplyFacts } from "../utils/chatContext";
+import { getConfiguredFollowUp } from "../utils/storyQuestions";
+import { decodeEvidenceReply, deriveEvidenceActions, getEvidenceIntentAnswer } from "../utils/evidenceActions";
 
 /**
  * aiService —— 独立的 AI 调用层
@@ -20,7 +22,7 @@ import { buildChatHistory, getReplyFacts, limitReply } from "../utils/chatContex
 
 export interface StreamHandlers {
   onToken: (partial: string, token: string) => void;
-  onDone: (fullText: string, factBasis: FactConfidence | "unknown", metadata?: { factIds: string[]; source: "ai" | "local" }) => void;
+  onDone: (fullText: string, factBasis: FactConfidence | "unknown", metadata?: { factIds: string[]; source: "ai" | "local"; suggestedActions?: AIAction[] }) => void;
   onError?: (err: unknown) => void;
 }
 
@@ -77,13 +79,20 @@ async function streamFromBackend(
   if (!res.ok) throw new Error(`api/chat responded with ${res.status}`);
 
   const data = (await res.json()) as { reply?: string };
-  const reply = limitReply(data.reply ?? "", context.answerMode);
+  // 篇幅在生成阶段控制，显示层保留全文，不能把句子或关键时间点裁掉。
+  const decoded = decodeEvidenceReply(data.reply ?? "", context.artifact);
+  const reply = decoded.answer;
   if (!reply) throw new Error("api/chat returned empty reply");
+  const factIds = decoded.factIds ?? getReplyFacts(context, userMessage).map((fact) => fact.id);
+  const suggestedActions = classifyQuestion(userMessage) !== "general" ? []
+    : decoded.suggestedActions.length ? decoded.suggestedActions : deriveEvidenceActions(context.artifact, reply, factIds);
+  const factBasis = decoded.factIds === undefined ? judgeFactBasis(userMessage, context)
+    : !factIds.length ? "unknown" : factIds.every((id) => context.verifiedFacts.find((fact) => fact.id === id)?.confidence === "verified") ? "verified" : "inferred";
 
   await wait(THINK_PAUSE_MS, signal);
   const full = await typeOut(reply, handlers.onToken, signal);
   if (signal?.aborted) return;
-  handlers.onDone(full, judgeFactBasis(userMessage, context), { factIds: getReplyFacts(context, userMessage).map((f) => f.id), source: "ai" });
+  handlers.onDone(full, factBasis, { factIds, suggestedActions, source: "ai" });
 }
 
 /**
@@ -197,12 +206,15 @@ function composeFactAnswer(question: string, context: ArtifactContext): {
   text: string;
   factBasis: FactConfidence | "unknown";
 } {
-  const facts = getReplyFacts(context, question).slice(0, context.answerMode === "deep" ? 3 : 2);
+  const facts = getReplyFacts(context, question);
   if (facts.length === 0) {
     return { text: unknownAnswerTemplate(), factBasis: "unknown" };
   }
 
-  const lead = facts.map((f) => context.answerMode === "deep" ? `资料记载：${f.content}\n资料出处：${f.source}` : f.content).join("\n\n");
+  const configured = getConfiguredFollowUp(context.artifact, question);
+  const hasAllSources = configured?.factIds.every((id) => facts.some((fact) => fact.id === id));
+  const concise = hasAllSources && configured?.localAnswer || getEvidenceIntentAnswer(context.artifact, question);
+  const lead = context.answerMode !== "deep" && concise ? concise : facts.map((f) => f.content).join("\n\n");
   const confidence: FactConfidence = facts.every((f) => f.confidence === "verified")
     ? "verified"
     : "inferred";
@@ -244,9 +256,10 @@ async function streamMock(
   // 模拟「思考」停顿，让回答显得不是瞬间吐出来的
   await wait(THINK_PAUSE_MS, signal);
 
-  const full = await typeOut(limitReply(text, context.answerMode), handlers.onToken, signal);
+  const full = await typeOut(text.trim(), handlers.onToken, signal);
   if (signal?.aborted) return;
-  handlers.onDone(full, factBasis, { factIds: factBasis === "unknown" ? [] : getReplyFacts(context, userMessage).map((f) => f.id), source: "local" });
+  const factIds = factBasis === "unknown" ? [] : getReplyFacts(context, userMessage).map((f) => f.id);
+  handlers.onDone(full, factBasis, { factIds, suggestedActions: classifyQuestion(userMessage) === "general" ? deriveEvidenceActions(context.artifact, full, factIds) : [], source: "local" });
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {

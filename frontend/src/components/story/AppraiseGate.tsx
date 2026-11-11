@@ -199,7 +199,7 @@ export default function AppraiseGate({ artifactId, data, onDone }: AppraiseGateP
                       key={opt.id}
                       type="button"
                       onClick={() => pick(opt.id)}
-                      className="rounded-full border border-rice-100/20 bg-ink-800/40 px-5 py-2.5 text-sm text-rice-100/90 transition hover:border-rice-100/40 hover:bg-rice-100/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rice-100/60"
+                      className="min-h-11 appearance-none rounded-full border border-rice-100/20 bg-ink-800/40 px-5 py-2.5 text-sm text-rice-100/90 outline-none transition [-webkit-tap-highlight-color:transparent] [@media(hover:hover)_and_(pointer:fine)]:hover:border-rice-100/40 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-rice-100/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gilt-light"
                     >
                       {opt.label}
                     </button>

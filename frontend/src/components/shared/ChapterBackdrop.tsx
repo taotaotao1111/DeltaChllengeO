@@ -1,5 +1,6 @@
 import { Fragment, useMemo } from "react";
 import { motion } from "framer-motion";
+import type { ChapterBackdropMotif } from "../../types/artifact";
 
 /**
  * 章节视觉母题。每一章的背景要能回答「我现在在哪儿」：
@@ -8,10 +9,8 @@ import { motion } from "framer-motion";
  * - strata 时间线：三千年。横向地层层理，越往下越暗——它有大半辈子埋在土里。
  * - scrap  漂流记章：废品堆场。暗绿铜锈、压痕暗带、一线冷白天光——那段日子没有火。
  */
-type Motif = "forge" | "patina" | "strata" | "scrap";
-
 interface ChapterBackdropProps {
-  motif: Motif;
+  motif: ChapterBackdropMotif;
   /** 额外压暗，配合前景文字密度微调 */
   dim?: number;
   /**

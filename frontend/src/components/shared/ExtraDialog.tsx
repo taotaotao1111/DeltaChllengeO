@@ -14,18 +14,19 @@ export default function ExtraDialog({ title, onClose, children }: {
     const previous = document.activeElement;
     const dialog = ref.current;
     dialog?.showModal();
+    dialog?.focus({ preventScroll: true });
     return () => {
       dialog?.close();
       if (previous instanceof HTMLElement && previous.isConnected) previous.focus();
     };
   }, []);
   return createPortal(
-    <dialog ref={ref} aria-label={title} onCancel={(e) => { e.preventDefault(); onClose(); }}
-      className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none border-0 bg-ink-900 p-0 text-rice-100 backdrop:bg-ink-900/80">
+    <dialog ref={ref} tabIndex={-1} aria-label={title} onCancel={(e) => { e.preventDefault(); onClose(); }}
+      className="fixed inset-0 m-0 h-dvh max-h-none w-screen max-w-none border-0 bg-ink-900 p-0 text-rice-100 outline-none backdrop:bg-ink-900/80">
       <div className="flex h-full flex-col">
         <div className="flex shrink-0 items-center justify-between border-b border-gilt/15 px-6 pb-3 pt-[calc(0.75rem+var(--safe-top))]">
           <p className="text-xs tracking-widest text-gilt-light/80">{title}</p>
-          <button autoFocus onClick={onClose} className="min-h-11 px-3 text-sm text-rice-200/80">返回</button>
+          <button type="button" onClick={onClose} className="min-h-11 rounded-full border border-gilt/30 bg-gilt/5 px-4 text-sm text-gilt-light outline-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gilt-light [-webkit-tap-highlight-color:transparent] [@media(hover:hover)]:hover:bg-gilt/15">返回</button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
       </div>

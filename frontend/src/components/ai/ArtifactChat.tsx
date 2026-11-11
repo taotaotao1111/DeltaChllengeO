@@ -7,9 +7,11 @@ import { captureChatContext } from "../../utils/chatContext";
 import { classifyQuestion } from "../../utils/factGuard";
 import { getStoryQuestions } from "../../utils/storyQuestions";
 import { track } from "../../utils/tracking";
-import type { ArtifactContext, ChatTurnContext } from "../../types/artifact";
+import type { AIAction, ArtifactContext, ChatTurnContext } from "../../types/artifact";
 import ChatSheet from "./ChatSheet";
 import FloatingAIButton from "./FloatingAIButton";
+import EvidenceExplorer from "./EvidenceExplorer";
+import { getChatDiscoveryQuestions, validateEvidenceAction } from "../../utils/evidenceActions";
 
 /** 对话独立挂载；打开、收起均不改变舞台或幕内组件的 key。 */
 export default function ArtifactChat() {
@@ -25,12 +27,17 @@ export default function ArtifactChat() {
   const chapterIndex = useGameStore((s) => s.chapterIndex);
   const toggleChat = useGameStore((s) => s.toggleChat);
   const [draft, setDraft] = useState("");
+  const [evidenceAction, setEvidenceAction] = useState<AIAction | null>(null);
   const requestRef = useRef<{ controller: AbortController; messageId: string } | null>(null);
   const scrollPosition = useRef(Number.POSITIVE_INFINITY);
   const artifact = getArtifact(artifactId);
   const currentContext = captureChatContext(artifact, chapterIndex, useGameStore.getState().currentScene(), discovered, moment);
   const asked = messages.filter((m) => m.role === "user").map((m) => m.content);
-  const questions = getStoryQuestions(artifact, moment, asked).slice(0, 3);
+  const questions = getChatDiscoveryQuestions(artifact, getStoryQuestions(artifact, moment, asked), asked);
+
+  useEffect(() => {
+    if (!chatOpen || evidenceAction?.artifactId !== artifactId) setEvidenceAction(null);
+  }, [chatOpen, artifactId, evidenceAction]);
 
   const send = useCallback(async (text: string, mode: "short" | "deep" = "short", savedContext?: ChatTurnContext) => {
     const state = useGameStore.getState();
@@ -62,7 +69,7 @@ export default function ArtifactChat() {
         onToken: (content) => { if (isCurrent()) useGameStore.getState().patchMessage(replyId, { content }); },
         onDone: (content, factBasis, metadata) => {
           if (!isCurrent()) return;
-          useGameStore.getState().completeChatReply(replyId, { content, factBasis, factIds: metadata?.factIds ?? [], replySource: metadata?.source });
+          useGameStore.getState().completeChatReply(replyId, { content, factBasis, factIds: metadata?.factIds ?? [], suggestedActions: metadata?.suggestedActions ?? [], replySource: metadata?.source });
           track("chat_reply", { artifactId: currentArtifact.id, questionKind: classifyQuestion(question), factBasis, answerMode: mode, momentId: turnContext.storyMoment?.id ?? "free" });
         },
       }, controller.signal);
@@ -109,7 +116,13 @@ export default function ArtifactChat() {
         onSend={(question) => { void send(question); }}
         onDeepDive={(message) => { if (message.question) void send(message.question, "deep", message.turnContext); }}
         onRetry={(message) => { if (message.question) void send(message.question, message.answerMode, message.turnContext); }}
+        onExplore={(message, candidate) => {
+          const action = validateEvidenceAction(artifact, candidate, message.factIds ?? [], message.content);
+          if (action) setEvidenceAction(action);
+        }}
         onStop={stop} onClose={() => toggleChat(false)} />}
     </AnimatePresence>
+    {chatOpen && evidenceAction?.artifactId === artifactId && <EvidenceExplorer artifact={artifact} action={evidenceAction}
+      onBack={() => setEvidenceAction(null)} onReturnStory={() => { setEvidenceAction(null); toggleChat(false); }} />}
   </>;
 }

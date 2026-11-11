@@ -1,63 +1,30 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { getHistorySpan } from "../../utils/historySpan";
 
-interface SpanBarProps {
-  /** 铸造年代（负数 = 公元前），仅用于画比例 */
-  castYear: number;
-  /** 出土年份 */
-  foundYear: number;
-  /** 底部的算法与来源说明 */
-  note: string;
-}
+interface SpanBarProps { castYear: number; foundYear: number; note: string }
 
-/**
- * 「三千年比例条」：把文物「无人知晓的时间」与「被人看见的时间」按真实比例并排画出来。
- *
- * 刻意只画这两段。时间线里「沉睡」那一节只写了「西周之后」，没有确切年份，
- * 硬给它分一段比例就是编数据 —— 而「铸造 → 被发现 → 今天」这两段完全可以直接相减，
- * 结论已经足够有冲击力。
- */
+/** 亮色仅填充出土至今的真实比例；不把铸造至出土等同于连续埋藏。 */
 export default function SpanBar({ castYear, foundYear, note }: SpanBarProps) {
-  const thisYear = new Date().getFullYear();
-
-  const unseenYears = foundYear - castYear; // 何尊约 3000 年
-  const seenYears = thisYear - foundYear; // 何尊约 60 余年
-  const totalYears = unseenYears + seenYears;
-  const seenPercent = (seenYears / totalYears) * 100;
-
+  const year = new Date().getFullYear();
+  const span = getHistorySpan(castYear, foundYear, year);
+  const reduceMotion = useReducedMotion();
   return (
-    <div className="mx-auto w-full max-w-xl px-4">
-      <div className="flex h-2 w-full overflow-hidden rounded-full bg-ink-700">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${100 - seenPercent}%` }}
-          transition={{ duration: 1.6, ease: "easeOut" }}
-          className="h-full bg-gradient-to-r from-ink-600 to-bronze-dark"
-        />
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${seenPercent}%` }}
-          transition={{ duration: 1.6, delay: 0.3, ease: "easeOut" }}
-          // 这一小截刻意用最亮的暗金，让人一眼看到它有多窄
-          className="h-full bg-gilt-light"
-        />
+    <section className="history-span" aria-label="出土至今的时间比例">
+      <div className="history-span__header">
+        <strong className="history-span__number">{span.percent.toFixed(1)}<span>%</span></strong>
+        <p>被重新看见的时间，只占我全部岁月的一小部分。</p>
+        <details className="history-span__note">
+          <summary aria-label="查看时间比例计算说明" title="计算说明">ⓘ</summary>
+          <p>{note} 截至 {year} 年，比例为年代估算，不代表连续埋藏或无人知晓的时长。</p>
+        </details>
       </div>
-
-      <div className="mt-2 flex justify-between text-[10px] tracking-wider text-rice-200/40">
-        <span>没有人知道我 · 约 {Math.round(unseenYears / 100) * 100} 年</span>
-        <span className="text-gilt-light/70">被看见 · {seenYears} 年</span>
+      <div className="history-span__track" role="progressbar" aria-label={`出土至${year}年的时间比例`}
+        aria-valuenow={Number(span.percent.toFixed(1))} aria-valuemin={0} aria-valuemax={100}
+        aria-valuetext={`约${span.percent.toFixed(1)}%，出土至今${span.sinceDiscovery}年`}>
+        <motion.div initial={{ width: reduceMotion ? `${span.percent}%` : 0 }} whileInView={{ width: `${span.percent}%` }}
+          viewport={{ once: true, amount: 0.5 }} transition={{ duration: reduceMotion ? 0 : 1.4, ease: "easeOut" }} className="history-span__fill" />
       </div>
-
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.6, duration: 0.8 }}
-        className="mt-4 text-center text-sm leading-7 text-rice-200/70"
-      >
-        我被人看见的时间，只占我全部时间的
-        <span className="mx-1 text-gilt-light">{seenPercent.toFixed(1)}%</span>。
-      </motion.p>
-
-      <p className="mt-2 text-center text-[10px] text-rice-200/25">{note}</p>
-    </div>
+      <div className="history-span__labels"><span>铸造至出土 · 约 {span.approximateBefore} 年</span><span>出土至今 · {span.sinceDiscovery} 年</span></div>
+    </section>
   );
 }

@@ -4,6 +4,8 @@ import { useGameStore } from "../../store/gameStore";
 
 interface SpeechRevealProps {
   lines: string[];
+  /** 折叠时暂停计时，重新展开后接着讲。 */
+  paused?: boolean;
   /** 每行停留时长（ms），会按文字长度做一点微调 */
   lineDelay?: number;
   onComplete?: () => void;
@@ -29,6 +31,7 @@ interface SpeechRevealProps {
  */
 export default function SpeechReveal({
   lines,
+  paused: externallyPaused = false,
   lineDelay = 1500,
   onComplete,
   className = "",
@@ -41,7 +44,8 @@ export default function SpeechReveal({
   const [revealed, setRevealed] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const doneRef = useRef(false);
-  const paused = useGameStore((s) => s.chatOpen);
+  const chatOpen = useGameStore((s) => s.chatOpen);
+  const paused = chatOpen || externallyPaused;
   const remainingRef = useRef<{ index: number; ms: number } | null>(null);
 
   useEffect(() => {

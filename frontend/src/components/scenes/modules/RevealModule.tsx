@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
 import ArtifactPresence from "../../artifact/ArtifactPresence";
@@ -10,8 +10,7 @@ import { useGameStore } from "../../../store/gameStore";
 import type { Artifact, ArtifactChapter, RevealModuleData } from "../../../types/artifact";
 import { useStoryMoment } from "../../../utils/useStoryMoment";
 import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
-
-type Phase = "lead-in" | "derust" | "compare" | "focus" | "guess" | "closing";
+import { getRevealSteps, type RevealPhase } from "../../../utils/revealFlow";
 
 interface RevealModuleProps {
   artifact: Artifact;
@@ -25,12 +24,13 @@ interface RevealModuleProps {
 /**
  * 揭示模块：听说有字 → 亲手擦出字影 → 看清并读懂 → 先猜一次 → 收尾。
  *
- * 中间三步都可选：没有除锈素材的文物会从念白直接进特写，没有关键字的直接进竞猜。
+ * 可精简说明和配图，关键文字的揭示始终在含义竞猜之前。
  */
 export default function RevealModule({ artifact, data, presence, onNext, onDeepDive, initialPhase = "lead-in" }: RevealModuleProps) {
-  const [phase, setPhase] = useState<Phase>(initialPhase);
+  const [phase, setPhase] = useState<RevealPhase>(initialPhase);
   const markDiscovered = useGameStore((s) => s.markDiscovered);
   const [closingReady, setClosingReady] = useState(false);
+  const showFocus = !!data.focus?.characters.length;
   useStoryMoment({
     id: `${artifact.id}:reveal:${phase}`,
     title: phase === "closing" || phase === "guess" || phase === "focus" ? "铭文初现 · 宅兹中国" : "除锈发现",
@@ -41,18 +41,7 @@ export default function RevealModule({ artifact, data, presence, onNext, onDeepD
     ready: phase === "closing" && closingReady,
   });
 
-  /** 实际会经过的步骤，跳过没有素材的那些 */
-  const steps = useMemo<Phase[]>(
-    () => [
-      "lead-in",
-      ...(data.derust ? (["derust"] as const) : []),
-      ...(data.compare ? (["compare"] as const) : []),
-      ...(data.focus ? (["focus"] as const) : []),
-      ...(data.guess ? (["guess"] as const) : []),
-      "closing",
-    ],
-    [data.derust, data.compare, data.focus, data.guess],
-  );
+  const steps = getRevealSteps(data);
 
   const advance = () => {
     const i = steps.indexOf(phase);
@@ -111,13 +100,15 @@ export default function RevealModule({ artifact, data, presence, onNext, onDeepD
         />
       )}
 
-      {data.focus && (
+      {showFocus && data.focus && (
         <InscriptionFocus
           open={phase === "focus"}
           characters={data.focus.characters}
           explainLines={data.focus.explainLines}
           facts={focusFacts}
           sideImage={data.focus.sideImage}
+          charactersOnly={data.focus.showPage === false}
+          continueLabel={data.focus.showPage === false ? data.focus.nextLabel ?? (data.guess ? "猜猜这句话的意思 →" : "继续故事 →") : undefined}
           onClose={advance}
         />
       )}
@@ -147,7 +138,7 @@ export default function RevealModule({ artifact, data, presence, onNext, onDeepD
             textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-xl"
             reveal={
               <div className="w-full">
-                <div className="mb-4 flex justify-center"><StoryQuestionBubble /></div>
+                <div className="mb-4 flex justify-center"><StoryQuestionBubble compact variant="evidence" /></div>
                 {onDeepDive && <p className="mb-4 text-xs leading-6 text-rice-200/60">秘密已经读懂。接着听我的故事，或留步读完这 122 个字。</p>}
                 <div className="flex flex-col justify-center gap-3 sm:flex-row">
                 <button

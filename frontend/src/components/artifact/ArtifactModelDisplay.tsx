@@ -1,5 +1,7 @@
-import { Canvas } from "@react-three/fiber";
+import { useEffect } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import type { ArtifactModel } from "../../types/artifact";
+import type { FogSceneSnapshot } from "../../utils/fogMask";
 import ArtifactModel3D, { ArtifactLights } from "./ArtifactModel3D";
 
 interface ArtifactModelDisplayProps {
@@ -9,6 +11,30 @@ interface ArtifactModelDisplayProps {
   /** 每秒自转弧度 */
   autoRotateSpeed?: number;
   className?: string;
+  onSnapshotReady?: (snapshot: FogSceneSnapshot) => void;
+}
+
+function SnapshotBridge({ onReady }: { onReady: (snapshot: FogSceneSnapshot) => void }) {
+  const { gl, scene, camera, size } = useThree();
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      // 在同一帧渲染后立即复制，不依赖 preserveDrawingBuffer，也不逐帧读取 WebGL。
+      gl.render(scene, camera);
+      const image = document.createElement("canvas");
+      image.width = gl.domElement.width;
+      image.height = gl.domElement.height;
+      const ctx = image.getContext("2d");
+      if (!ctx || !image.width || !image.height) return;
+      try {
+        ctx.drawImage(gl.domElement, 0, 0);
+        onReady({ image, element: gl.domElement });
+      } catch {
+        // 抓帧不可用时仍可擦除冷凝纹理，不阻断主线。
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [gl, scene, camera, size.width, size.height, onReady]);
+  return null;
 }
 
 /**
@@ -22,6 +48,7 @@ export default function ArtifactModelDisplay({
   src,
   autoRotateSpeed = 0.25,
   className = "",
+  onSnapshotReady,
 }: ArtifactModelDisplayProps) {
   return (
     <div className={`pointer-events-none ${className}`}>
@@ -29,6 +56,7 @@ export default function ArtifactModelDisplay({
         camera={{ fov: 35, position: [0, 0.1, 3.8] }}
         dpr={[1, 2]}
         gl={{ alpha: true, antialias: true }}
+        frameloop={autoRotateSpeed ? "always" : "demand"}
         /*
           外层那个 `pointer-events-none` **拦不住 R3F**：Canvas 会给自己的容器 div
           内联一句 `pointer-events: auto`（源码里 `eventSource ? 'none' : 'auto'`），
@@ -40,6 +68,7 @@ export default function ArtifactModelDisplay({
       >
         <ArtifactLights />
         <ArtifactModel3D model={model} src={src} autoRotateSpeed={autoRotateSpeed} />
+        {onSnapshotReady && <SnapshotBridge onReady={onSnapshotReady} />}
       </Canvas>
     </div>
   );

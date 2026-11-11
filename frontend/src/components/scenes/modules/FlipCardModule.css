@@ -1,0 +1,90 @@
+.archive-cards-layout {
+  position: relative;
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(142px + var(--safe-top)) 24px calc(44px + var(--safe-bottom));
+}
+.archive-card-group { display: flex; width: 100%; max-width: 780px; flex-direction: column; align-items: center; gap: 8px; }
+.archive-cards-layout--reading { justify-content: flex-start; }
+.flip-card-progress { display: flex; flex-shrink: 0; align-items: center; justify-content: center; margin-bottom: 6px; }
+.flip-card-progress__button { display: grid; place-items: center; width: 28px; height: 24px; padding: 0; border-radius: 8px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.flip-card-progress__dot { width: 6px; height: 6px; border-radius: 999px; background: #e6dcc326; transition: width .2s, background .2s; }
+.flip-card-progress__button.is-read .flip-card-progress__dot { background: #a8863f80; }
+.flip-card-progress__button.is-current .flip-card-progress__dot { width: 20px; background: #c9a76ab3; }
+.flip-card-progress__button:focus-visible { outline: 1px solid #edca88; outline-offset: -2px; }
+@media (hover: hover) and (pointer: fine) {
+  .flip-card-progress__button:hover .flip-card-progress__dot { background: #efc779; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-card-progress__dot { transition: none; }
+}
+.archive-card-stage { position: relative; isolation: isolate; width: min(100%, clamp(240px, calc((100svh - 365px - var(--safe-top) - var(--safe-bottom)) * 300 / 398), 300px)); perspective: 1200px; touch-action: pan-y; }
+.archive-card-frame { position: relative; width: 100%; aspect-ratio: 300 / 398; cursor: grab; touch-action: pan-y; outline: none; }
+.archive-card-frame:active { cursor: grabbing; }
+.archive-card-frame:focus-visible { outline: 2px solid #efc779; outline-offset: 8px; border-radius: 8px; }
+.archive-card-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.archive-card-face--back { transform: rotateY(180deg); }
+.archive-card-face__paper { position: absolute; inset: 0; display: block; pointer-events: none; filter: drop-shadow(0 0 2px #efbd715c) drop-shadow(0 8px 15px #0006); }
+.archive-card-face__paper img { display: block; width: 100%; height: 100%; object-fit: fill; }
+.archive-card-face--front .archive-card-face__paper img { filter: brightness(.74) saturate(.85); }
+.archive-card-face__interior { position: relative; display: flex; height: 100%; min-height: 0; flex-direction: column; padding: 22px 22px 20px; color: #f2dfba; }
+.archive-card-face__heading { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 10px; }
+.archive-card-face__label { display: inline-block; padding: 6px 11px; border: 1px solid #af78374d; border-radius: 2px; background: linear-gradient(110deg, #503415e6, #35200fdb); box-shadow: 0 2px 5px #0003; color: #f5d798; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 15px; line-height: 1.5; letter-spacing: .06em; }
+.archive-card-face__stamp { flex-shrink: 0; padding: 2px 5px; border: 2px solid #6d5b43; color: #6d5b43; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 13px; line-height: 1.4; letter-spacing: .12em; transform: rotate(-7deg); }
+.archive-card-face__stamp.is-verified { border-color: #963e2d; color: #963e2d; }
+.archive-card-face__copy { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin-top: 16px; padding: 0 3px 4px 0; touch-action: pan-y; scrollbar-width: thin; scrollbar-color: #a47b4545 transparent; overflow-wrap: anywhere; }
+.archive-card-face__copy:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
+.archive-card-face__copy blockquote { margin: 0; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 18px; line-height: 1.7; font-weight: 500; text-wrap: pretty; }
+.archive-card-face__story { margin-top: 18px; white-space: pre-line; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 14px; line-height: 1.85; color: #e0c8a0; }
+.archive-card-face--back .archive-card-face__interior { color: #352719; }
+.archive-card-face--back .archive-card-face__copy { margin-top: 18px; }
+.archive-card-face__fact { font-size: 15px; line-height: 1.85; }
+.archive-card-face__note { margin-top: 16px; padding-left: 9px; border-left: 3px solid #916330; color: #704d29; font-size: 12px; line-height: 1.8; }
+.archive-card-face__source { display: flex; align-items: flex-start; gap: 6px; margin-top: 16px; padding-top: 12px; border-top: 1px solid #7f633344; color: #725b3d; font-size: 12px; line-height: 1.75; }
+.archive-card-face__source svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 3px; }
+.archive-card-hint { display: flex; min-height: 34px; align-items: center; justify-content: center; gap: 9px; color: #d6b171; font-size: 12px; animation: archive-flip-hint-breathe 2.8s ease-in-out infinite; }
+.archive-card-hint svg { width: 23px; height: 27px; }
+@keyframes archive-flip-hint-breathe {
+  0%, 100% { opacity: .55; transform: scale(.98); text-shadow: 0 0 0 transparent; }
+  50% { opacity: 1; transform: scale(1.02); text-shadow: 0 0 10px #e8bf7459; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .archive-card-hint { animation: none; }
+}
+.archive-card-next { display: flex; align-items: center; min-height: 44px; }
+.archive-card-next button { min-width: 138px; min-height: 44px; padding: 10px 30px; border: 1px solid #dfba76; border-radius: 999px; background: linear-gradient(110deg, #956e35, #59401f 70%, #7c5529); box-shadow: 0 0 15px #c68e3821; color: #f7dba5; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 15px; }
+.archive-card-next button:focus-visible { outline: 2px solid #efc779; outline-offset: 4px; }
+@media (max-width: 1023px) {
+  .archive-card-group > aside { padding: 8px 10px; border-radius: 14px; }
+  .archive-card-group > aside > p { margin-bottom: 4px; font-size: 10px; line-height: 16px; }
+  .archive-card-group > aside button { min-height: 40px; padding: 8px 10px; line-height: 20px; }
+}
+.archive-card-stack { position: relative; width: min(100%, 300px); aspect-ratio: 300 / 398; }
+.archive-card-stack__sheet { position: absolute; inset: 0; pointer-events: none; }
+.archive-card-stack .archive-card-face--back { transform: none; }
+.archive-card-stack .archive-card-face__copy { overflow: hidden; }
+.archive-card-stack__sheet.is-top .archive-card-face__copy { opacity: .3; filter: blur(.4px); }
+.archive-card-stack__message { position: absolute; inset: 0; display: grid; place-items: center; padding: 36px; pointer-events: none; background: radial-gradient(ellipse at center, #100b05df, #100b0540 65%, transparent 88%); }
+.archive-card-stack__message p { color: #f0cb8b; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 18px; line-height: 1.9; text-align: center; text-wrap: balance; text-shadow: 0 2px 12px #0008; }
+@media (min-width: 1024px) {
+  .archive-cards-layout { padding: calc(164px + var(--safe-top)) 64px calc(76px + var(--safe-bottom)); }
+  .archive-card-group { gap: 20px; }
+  .flip-card-progress { margin-bottom: 12px; }
+  .flip-card-progress__button { height: 32px; }
+  .archive-card-stage, .archive-card-stack { width: min(100%, clamp(560px, calc(157svh - 534px), 780px)); }
+  .archive-card-frame, .archive-card-stack { aspect-ratio: 1489 / 947; }
+  .archive-card-face__paper img { clip-path: none; }
+  .archive-card-face__interior { padding: 38px 48px 32px; }
+  .archive-card-face__label { font-size: 18px; padding: 6px 16px; }
+  .archive-card-face__stamp { font-size: 17px; padding: 3px 8px; }
+  .archive-card-face__copy { margin-top: 26px; }
+  .archive-card-face__copy blockquote { font-size: 25px; line-height: 1.7; }
+  .archive-card-face__story { margin-top: 20px; font-size: 17px; line-height: 1.9; }
+  .archive-card-face__fact { font-size: 18px; line-height: 1.9; }
+  .archive-card-face__note { font-size: 14px; }
+  .archive-card-face__source { font-size: 13px; line-height: 1.8; }
+  .archive-card-stack__message p { font-size: 24px; }
+}

@@ -1,0 +1,54 @@
+.glyph-char--relief {
+  overflow: visible;
+  transform-box: fill-box;
+  transform-origin: center;
+  /* 不设 perspective，也不用 scale：用正交投影、侧缘和投影表现离开纸面的深度。 */
+  animation: glyph-relief-emerge 880ms cubic-bezier(.2, .65, .3, 1) var(--glyph-relief-delay, 0ms) forwards;
+}
+
+@keyframes glyph-relief-emerge {
+  0% {
+    transform: translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg);
+    filter: brightness(1) drop-shadow(0 0 0 transparent);
+  }
+  /* 快速冲出 → 回落 → 小幅再弹起，保持字的原有尺寸。 */
+  28% {
+    transform: translate3d(0, -8px, 48px) rotateX(-14deg) rotateY(9deg);
+    filter: brightness(1.32)
+      drop-shadow(0 1.5px 0 #ae8343)
+      drop-shadow(0 2.5px 0 #58401e)
+      drop-shadow(0 11px 5px rgb(12 8 2 / 70%))
+      drop-shadow(0 0 6px rgb(235 192 112 / 45%));
+  }
+  52% {
+    transform: translate3d(0, -2px, 20px) rotateX(3deg) rotateY(-3deg);
+    filter: brightness(1.13)
+      drop-shadow(0 1px 0 #9c7237)
+      drop-shadow(0 1.5px 0 #58401e)
+      drop-shadow(0 5px 3px rgb(12 8 2 / 55%))
+      drop-shadow(0 0 3px rgb(235 192 112 / 22%));
+  }
+  74% {
+    transform: translate3d(0, -5px, 36px) rotateX(-8deg) rotateY(5deg);
+    filter: brightness(1.23)
+      drop-shadow(0 1.5px 0 #ae8343)
+      drop-shadow(0 2px 0 #58401e)
+      drop-shadow(0 8px 4px rgb(12 8 2 / 62%))
+      drop-shadow(0 0 4px rgb(235 192 112 / 30%));
+  }
+  100% {
+    transform: translate3d(0, -3px, 24px) rotateX(-4deg) rotateY(3deg);
+    filter: brightness(1.16)
+      drop-shadow(0 1px 0 #9c7237)
+      drop-shadow(0 1.5px 0 #58401e)
+      drop-shadow(0 6px 3px rgb(12 8 2 / 58%))
+      drop-shadow(0 0 3px rgb(235 192 112 / 22%));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glyph-char--relief {
+    animation: none;
+    filter: drop-shadow(0 1px 0 #58401e) drop-shadow(0 3px 2px rgb(12 8 2 / 45%));
+  }
+}

@@ -19,8 +19,11 @@ export default function ChapterMenu({ open, onClose }: ChapterMenuProps) {
   const artifact = getArtifact(artifactId);
   const acts = getStoryActs(artifact);
   const enter = (index: number) => {
-    setChapter(index);
-    setStage("chapter");
+    // 当前段只收起目录，继续原位阅读，不重置段内交互。
+    if (stage !== "chapter" || index !== chapterIndex) {
+      setChapter(index);
+      setStage("chapter");
+    }
     onClose();
   };
 
@@ -32,38 +35,57 @@ export default function ChapterMenu({ open, onClose }: ChapterMenuProps) {
         {/* 桌面跟随导航右对齐；窄屏贴近控件组右侧，避免宽目录越出左边缘。 */}
         <div key="story-menu" className="fixed right-[calc(0.75rem+var(--safe-right))] top-[calc(4.5rem+var(--safe-top))] z-50 w-[86vw] max-w-sm sm:right-[calc(6rem+var(--safe-right))]">
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3, ease: "easeOut" }} className="overflow-hidden rounded-2xl border border-gilt/25 bg-ink-800/95 shadow-2xl backdrop-blur-md">
-          <p className="border-b border-rice-100/10 px-5 py-3 text-[11px] tracking-widest text-gilt-light/60">
-            {artifact.name} · {artifact.narrative ? `三幕故事 · ${artifact.narrative.durationLabel}` : "故事目录"}
-          </p>
-          <div className="max-h-[54vh] overflow-y-auto overscroll-contain py-2">
-            {acts.map((act) => {
+          transition={{ duration: 0.3, ease: "easeOut" }} className="flex max-h-[calc(100svh-5.5rem-var(--safe-top)-var(--safe-bottom))] flex-col overflow-hidden rounded-3xl border border-gilt/30 bg-[#100e0c]/95 shadow-2xl backdrop-blur-md">
+          <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-5">
+            <p className="text-xs tracking-wide text-gilt-light/90">{artifact.name} · 故事目录</p>
+            {artifact.narrative && <span className="shrink-0 text-[11px] text-rice-200/50">{artifact.narrative.durationLabel}</span>}
+          </div>
+          <nav aria-label={`${artifact.name}故事目录`} className="min-h-0 space-y-1.5 overflow-y-auto overscroll-contain px-3 pb-1 sm:px-4">
+            {acts.map((act, actIndex) => {
               const isCurrent = stage === "chapter" && act.chapterIndices.includes(chapterIndex);
+              const isCurrentMain = isCurrent && act.mainIndices.includes(chapterIndex);
               const isRead = act.mainIndices.length > 0 && act.mainIndices.every((i) => discovered.includes(`chapter:${artifact.chapters[i].id}`));
               const target = act.mainIndices[0] ?? act.chapterIndices[0];
               if (target === undefined) return null;
               return (
-                <div key={act.id} className={isCurrent ? "bg-gilt/10" : ""}>
-                  <button onClick={() => enter(target)} className="flex w-full items-center gap-3 px-5 py-4 text-left transition hover:bg-rice-100/5">
-                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isRead ? "bg-gilt/60" : "bg-cinnabar-light"}`} />
-                    <span className="w-12 shrink-0 text-[11px] tracking-widest text-rice-200/60">{act.label}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`font-title block text-base ${isCurrent ? "text-gilt-light" : "text-rice-100/90"}`}>{act.title}</span>
-                      <span className="mt-1 block text-[11px] leading-5 text-rice-200/50">{act.mainIndices.map((i) => artifact.chapters[i].title).join(" · ")}</span>
+                <div key={act.id} className={`overflow-hidden rounded-xl border transition-colors ${isCurrent ? "border-gilt/65 bg-[#302515]/90" : "border-gilt/25 bg-[#1a1712]/85"}`}>
+                  <button type="button" onClick={() => enter(isCurrentMain ? chapterIndex : target)} aria-current={isCurrentMain ? "step" : undefined}
+                    className="block w-full px-3.5 py-3 text-left transition hover:bg-gilt/5 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gilt-light sm:px-4">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <span title={isRead ? "主线已读" : "主线未读完"} className={`h-1.5 w-1.5 shrink-0 rounded-full ${isRead ? "bg-gilt/60" : "bg-cinnabar-light"}`} />
+                        <span className={`text-[11px] ${isCurrent ? "text-gilt-light" : "text-rice-200/60"}`}>{String(actIndex + 1).padStart(2, "0")} / {act.label}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5 text-[10px] text-gilt-light/85">
+                        {isCurrent && <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5"><path d="M10 5C7.5 3.5 4.8 3.5 2 4.5v11c2.8-1 5.5-1 8 .5m0-11c2.5-1.5 5.2-1.5 8-.5v11c-2.8-1-5.5-1-8 .5V5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" /></svg>}
+                        {isCurrent ? "正在阅读" : isRead ? "已读" : ""}
+                      </span>
                     </span>
-                    <span className="shrink-0 text-[10px] text-gilt-light/70">{isCurrent ? "在读" : isRead ? "已读" : ""}</span>
+                    <span className="mt-2 block font-title text-xl leading-7 text-rice-100">{act.title}</span>
+                    <span className="mt-1 flex items-center justify-between gap-3">
+                      <span className="min-w-0 text-xs leading-5 text-rice-200/65">{act.mainIndices.map((i) => artifact.chapters[i].title).join(" · ")}</span>
+                      {isCurrent && <span className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-gilt-light">{isCurrentMain ? "继续故事" : "返回主线"}<span aria-hidden="true">→</span></span>}
+                    </span>
                   </button>
                   {act.optionalIndices.map((index) => {
                     const chapter = artifact.chapters[index];
-                    return <button key={chapter.id} onClick={() => enter(index)} className="mb-3 ml-12 block min-h-10 rounded-full border border-gilt/20 px-4 py-2 text-left text-xs text-gilt-light/80 transition hover:bg-gilt/10">
-                      自选深入 · {chapter.module.kind === "inscription" ? "完整铭文" : chapter.title}
-                      {discovered.includes(`chapter:${chapter.id}`) ? " · 已读" : " →"}
+                    const isOptionalCurrent = stage === "chapter" && chapterIndex === index;
+                    return <button type="button" key={chapter.id} onClick={() => enter(index)} aria-current={isOptionalCurrent ? "step" : undefined}
+                      className={`mx-3.5 mb-1 flex min-h-11 w-[calc(100%-1.75rem)] items-center justify-between gap-2 border-t border-gilt/25 py-2 text-left text-xs transition hover:text-gilt-light ${isOptionalCurrent ? "text-gilt-light" : "text-gilt-light/80"} sm:mx-4 sm:w-[calc(100%-2rem)]`}>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0"><path d="M5 3H3a1.5 1.5 0 1 0 1.5 1.5V15a2 2 0 0 0 2 2H16a1.5 1.5 0 0 0 0-3h-1V3H5Zm0 0v1.5M8 6h4M8 9h4M8 12h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                        <span>{chapter.module.kind === "inscription" ? "完整铭文" : chapter.title} · 深入探索</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1.5 text-[10px]">
+                        {isOptionalCurrent ? "在读" : discovered.includes(`chapter:${chapter.id}`) ? "已读" : ""}<span aria-hidden="true" className="text-sm">↗</span>
+                      </span>
                     </button>;
                   })}
                 </div>
               );
             })}
-          </div>
+          </nav>
+          <p className="shrink-0 px-4 py-2.5 text-center text-[11px] text-rice-200/45">每一段相遇，都可以重新开始</p>
         </motion.div>
         </div>
       </>}

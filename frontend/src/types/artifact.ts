@@ -65,6 +65,8 @@ export interface StoryFollowUp {
   prompt: string;
   questions: string[];
   factIds: string[];
+  /** 网络不可用时也能完整回答当前疑点；只概括关联史料。 */
+  localAnswer?: string;
 }
 
 export interface Hotspot {
@@ -91,6 +93,8 @@ export interface Hotspot {
 }
 
 export interface ArtifactImages {
+  /** 对话头像，使用项目已有的文物素材。 */
+  avatar?: string;
   hero: string;
   detail: string[];
 }
@@ -145,12 +149,17 @@ export interface ObserveModuleData {
   lineDelay: number;
   /** 还没看完就要往下走时的提示 */
   notAllFoundHint: string;
-  /**
-   * 自我介绍视频（可选）：开场白念完后出现的「听我完整讲一遍」入口，
-   * 全屏浮层播放，播完/关闭回出口。src 是 public 下相对路径（不带开头斜杠），
-   * durationSec 只用于入口文案（45 秒）。
-   */
-  introVideo?: { src: string; poster?: string; durationSec: number };
+}
+
+/** 点击故事签直接展开预设文案；不调用 AI 聊天。 */
+export interface QaStoryItem {
+  id: string;
+  title?: string;
+  teaser?: string;
+  question: string;
+  answer: string;
+  factIds?: string[];
+  followUp?: StoryFollowUp;
 }
 
 /** 问答模块：一组「你想先听哪一个」 */
@@ -160,7 +169,9 @@ export interface QaModuleData {
   lineDelay: number;
   /** 问答列表上方的引导句 */
   prompt: string;
-  items: { id: string; question: string; answer: string; factIds?: string[]; followUp?: StoryFollowUp }[];
+  /** 共用的完整故事短片：选择问题后显示封面入口，不自动播放。 */
+  fullStoryVideo?: { src: string; poster?: string; durationSec: number };
+  items: QaStoryItem[];
 }
 
 /**
@@ -194,6 +205,10 @@ export interface RevealModuleData {
   };
   /** 关键字逐字浮现的特写。explainLines 一句一行；sideImage 可选实物配图 */
   focus?: {
+    /** false：保留关键字逐字揭示，省略后面的配图与长说明。 */
+    showPage?: boolean;
+    /** 精简揭示后的入口文案。 */
+    nextLabel?: string;
     characters: string[];
     explainLines: string[];
     factIds: string[];
@@ -217,6 +232,8 @@ export interface RevealModuleData {
 export interface InscriptionSection {
   id: string;
   followUp?: StoryFollowUp;
+  /** 仅在用户主动展开本段「考」时推荐。 */
+  debateFollowUp?: StoryFollowUp;
   /** 本节金文字符（按铭文顺序）；精摹字见 glyphs 数据模块 */
   characters: string[];
   /** 本节在铭文全文 fullText 中的字序范围 [start, end)（start 含 end 不含）——卷面点亮与镜头定位都靠它 */
@@ -272,6 +289,11 @@ export interface FlipCardData {
 
 export interface FlipModuleData {
   kind: "flip";
+  /** 正反面空白纸底；文字单独排版，横竖端共用同一套故事。 */
+  cardArtwork?: {
+    front: { mobile: string; desktop: string };
+    back: { mobile: string; desktop: string };
+  };
   openingLines: string[];
   lineDelay: number;
   cards: FlipCardData[];
@@ -412,6 +434,12 @@ export interface Artifact {
   timeline: TimelineEvent[];
   hotspots: Hotspot[];
   suggestedQuestions: string[];
+  /** 受控的证据探索入口；目标必须对应真实铭文段落及其史料。 */
+  evidenceGuide?: {
+    question: string;
+    answer: string;
+    targets: InscriptionEvidenceTarget[];
+  };
   /** 记忆卡上「一句话记住我」候选文案 */
   memoryLines: string[];
 
@@ -461,6 +489,13 @@ export interface Artifact {
    * 解析字符串等于替史料猜数字。没有确切年份的文物就不写，这一段留白比编数字好。
    */
   span?: { castYear: number; foundYear: number; note: string };
+  /** 探索历史页的装饰配图与四段总览；完整事件与史料仍引用 timeline。 */
+  historyEnding?: {
+    background: { desktop: string; mobile: string };
+    phases: { id: string; title: string; period: string; image: string; eventIds: string[]; chapterIds?: string[] }[];
+    appraisalImage: string;
+    tracingImage: string;
+  };
   /** 记忆卡洞察（有序匹配） */
   insights: MemoryInsight[];
   /** 一处都没探索时的兜底洞察 */
@@ -501,10 +536,30 @@ export interface ChatMessage {
   question?: string;
   answerMode?: "short" | "deep";
   factIds?: string[];
+  suggestedActions?: AIAction[];
   replySource?: "ai" | "local";
   turnContext?: ChatTurnContext;
   error?: boolean;
   createdAt: number;
+}
+
+export interface InscriptionEvidenceTarget {
+  sectionId: string;
+  chapterId: string;
+  label: string;
+  factIds: string[];
+  excerpt: string;
+  interpretation: string;
+  boundary: string;
+  answerTerms: string[];
+}
+
+/** 首版只允许定位已登记的铭文，不接受 DOM 选择器、网址或代码。 */
+export interface AIAction {
+  type: "FOCUS_INSCRIPTION";
+  artifactId: string;
+  targetId: string;
+  factIds: string[];
 }
 
 /** 当前剧情中实际看到的内容；只作上下文，不能替代 FACT 层。 */

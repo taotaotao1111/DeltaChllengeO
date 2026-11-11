@@ -7,8 +7,8 @@ import type { Artifact } from "../../types/artifact";
  * - verifiedFacts 中的内容基于公开、被广泛引用的考古与博物馆资料整理
  *  （宝鸡青铜器博物院公开资料 / 学界对何尊铭文的通行释读），
  *   用于本 Demo 的历史事实基线。
- * - images 字段目前指向项目内绘制的 **DEMO 插画（SVG）**，
- *   并非文物实拍照片，仅用于展示交互效果，后续应替换为经授权的实拍图 / 3D 模型。
+ * - images.hero/detail 保留项目内绘制的 DEMO 插画标识；
+ *   avatar 复用项目已有短片中的绿色何尊形象，用于标识对话中的文物角色。
  * - narration / story 等文学化文案属于 STORY 层，用于让年轻用户更容易理解，
  *   但均围绕 verifiedFacts 展开，不引入未被史料支持的情节、人物或对话。
  */
@@ -23,9 +23,24 @@ export const hezun: Artifact = {
     "一件西周早期的青铜礌器，内底铸有122字铭文，其中「宅兹中国」是目前所见「中国」一词最早的文字记录。",
   personality: ["沉稳", "温和", "克制", "见证者", "偶尔有一点幽默"],
   images: {
+    avatar: "images/hezun-intro-poster.jpg",
     // DEMO 数据：以下为项目内绘制的 SVG 插画路径标识，非文物实拍图
     hero: "demo:hezun-illustration",
     detail: ["demo:hezun-pattern", "demo:hezun-inscription", "demo:hezun-form"],
+  },
+  evidenceGuide: {
+    question: "你为什么这么重要？",
+    answer: "我的价值之一，在于铭文保存了研究西周早期历史的材料。其中‘宅兹中国’是目前所见‘中国’二字连用的最早文字记录之一。这里的‘中国’需要放在当时的语境里理解，不能直接等同于今天的国家概念。",
+    targets: [{
+      sectionId: "sec-climax",
+      chapterId: "read-my-words",
+      label: "宅兹中国",
+      factIds: ["fact-inscription-zhongguo", "fact-inscription-full"],
+      excerpt: "余其宅兹中国，自之乂民。",
+      interpretation: "按通行释读，‘宅兹中国’中的‘中国’指天下之中的都邑或区域。这句话处于铭文追述武王告天、从此治理民众的上下文中。",
+      boundary: "不能将现代国家概念直接套回西周用语；‘中国’的具体释义也存在学术讨论。本页字形是手工摹写示意，不能代替原器或拓片。",
+      answerTerms: ["宅兹中国", "中国"],
+    }],
   },
   /**
    * 3D 模型（见 utils/artifactEvaluator.ts：有 url + license 且环境支持 WebGL 才启用 3D，
@@ -113,6 +128,27 @@ export const hezun: Artifact = {
       tags: ["何", "铭文"],
     },
     {
+      id: "fact-qa-bronze-ritual",
+      content: "商周青铜礼器承载祭祀与礼仪功能，是贵族等级身份的标志。青铜制品也包括兵器、工具等，不能把青铜礼器的身份与礼制属性套用到全部青铜制品。",
+      source: "故宫博物院《青铜器》 https://www.dpm.org.cn/collection/bronzes/p/1.html · 中国国家博物馆《中国古代青铜器艺术》 https://www.chnmuseum.cn/zl/zlhg/201812/t20181220_32171_wap.shtml",
+      confidence: "verified",
+      tags: ["礼器", "礼制", "贵族", "使用资格"],
+    },
+    {
+      id: "fact-qa-cast-inscription",
+      content: "商代至春秋时期的青铜器铭文通常通过铸造形成。文字先经书写、制模或制范等环节，再随铜液浇铸成形；不能一概理解为器物铸好后再逐字刻入。此为一般工艺说明，不代表已经确认何尊每道工序或工匠身份。",
+      source: "安阳博物馆 郑嘉凤《商和西周青铜器铭文书法论析》（原载《殷都学刊》2004年3月） https://www.aybwg.org/wenwu2/226.html",
+      confidence: "verified",
+      tags: ["文字工艺", "铸铭", "范模", "浇铸"],
+    },
+    {
+      id: "fact-qa-empathy-reading",
+      content: "依据何尊铭文的训诫、赏赐与铸尊纪念内容，可以联想到今天人们对责任、认可和被记住的在意。这属于跨时代的情感联想，不是对古人真实心理的考古结论，也不能代表所有古人的心愿。",
+      source: "文学性解读，依据本档案 fact-inscription-content、fact-owner 所述铭文内容；情感类比属于合理推测。",
+      confidence: "inferred",
+      tags: ["心愿", "情感联想", "古今比较"],
+    },
+    {
       id: "fact-status",
       content:
         "何尊现藏于宝鸡青铜器博物院，属于国家文物局公布的「禁止出境展览文物」名录中的文物之一。",
@@ -192,7 +228,7 @@ export const hezun: Artifact = {
       id: "tl-buried",
       year: "西周之后",
       title: "沉睡",
-      narration: "之后发生了什么，我说不清楚。我只记得，很长很长一段时间里，没有光。",
+      narration: "之后发生了什么，我说不清楚。漫长的岁月里，有些故事已经无从考证。",
       factIds: ["fact-unknown-personal"],
       sceneMood: "burial",
     },
@@ -230,6 +266,7 @@ export const hezun: Artifact = {
         prompt: "纹饰看得见，它的含义也能确定吗？",
         questions: ["把纹饰说成“敬畏”，是史料记载还是一种解读？"],
         factIds: ["fact-form"],
+        localAnswer: "史料能确认何尊有兽面纹、蕉叶纹等纹饰；把它们说成‘敬畏’，是作品的文学化解读，并非铭文记载的确定含义。两者需要区分。",
       },
       type: "pattern",
       position: { x: 50, y: 46 },
@@ -417,16 +454,6 @@ export const hezun: Artifact = {
         ],
         lineDelay: 1500,
         notAllFoundHint: "我身上还有你没看过的地方——也可以直接听我讲下去。",
-        /**
-         * 自我介绍视频（用户提供的 3D 动画短片，第一人称讲述从出土到「中国」词源）。
-         * 横构图 1080p，44.7s，4.6MB。开场白念完后的「听我完整讲一遍」入口进入。
-         * 注意：视频内字幕是文学化表述，与 FACT 层口径的对齐见 /sources 的史料列表。
-         */
-        introVideo: {
-          src: "videos/hezun-intro.mp4",
-          poster: "images/hezun-intro-poster.jpg",
-          durationSec: 45,
-        },
       },
     },
     {
@@ -452,29 +479,50 @@ export const hezun: Artifact = {
         kind: "qa",
         openingLines: ["那时候，我还没有名字。", "工匠把青铜熔化。", "火光照亮了整个作坊。"],
         lineDelay: 1500,
-        prompt: "你想先听哪一个？",
+        prompt: "你想先听哪段往事？",
+        // 选择问题后在讲述下方呈现原版封面入口；短片由用户点播。
+        fullStoryVideo: { src: "videos/hezun-intro.mp4", poster: "images/hezun-intro-poster.jpg", durationSec: 45 },
         items: [
           {
             id: "why",
+            title: "我的诞生",
+            teaser: "回到西周初年的那一刻",
             factIds: ["fact-inscription-content"],
+            followUp: {
+              prompt: "有些重要的话，被留在了青铜里",
+              questions: ["为什么古人要把重要的事铸进青铜器？"],
+              factIds: ["fact-inscription-content", "fact-qa-bronze-ritual"],
+              localAnswer: "青铜礼器既参与礼仪，也承载纪念。把训诫、赏赐等重要事情铸成铭文，能使它们随器物被保存和传述。何尊的铭文就记录了成王对何的训诫与赏赐；不能把所有青铜器的作器缘由都归为同一种。",
+            },
             question: "为什么要铸造你？",
             answer:
               "青铜在那个年代，不会被随便浇铸。重要的赏赐、重要的嘱托，常常需要被长久地记住——于是它们被铸进青铜。我，就是因为有一段话需要被记住，才被铸了出来。",
           },
           {
             id: "who",
+            title: "我的使命",
+            teaser: "听听青铜礼器的故事",
             factIds: ["fact-owner"],
-            question: "谁使用你？",
+            followUp: {
+              prompt: "一件礼器，也藏着身份的线索",
+              questions: ["为什么青铜器不是人人都能使用？"],
+              factIds: ["fact-owner", "fact-qa-bronze-ritual"],
+              localAnswer: "这里主要说的是青铜礼器。它们与祭祀、礼仪和贵族身份相连，不能只当作普通生活用品来理解。青铜制品还有工具、兵器等，因此‘不是人人都能使用’不能笼统套在所有青铜器上。",
+            },
+            question: "谁曾使用过你？",
             answer:
               "铭文里提到一个名字——「何」。他是那时宗室里的一位年轻子弟。后来的人，就用这个名字称呼我：何尊。",
           },
           {
             id: "carve",
+            title: "无名的匠人",
+            teaser: "有些名字，历史没有留下",
             factIds: ["fact-inscription-basic", "fact-inscription-content"],
             followUp: {
-              prompt: "有些名字，历史没有留下……",
-              questions: ["既然工匠姓名没有记载，哪些内容仍能从铭文确认？"],
-              factIds: ["fact-inscription-basic", "fact-inscription-content", "fact-owner"],
+              prompt: "这些文字，也藏着古人的手艺",
+              questions: ["三千年前的文字，是怎样留在青铜器上的？"],
+              factIds: ["fact-inscription-basic", "fact-qa-cast-inscription"],
+              localAnswer: "何尊内底的122字铭文是铸成的。商周铸铭通常先在范模等环节制作文字，再随铜液浇铸成形，并非都在铜器铸好后逐字刻入。这里讲的是一般工艺，不能据此补出何尊工匠的姓名或全部操作细节。",
             },
             question: "你身上的字是谁刻的？",
             answer:
@@ -482,7 +530,15 @@ export const hezun: Artifact = {
           },
           {
             id: "mind",
+            title: "那个时代",
+            teaser: "从铭文里窥见古人的心愿",
             factIds: ["fact-inscription-zhongguo", "fact-inscription-content"],
+            followUp: {
+              prompt: "隔着三千年，也许仍有相似的牵挂",
+              questions: ["三千年前的人，和今天的我们有什么相似的心愿？"],
+              factIds: ["fact-inscription-content", "fact-owner", "fact-qa-empathy-reading"],
+              localAnswer: "从铭文里的训诫、赏赐和纪念，可以联想到今天人们对承担责任、得到认可和被记住的在意。这是跨时代的情感联想，不代表我们知道每个古人的真实心事，也不能说所有人的心愿都相同。",
+            },
             question: "那个时代的人在想什么？",
             answer:
               "从我身上的话来看，那时的人，正在思考「天下的中心应该在哪里」这样的问题——那关系到如何治理，如何让远方也归于秩序。「宅兹中国」，就是那个思考留下的痕迹。",
@@ -510,9 +566,10 @@ export const hezun: Artifact = {
       module: {
         kind: "reveal",
         followUp: {
-          prompt: "读懂这几个字，也要读懂证据的边界。",
-          questions: ["“目前所见最早”，为什么还要加上这个限定？"],
+          prompt: "AI · 读懂史料的边界",
+          questions: ["为什么不能直接说，这是最早的“中国”？"],
           factIds: ["fact-inscription-zhongguo"],
+          localAnswer: "‘目前所见’限定的是已有材料能够证明的范围。何尊铭文是目前所见‘中国’二字连用的最早文字记录之一；这不能直接证明它是这个词第一次被使用，也不能把当时的含义等同于今天。",
         },
         leadInLines: ["你还记得，我说过我身上刻着字吗？", "现在，我想让你看看。"],
         lineDelay: 1500,
@@ -528,9 +585,11 @@ export const hezun: Artifact = {
           beforeSrc: "images/hezun-derust-before.jpg",
           afterSrc: "images/hezun-derust-after.jpg",
           caption: "前后对比为场景示意图，非何尊实物照片 · 除锈史实见资料来源页",
-          nextLabel: "看清这几个字 →",
+          nextLabel: "看看锈下的字 →",
         },
         focus: {
+          showPage: false,
+          nextLabel: "猜猜「中国」的意思 →",
           characters: ["宅", "兹", "中", "国"],
           explainLines: [
             "这是何尊铭文中的一句，铭文全文共122字（含重文）。",
@@ -627,9 +686,16 @@ export const hezun: Artifact = {
           {
             id: "sec-opening",
             followUp: {
-              prompt: "同一个字，学者也可能读出不同的意思。",
-              questions: ["有些字的释读有分歧，还能怎样理解这段铭文？"],
-              factIds: ["fact-inscription-debate", "fact-inscription-full"],
+              prompt: "迁居成周，为什么值得被记下来？",
+              questions: ["为什么周王迁居成周，是一件重要的事？"],
+              factIds: ["fact-inscription-full", "fact-inscription-content", "fact-inscription-basic"],
+              localAnswer: "铭文把迁居成周，与武王在天下中心营建都邑、治理民众的告天之辞联系起来，又记录成王对何的训诫与赏赐。这些叙述让迁居成周成为研究西周早期历史的一条实物线索，不只是个人‘搬家’的故事。",
+            },
+            debateFollowUp: {
+              prompt: "把刚才的释读说明，放回历史背景里看。",
+              questions: ["这段铭文是如何确定历史背景的？"],
+              factIds: ["fact-date", "fact-inscription-full", "fact-inscription-debate"],
+              localAnswer: "可以把迁居成周、追述武王与成王训诫何等叙述，与‘唯王五祀’的纪年一起对照。档案采用西周早期、与成王时期史事相印证的通行判断；开篇个别字仍有异说，不能把这种背景判断当作所有字都已定论。",
             },
             characters: ["唯", "王", "成", "周", "武", "天"],
             range: [0, 16],
@@ -647,7 +713,7 @@ export const hezun: Artifact = {
             id: "sec-admonition",
             characters: ["诰", "何"],
             range: [16, 30],
-            transcript: "四月丙戌这一天，王在京室训诫宗室子弟，说——",
+            transcript: "四月丙戌这一天，王在京室训诫宗室子弟。",
             sceneNote: "训诰场景",
             narrationLines: [
               "被叫到跟前的年轻人里，有一个叫「何」。",
@@ -657,6 +723,12 @@ export const hezun: Artifact = {
           },
           {
             id: "sec-ancestors",
+            debateFollowUp: {
+              prompt: "一个字的异说，会影响整段先人事迹吗？",
+              questions: ["‘逑’字有不同释读，还能怎样理解何父亲的功绩？"],
+              factIds: ["fact-inscription-full", "fact-inscription-debate"],
+              localAnswer: "通行释读认为，铭文追述何的父亲辅佐文王的功绩，这段往事处在成王训诫宗室子弟何的叙述中。局部释字的异说需单独标明；本档案没有列举各家的具体论证，不能据此判断哪一种异说必然正确。",
+            },
             characters: ["王", "武"],
             range: [30, 47],
             transcript: "王先追述了何的父亲辅佐文王的功绩，又说文王承受了上天的大命。",
@@ -670,6 +742,12 @@ export const hezun: Artifact = {
           },
           {
             id: "sec-climax",
+            debateFollowUp: {
+              prompt: "刚才的‘中国’，要放在当时的语境里读。",
+              questions: ["这里的‘中国’，和今天的‘中国’有什么不同？"],
+              factIds: ["fact-inscription-zhongguo", "fact-inscription-full"],
+              localAnswer: "按通行释读，这里的‘中国’指‘天下之中的都邑或区域’，处于武王告天、从此治理民众的叙述中。它与今天‘中国’的含义并不完全相同，不能直接把现代国家概念套回这句话。",
+            },
             characters: ["武", "王", "唯", "宅", "兹", "中", "国"],
             range: [47, 71],
             transcript: "武王攻克大邑商之后，向上天祷告说：我要定居在天下之中，从这里治理民众。",
@@ -686,6 +764,12 @@ export const hezun: Artifact = {
           },
           {
             id: "sec-exhort",
+            debateFollowUp: {
+              prompt: "断句有分歧时，先分清通行大意与局部争议。",
+              questions: ["这段断句有分歧，还能确认王在勉励何什么吗？"],
+              factIds: ["fact-inscription-content", "fact-inscription-debate", "fact-inscription-full"],
+              localAnswer: "本作品采用的通行大意是：成王告诫宗室子弟何，要效法先人、恪守职责。可以先据此理解训诫的主题，同时保留个别字句的不同释读；这不等于每处断句都已经没有争议。",
+            },
             characters: ["王", "天"],
             range: [71, 103],
             transcript: "王勉励何：要效法你的父亲，他有功于天；要恭敬地对待你的职守。",
@@ -699,6 +783,12 @@ export const hezun: Artifact = {
           },
           {
             id: "sec-reward",
+            debateFollowUp: {
+              prompt: "有些字看不清，仍有能从铭文确认的事。",
+              questions: ["作器对象的字有损泐，哪些赏赐与作器信息仍能确认？"],
+              factIds: ["fact-inscription-full", "fact-inscription-content", "fact-inscription-debate"],
+              localAnswer: "按通行释读，成王训诰后赏赐何贝三十朋，何因此铸尊纪念，铭文纪年为‘唯王五祀’。作器对象称谓仍有不同释读，不能据这些信息补出缺失的字或具体身份。",
+            },
             characters: ["何", "贝", "朋", "王", "祀"],
             range: [103, 122],
             transcript: "王结束训诰，赏赐何贝三十朋。何铸了这件尊，用来纪念——纪年为「唯王五祀」。",
@@ -735,10 +825,14 @@ export const hezun: Artifact = {
       },
       module: {
         kind: "flip",
+        cardArtwork: {
+          front: { mobile: "images/history/archive-card-front-mobile.webp", desktop: "images/history/archive-card-front-desktop.webp" },
+          back: { mobile: "images/history/archive-card-back-mobile.webp", desktop: "images/history/archive-card-back-desktop.webp" },
+        },
         openingLines: [
           "在读给你听之前，其实——我差点没能等到 1975 年。",
           "1963 年之后的这十二年，是我离熔炉最近的日子。",
-          "每张卡翻过来，都是核实过的事实。你自己看。",
+          "每张卡翻过来，都是核实过的事实。",
         ],
         lineDelay: 1500,
         /**
@@ -801,9 +895,10 @@ export const hezun: Artifact = {
           {
             id: "card-1975",
             followUp: {
-              prompt: "被找到，与被读懂，是两次相遇。",
-              questions: ["出土、入藏和读出铭文，为什么是三个不同的时间点？"],
+              prompt: "三次相遇",
+              questions: ["为什么发现和读懂我，相隔了多年？"],
               factIds: ["fact-scrap-unearthed", "fact-scrap-sale", "fact-scrap-1975"],
+              localAnswer: "这三个时间点对应不同的事：1963年，何尊被挖出后先藏于村民家中；1965年，经废品回收门市部转入博物馆收藏；1975年，清除锈垢才发现内底铭文。找到器物、妥善收藏和读懂文字，并非同时完成。",
             },
             front: "一九七五年，我入选出国展览的名单。\n出发前，有人把我身上的锈，一点一点清掉。\n然后——那个人愣住了。",
             back: {
@@ -945,6 +1040,18 @@ export const hezun: Artifact = {
       },
     },
   ],
+
+  historyEnding: {
+    background: { desktop: "images/history/background-desktop.webp", mobile: "images/history/background-mobile.webp" },
+    phases: [
+      { id: "casting", title: "被铸造", period: "约公元前11世纪", image: "images/history/casting.webp", eventIds: ["tl-cast", "tl-inscribed"], chapterIds: ["who-am-i", "why-cast", "read-my-words"] },
+      { id: "quiet", title: "沉寂", period: "流转经过尚待考证", image: "images/history/quiet-years.webp", eventIds: ["tl-buried"] },
+      { id: "rediscovery", title: "重逢", period: "1963年重新出土", image: "images/history/rediscovery.webp", eventIds: ["tl-found", "tl-museum"], chapterIds: ["my-secret", "almost-gone"] },
+      { id: "today", title: "今天", period: "走进更多人的生活", image: "images/history/museum-today.webp", eventIds: ["tl-today"] },
+    ],
+    appraisalImage: "images/history/appraisal.webp",
+    tracingImage: "images/history/inscription-tracing.webp",
+  },
 
   span: {
     /**

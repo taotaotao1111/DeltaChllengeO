@@ -7,7 +7,7 @@
  *   （chatMessages、artifactSnapshot、tracedGlyphs 的 PNG dataURL——
  *   体积大且语义是「那晚的纪念」，第二天重新生成一次也成立）。
  * - 写入点极克制：setStage / setChapter / markDiscovered(chapter:) /
- *   markAppraiseDone / 描红完成——都是「进度推进」语义的自然钩子。
+ *   markAppraiseDone / 描红完成 / 故事视频播完——都是「进度推进」语义的自然钩子。
  * - 解析失败/字段缺失一律视为无进度，静默回全新流程（绝不因坏数据卡开场）。
  */
 

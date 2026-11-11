@@ -1,0 +1,36 @@
+.qa-story-page { position: relative; height: 100dvh; width: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.qa-story-frame { position: relative; display: flex; min-height: 100%; flex-direction: column; align-items: center; padding: calc(9rem + var(--safe-top)) 24px calc(5rem + var(--safe-bottom)); }
+.qa-story-content { position: relative; z-index: 1; width: 100%; max-width: 500px; margin-block: auto; }
+.qa-story-heading { margin-bottom: 12px; text-align: center; }
+.qa-story-heading h2 { font-family: "Noto Serif SC", "Songti SC", serif; font-size: clamp(20px, 4.6vw, 26px); line-height: 1.5; color: #eee0c6; outline: none; }
+.qa-story-heading p { margin-top: 4px; color: #ae9e83; font-size: 12px; line-height: 1.6; }
+.qa-story-signs { position: relative; display: flex; flex-direction: column; }
+.qa-story-sign { position: relative; display: flex; width: 100%; min-height: 86px; align-items: center; gap: 14px; padding: 16px 4px; border: 0; border-bottom: 1px solid #ae915e35; border-radius: 0; background: transparent; text-align: left; -webkit-tap-highlight-color: transparent; }
+.qa-story-sign:last-child { border-bottom-color: transparent; }
+.qa-story-sign__number { flex-shrink: 0; width: 18px; color: #a68b56; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 15px; }
+.qa-story-sign__copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 4px; }
+.qa-story-sign__copy strong { color: #e5d8bd; font-size: 16px; font-weight: 600; line-height: 1.5; transition: color .3s; }
+.qa-story-sign__copy > small { color: #a3947a; font-size: 12px; line-height: 1.6; }
+.qa-story-sign__end { display: flex; flex-shrink: 0; flex-direction: column; align-items: center; gap: 3px; color: #bd9b60; font-size: 16px; }
+.qa-story-sign__end > small { font-size: 9px; }
+.qa-story-detail { padding-inline: 4px; }
+.qa-story-detail__meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #ad925f; font-size: 12px; line-height: 1.6; }
+.qa-story-detail__meta > :last-child { flex-shrink: 0; color: #97866d; font-variant-numeric: tabular-nums; }
+.qa-story-detail__heading h2 { margin-top: 18px; color: #eee0c6; font-family: "Noto Serif SC", "Songti SC", serif; font-size: clamp(22px, 5vw, 28px); line-height: 1.5; outline: none; }
+.qa-story-answer { margin-top: 24px; }
+.qa-story-answer__speaker { margin-bottom: 9px; color: #c2a474; font-size: 12px; }
+.qa-story-answer__text { color: #e5d6bd; font-family: "Noto Serif SC", "Songti SC", serif; font-size: 16px; line-height: 1.9; }
+.qa-story-video { margin-top: 22px; }
+.qa-story-video--watched { display: flex; min-height: 44px; width: 100%; align-items: center; gap: 9px; color: #bd9b60; font-size: 13px; text-align: left; }
+.qa-story-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #ae915e35; }
+.qa-story-actions > button { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; color: #b8a587; font-size: 13px; }
+.qa-story-actions > .qa-story-actions__continue { flex-shrink: 0; margin-left: auto; padding: 10px 20px; border-radius: 999px; background: #79562466; color: #e0bd7c; }
+.qa-story-content button:focus-visible { outline: 2px solid #edca88; outline-offset: 4px; }
+@media (min-width: 600px) {
+  .qa-story-sign { min-height: 94px; padding: 18px 4px; gap: 16px; }
+  .qa-story-sign__copy strong { font-size: 18px; }
+  .qa-story-sign__copy > small { font-size: 13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa-story-sign__copy strong { transition: none; }
+}

@@ -19,6 +19,7 @@ export interface CardData {
   insightLabel?: string;
   exploredTitles?: string[];
   completedTitles?: string[];
+  evidenceTitles?: string[];
   storyUnit?: string;
   /** 问题段落标题；没有提问时整段不展示。 */
   questionLabel: string;
@@ -161,6 +162,7 @@ function measure(ctx: CanvasRenderingContext2D, data: CardData): { blocks: Block
   push(data.insightLabel ?? "这次记住的一点", data.insight, 26, SERIF, COLOR_GILT, 64);
   if (data.exploredTitles?.length) push("我看过的细节", data.exploredTitles.join(" · "), 24, SERIF, "rgba(242,234,217,0.78)", 52);
   if (data.completedTitles?.length) push("我读完的故事", data.completedTitles.join(" · "), 24, SERIF, "rgba(242,234,217,0.78)", 52);
+  if (data.evidenceTitles?.length) push("我查看过的铭文证据", data.evidenceTitles.join(" · "), 24, SERIF, "rgba(242,234,217,0.78)", 52);
   if (data.myQuestion) push(
     data.questionLabel,
     data.myQuestion,

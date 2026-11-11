@@ -1,5 +1,6 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { HEZUN_GLYPHS, hasGlyph } from "../../data/artifacts/hezun-glyphs";
+import "./GlyphChar.css";
 
 interface GlyphCharProps {
   char: string;
@@ -18,6 +19,8 @@ interface GlyphCharProps {
   grow?: boolean;
   /** grow 模式下额外延迟（ms）：父层做段内逐字错峰时用 */
   growDelay?: number;
+  /** 描金完成后呈现浮雕层次；正交投影，不改变字的大小。 */
+  relief?: boolean;
 }
 
 /**
@@ -36,6 +39,7 @@ export default function GlyphChar({
   style,
   grow = false,
   growDelay = 0,
+  relief = false,
 }: GlyphCharProps) {
   const glyph = hasGlyph(char) ? HEZUN_GLYPHS[char] : null;
   const pathsRef = useRef<(SVGPathElement | null)[]>([]);
@@ -43,7 +47,7 @@ export default function GlyphChar({
   // 笔画生长：先量每笔长度 → dash 满偏移（隐藏）→ 下一帧把 offset 拉回 0
   // 触发 CSS transition（挂载后一帧再改值，浏览器才播动画）。
   useEffect(() => {
-    if (!glyph || !grow) return;
+    if (!glyph || !grow || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const paths = pathsRef.current.filter((p): p is SVGPathElement => !!p);
     paths.forEach((p) => {
       const len = p.getTotalLength();
@@ -51,24 +55,33 @@ export default function GlyphChar({
       p.style.strokeDashoffset = `${len}`;
       p.style.transition = "none";
     });
+    let drawRaf: number | undefined;
     const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
+      drawRaf = requestAnimationFrame(() => {
         paths.forEach((p, i) => {
           p.style.transition = `stroke-dashoffset 0.32s ease-out ${growDelay + i * 130}ms`;
           p.style.strokeDashoffset = "0";
         });
       });
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      if (drawRaf !== undefined) cancelAnimationFrame(drawRaf);
+    };
   }, [glyph, grow, growDelay]);
 
   if (!glyph) return null;
+  // 等最后一笔描完再浮起，额外留两帧给笔画过渡的起始帧。
+  const reliefDelay = grow ? growDelay + Math.max(0, glyph.paths.length - 1) * 130 + 320 + 64 : 0;
+  const glyphStyle = relief
+    ? { ...style, "--glyph-relief-delay": `${reliefDelay}ms` } as CSSProperties
+    : style;
 
   return (
     <svg
       viewBox={glyph.viewBox}
-      className={className}
-      style={style}
+      className={`${className}${relief ? " glyph-char--relief" : ""}`}
+      style={glyphStyle}
       role="img"
       aria-label={`金文「${char}」摹写`}
     >

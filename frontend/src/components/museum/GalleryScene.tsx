@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import InkBackground from "../shared/InkBackground";
 import DustParticles from "../shared/DustParticles";
 import SpeechReveal from "../shared/SpeechReveal";
-import FogWipeReveal from "../shared/FogWipeReveal";
+import GlassFogReveal from "../shared/GlassFogReveal";
 import GuessChoice from "../shared/GuessChoice";
 import ArtifactIllustration from "../artifact/ArtifactIllustration";
 import ArtifactModelGate from "../artifact/ArtifactModelGate";
@@ -12,6 +12,7 @@ import { evaluateViewerMode } from "../../utils/artifactEvaluator";
 import { startModelFetch } from "../artifact/modelSource";
 import { useGameStore } from "../../store/gameStore";
 import ReadingInvitation from "./ReadingInvitation";
+import type { FogSceneSnapshot } from "../../utils/fogMask";
 
 type View = "grid" | "reveal";
 
@@ -32,6 +33,7 @@ export default function GalleryScene() {
   const [toast, setToast] = useState<string | null>(null);
   const [showGuess, setShowGuess] = useState(false);
   const [wiped, setWiped] = useState(false);
+  const [fogSnapshot, setFogSnapshot] = useState<FogSceneSnapshot | null>(null);
   const [showInvitation, setShowInvitation] = useState(false);
   /** 被选中进入揭幕的文物 id */
   const [pickedId, setPickedId] = useState<string | null>(null);
@@ -65,6 +67,7 @@ export default function GalleryScene() {
       return;
     }
     setWiped(false);
+    setFogSnapshot(null);
     setShowGuess(false);
     setPickedId(item.id);
     selectArtifact(item.id);
@@ -85,12 +88,12 @@ export default function GalleryScene() {
   const pickedIllustration = picked ? (
     <ArtifactIllustration
       id={picked.illustrationId}
-      className="h-[30vh] max-h-[260px] w-auto animate-breathe drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
+      className="h-full w-full object-contain drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
     />
   ) : null;
 
   return (
-    <div className="relative h-dvh w-full overflow-hidden">
+    <div className={`relative ${view === "reveal" ? "h-svh" : "h-dvh"} w-full overflow-hidden`}>
       <InkBackground glow={litIn ? 0.5 : 0} />
       <DustParticles count={12} />
       <AnimatePresence>
@@ -216,82 +219,89 @@ export default function GalleryScene() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.9 }}
           >
-            <FogWipeReveal
+            <GlassFogReveal
               className="flex h-full w-full flex-col items-center justify-center px-6"
               onRevealed={() => setWiped(true)}
-              hint="在雾气上划一划，看看是谁"
-              skipLabel="直接看看"
+              hint="轻轻拂去雾气，看看谁在等你。"
+              skipLabel="跳过"
+              snapshot={fogSnapshot}
             >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1 }}
-                className="mb-8"
-              >
-                {pickedViewerMode === "3d" && picked.model ? (
-                  <ArtifactModelGate
-                    model={picked.model}
-                    fallback={pickedIllustration}
-                    placeholderClassName="h-[30vh] max-h-[260px] w-[30vh] max-w-[260px]"
-                  >
-                    {(src) => (
-                      <ArtifactModelDisplay
-                        model={picked.model!}
-                        src={src}
-                        className="h-[30vh] max-h-[260px] w-[30vh] max-w-[260px] animate-breathe drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
-                      />
-                    )}
-                  </ArtifactModelGate>
-                ) : (
-                  pickedIllustration
-                )}
-              </motion.div>
+              <div className="gallery-reveal-artifact-position">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 1 }}
+                  className="gallery-reveal-artifact"
+                >
+                  {pickedViewerMode === "3d" && picked.model ? (
+                    <ArtifactModelGate
+                      model={picked.model}
+                      fallback={pickedIllustration}
+                      placeholderClassName="h-full w-full"
+                    >
+                      {(src) => (
+                        <ArtifactModelDisplay
+                          model={picked.model!}
+                          src={src}
+                          autoRotateSpeed={wiped ? 0.12 : 0}
+                          onSnapshotReady={wiped ? undefined : setFogSnapshot}
+                          className="h-full w-full drop-shadow-[0_20px_50px_rgba(0,0,0,0.6)]"
+                        />
+                      )}
+                    </ArtifactModelGate>
+                  ) : (
+                    pickedIllustration
+                  )}
+                </motion.div>
+              </div>
 
-              {wiped && !greetingDone && greeting && (
-                <SpeechReveal
-                  lines={greeting.greetingLines}
-                  lineDelay={greeting.lineDelay}
-                  onComplete={() => setShowGuess(true)}
-                  className="max-w-lg text-center"
-                  textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-2xl"
-                />
-              )}
-
-              <AnimatePresence>
-                {wiped && greetingDone && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="w-full max-w-md"
-                  >
-                    {greeting?.guess && !picked.narrative ? (
-                      <GuessChoice
-                        question={greeting.guess.question}
-                        options={greeting.guess.options}
-                        onDone={enterChapters}
-                        continueLabel="听它讲下去 →"
-                      />
-                    ) : (
-                      /* 没有设计竞猜的文物：擦完雾、听完自我介绍就直接进正文 */
-                      <div className="flex flex-col items-center justify-center gap-4">
-                        {picked.narrative && (
-                          <div className="text-center">
-                            <p className="text-xs tracking-wide text-gilt-light/80">相遇 · 发现 · 重逢</p>
-                            <p className="mt-2 text-xs text-rice-200/55">{picked.narrative.durationLabel} · 完整铭文可自由深入 · 支持续读</p>
-                          </div>
-                        )}
-                        <button
-                          onClick={enterChapters}
-                          className="rounded-full bg-gilt/20 px-6 py-2.5 text-sm tracking-wide text-gilt-light transition hover:bg-gilt/30"
-                        >
-                          {picked.narrative ? "开始这次相遇 →" : "听它讲下去 →"}
-                        </button>
-                      </div>
-                    )}
-                  </motion.div>
+              <div className="gallery-reveal-caption">
+                {wiped && !greetingDone && greeting && (
+                  <SpeechReveal
+                    lines={greeting.greetingLines}
+                    lineDelay={greeting.lineDelay}
+                    onComplete={() => setShowGuess(true)}
+                    className="max-w-lg text-center"
+                    textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-2xl"
+                  />
                 )}
-              </AnimatePresence>
-            </FogWipeReveal>
+
+                <AnimatePresence>
+                  {wiped && greetingDone && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="w-full max-w-md"
+                    >
+                      {greeting?.guess && !picked.narrative ? (
+                        <GuessChoice
+                          question={greeting.guess.question}
+                          options={greeting.guess.options}
+                          onDone={enterChapters}
+                          continueLabel="听它讲下去 →"
+                        />
+                      ) : (
+                        /* 没有设计竞猜的文物：擦完雾、听完自我介绍就直接进正文 */
+                        <div className="flex flex-col items-center justify-center gap-4">
+                          {picked.narrative && (
+                            <div className="text-center">
+                              <p className="text-xs tracking-wide text-gilt-light/80">相遇 · 发现 · 重逢</p>
+                              <p className="mt-2 text-xs text-rice-200/55">{picked.narrative.durationLabel} · 完整铭文可自由深入 · 支持续读</p>
+                            </div>
+                          )}
+                          <button
+                            onClick={enterChapters}
+                            className="rounded-full bg-gilt/20 px-6 py-2.5 text-sm tracking-wide text-gilt-light transition hover:bg-gilt/30"
+                          >
+                            {picked.narrative ? "开始这次相遇 →" : "听它讲下去 →"}
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </GlassFogReveal>
           </motion.div>
         )}
       </AnimatePresence>

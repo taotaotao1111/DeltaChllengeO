@@ -1,0 +1,63 @@
+.history-timeline { --timeline-gap: 8px; position: relative; width: 100%; max-width: 820px; margin-inline: auto; }
+.history-timeline__gallery { position: relative; }
+.history-timeline__nodes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(140px, 42%); gap: var(--timeline-gap); padding: 10px 2px 8px; align-items: start; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; }
+.history-timeline__nodes::-webkit-scrollbar { display: none; }
+.history-timeline-card { scroll-snap-align: center; }
+.history-timeline-card { --timeline-lift: 0px; position: relative; display: flex; min-width: 0; flex-direction: column; align-items: stretch; margin-top: calc(-1 * var(--timeline-lift)); padding: 0 0 10px; border: 1px solid #ad803c45; border-radius: 12px; background: linear-gradient(180deg, #30231522, #1a130b88); color: #d4b279; text-align: center; -webkit-tap-highlight-color: transparent; transition: border-color .3s, background .3s, margin-top .35s, box-shadow .3s; }
+.history-timeline-card__image { position: relative; display: block; box-sizing: content-box; width: 100%; aspect-ratio: 1.55; padding-top: var(--timeline-lift); overflow: hidden; border-radius: 11px 11px 8px 8px; transition: padding-top .35s; }
+.history-timeline-card img { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover; object-position: center; pointer-events: none; transition: transform .4s; }
+.history-timeline-card.is-focused { --timeline-lift: 6px; border-color: #e5bb73; background: linear-gradient(180deg, #30231522, #37261399); color: #f0cf8f; box-shadow: 0 0 14px #d6a34b24; }
+.history-timeline-card.is-focused img { transform: scale(1.025); }
+.history-timeline-nav { display: none; }
+.history-timeline-card__thread { position: relative; display: block; flex-shrink: 0; height: 20px; }
+.history-timeline-link { position: absolute; z-index: 1; left: 50%; top: 0; width: calc(100% + var(--timeline-gap) + 2px); height: 100%; overflow: visible; pointer-events: none; }
+.history-timeline-link path { fill: none; stroke: #80613980; stroke-width: 1.2; transition: stroke .3s, filter .3s; }
+.history-timeline-link path.is-lit { stroke: #efc675; filter: drop-shadow(0 0 2px #e8b35b70); }
+.history-timeline-card__thread > i { position: absolute; z-index: 2; top: 6px; left: calc(50% - 4px); width: 8px; height: 8px; border: 1px solid #967444; border-radius: 50%; background: #735731; transition: background .3s, border-color .3s, box-shadow .3s; }
+.history-timeline-card.is-visited .history-timeline-card__thread > i { border-color: #ffe2a1; background: #f0c778; box-shadow: 0 0 9px #edbd6b65; }
+.history-timeline-card__thread::after { content: ""; position: absolute; z-index: 2; top: 8px; right: calc(var(--timeline-gap) / -2 - 3px); width: 5px; height: 5px; border-radius: 50%; background: #806139; transition: background .3s, box-shadow .3s; }
+.history-timeline-card__thread.is-linked::after { background: #dcb166; box-shadow: 0 0 5px #edbd6b40; }
+.history-timeline-card:last-child .history-timeline-card__thread::after { display: none; }
+.history-timeline-card strong { padding-inline: 2px; font-family: "Noto Serif SC", "Songti SC", serif; font-size: clamp(14px, 3.5vw, 20px); font-weight: 500; line-height: 1.5; letter-spacing: .04em; }
+.history-timeline-card small { display: block; min-height: 3.3em; margin-top: 3px; padding-inline: 6px; font-size: 11px; line-height: 1.65; color: #bbaa8c; text-wrap: pretty; }
+.history-timeline-card:focus-visible { outline: 2px solid #edca88; outline-offset: 3px; }
+.history-timeline-hint { margin-top: 10px; color: #ae987799; font-size: 9px; line-height: 1.8; text-align: center; letter-spacing: .04em; }
+.history-timeline-hint span { margin: 0 4px; }
+@media (min-width: 600px) {
+  .history-timeline { --timeline-gap: 18px; }
+  .history-timeline__nodes { grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow: visible; }
+  .history-timeline-hint__mobile { display: none; }
+  .history-timeline-card { padding-bottom: 14px; border-radius: 16px; }
+  .history-timeline-card__image { border-radius: 15px 15px 10px 10px; }
+  .history-timeline-card__thread { height: 26px; }
+  .history-timeline-card__thread > i { top: 8px; left: calc(50% - 5px); width: 10px; height: 10px; }
+  .history-timeline-card__thread::after { top: 10px; right: calc(var(--timeline-gap) / -2 - 3px); width: 6px; height: 6px; }
+  .history-timeline-card small { margin-top: 4px; }
+  .history-timeline-hint { font-size: 11px; }
+}
+@media (min-width: 1024px) {
+  .history-timeline { --timeline-gap: 14px; max-width: none; }
+  .history-timeline__nodes { padding-top: 14px; }
+  .history-timeline-card { padding-bottom: 10px; }
+  .history-timeline-card__image { aspect-ratio: 1.65; }
+  .history-timeline-card.is-focused { --timeline-lift: 8px; box-shadow: 0 0 22px #e2ab4930, inset 0 -14px 28px #ae793c20; }
+  .history-timeline-card strong { font-size: 23px; }
+  .history-timeline-card small { min-height: 1.65em; margin-top: 5px; padding-inline: 6px; font-size: 12px; }
+  .history-timeline-nav { position: absolute; top: 46%; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid #b68b4355; border-radius: 50%; background: #20170dcc; color: #e4c796; }
+  .history-timeline-nav svg { width: 18px; height: 18px; }
+  .history-timeline-nav--previous { left: -38px; }
+  .history-timeline-nav--next { right: -38px; }
+  .history-timeline-nav:disabled { opacity: .3; cursor: default; }
+  .history-timeline-hint { font-size: 10px; margin-top: 12px; }
+}
+@media (min-width: 1024px) and (max-height: 800px) {
+  .history-timeline-card__image { aspect-ratio: 1.9; }
+  .history-timeline-card strong { font-size: 21px; }
+  .history-timeline-card small { font-size: 11px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .history-timeline-card:hover { border-color: #d4ab66; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .history-timeline-card, .history-timeline-card__image, .history-timeline-card img, .history-timeline-link path, .history-timeline-card__thread > i, .history-timeline-card__thread::after { transition: none; }
+}

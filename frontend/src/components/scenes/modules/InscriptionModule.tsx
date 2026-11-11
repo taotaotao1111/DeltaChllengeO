@@ -9,6 +9,8 @@ import type { Artifact, InscriptionModuleData, InscriptionSection } from "../../
 import { useStoryMoment } from "../../../utils/useStoryMoment";
 import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
 import { useStoryTimers } from "../../../utils/useStoryTimers";
+import { getInscriptionFollowUp } from "../../../utils/storyQuestions";
+import { getInscriptionEvidenceRange, resolveEvidenceTarget } from "../../../utils/evidenceActions";
 
 type Phase = "lead-in" | "scroll" | "climax" | "closing";
 type View = "overview" | "section";
@@ -16,7 +18,7 @@ type View = "overview" | "section";
 /** climax 四字多久没全部点亮就自动点亮剩余的（无障碍兜底，同 FogWipeReveal skip 纪律） */
 const CLIMAX_AUTO_LIGHT_MS = 8000;
 const CLIMAX_CHARS = ["宅", "兹", "中", "国"];
-/** 进入一段后讲述自动开始的延迟 */
+/** 镜头吸附后释义可供追问的延迟 */
 const NARRATION_DELAY_MS = 700;
 
 /** —— 卷面几何（固定像素，镜头数学依赖它，别改成响应式单位）—— */
@@ -46,42 +48,47 @@ const PAD_OV = 56;
  * 与第三章 RustReveal「不画清晰字形」的关系：那条底线的语境是除锈场景——
  * 「发现有字」与「看清读懂」必须分成两步，且不伪造文物图像。本章是
  * 除锈之后的「读铭文」场景，摹写字形正是本章的目的；字形为手工 SVG
- * 摹写（非拓片），footnote 常驻声明。两处不矛盾，别合并。
+ * 摹写（非拓片），footnote 通过 ⓘ 查看。两处不矛盾，别合并。
  *
  * 卷面一次性铺开全部 122 字（fullText，右起竖排；精摹字走 GlyphChar，
  * 未摹字以示意字位呈现——不伪装）。交互是「镜头」：
  * - overview：整卷缩到屏宽铺满，给「一整卷」的量感；
  * - section：镜头推近到当前段（range），该段字依次点亮；横滑整卷跟手平移、
- *   松手吸附最近的段（沿卷走），按钮「下一段」同效；
- * - 末段讲完拉回全览（走过的段保持点亮），接 closing。
+ *   松手吸附最近的段（沿卷走），分段导航点条同效；
+ * - 独白默认收起，用户自行展开；末段通过按钮结束阅读，接 closing。
  * 历史包袱：连续拖拽展开（v1）被用户否掉——动作成本高反馈弱；横滑切段+
  * 每段单独一块纸（v2）也被否——用户要整卷全展示。别回退。
  *
  * 文字分层（可读性硬要求）：释文 = 史料译文，整段全亮常驻；讲述 = 何尊
- * 第一人称，SpeechReveal 逐句；sceneNote 做标签不混正文；debateNote 弱化
- * 为讲述下方小字。状态全部留在本组件内部（不上提 ChapterHost）。
+ * 第一人称，SpeechReveal 逐句；sceneNote 做标签不混正文；debateNote 通过
+ * 「考」查看。状态全部留在本组件内部（不上提 ChapterHost）。
  */
 export default function InscriptionModule({
   artifact,
   data,
   onNext,
+  focusSectionId,
 }: {
   artifact: Artifact;
   data: InscriptionModuleData;
   onNext: () => void;
+  /** 证据层直接定位真实选段；不启动主线、不发布全局剧情上下文。 */
+  focusSectionId?: string;
 }) {
   const markDiscovered = useGameStore((s) => s.markDiscovered);
 
   const sections = data.sections;
   const fullText = data.fullText;
-  const [phase, setPhase] = useState<Phase>("lead-in");
-  const [view, setView] = useState<View>("overview");
-  const [activeIndex, setActiveIndex] = useState(0);
-  /** 讲述状态：narrating 本段讲述中 */
+  const evidenceMode = !!focusSectionId;
+  const [phase, setPhase] = useState<Phase>(evidenceMode ? "scroll" : "lead-in");
+  const [view, setView] = useState<View>(evidenceMode ? "section" : "overview");
+  const [activeIndex, setActiveIndex] = useState(() => Math.max(0, sections.findIndex((item) => item.id === focusSectionId)));
+  /** 独白由用户展开后才开始，折叠只暂停，不重播。 */
   const [narrating, setNarrating] = useState(false);
+  const [narrationOpen, setNarrationOpen] = useState(false);
   const [sectionReady, setSectionReady] = useState(false);
   const { schedule, cancel } = useStoryTimers();
-  /** 全章已读完（末段讲述完成）：全览的出口从「从头读」换成「继续听我说」 */
+  /** 全章已读完：无需听完可选独白。 */
   const [readComplete, setReadComplete] = useState(false);
   /** 考据角标展开态 */
   const [noteOpen, setNoteOpen] = useState(false);
@@ -89,7 +96,7 @@ export default function InscriptionModule({
   const [infoOpen, setInfoOpen] = useState(false);
   const climaxDoneRef = useRef(false);
   const trackedRef = useRef(-1);
-  const autoNarrateRef = useRef<ReturnType<typeof schedule> | null>(null);
+  const readingReadyRef = useRef<ReturnType<typeof schedule> | null>(null);
   /** 入场铺开动画只播一次（末段读完拉回全览不重播） */
   const introPlayedRef = useRef(false);
 
@@ -102,20 +109,29 @@ export default function InscriptionModule({
   const cameraX = useMotionValue(0);
   const cameraScale = useMotionValue(1);
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const readingDetailsRef = useRef<HTMLDivElement | null>(null);
   const [vp, setVp] = useState({ w: 0, h: 0 });
+  const [viewportElement, setViewportElement] = useState<HTMLDivElement | null>(null);
 
   const section: InscriptionSection | undefined = sections[activeIndex];
+  const evidenceTarget = focusSectionId ? resolveEvidenceTarget(artifact, focusSectionId) : null;
+  const evidenceRange = evidenceTarget && section
+    ? getInscriptionEvidenceRange(data, section, evidenceTarget.target.label)
+      ?? getInscriptionEvidenceRange(data, section, evidenceTarget.target.excerpt)
+    : null;
   const allLit = litChars.length >= CLIMAX_CHARS.length;
+  const followUp = getInscriptionFollowUp(section, noteOpen, infoOpen);
+  const readingIntent = noteOpen ? "debate" : infoOpen ? "glyph-source" : "reading";
   useStoryMoment({
-    id: `${artifact.id}:inscription:${phase}:${view}:${section?.id ?? "overview"}`,
-    title: view === "section" && section ? `铭文 · ${section.sceneNote}` : "完整铭文 · 全览",
-    summary: view === "section" && section ? section.transcript : data.openingLines.join("\n"),
-    factIds: view === "section" && section ? [...new Set([...section.factIds, ...(section.followUp?.factIds ?? [])])] : [],
+    id: `${artifact.id}:inscription:${phase}:${view}:${section?.id ?? "overview"}:${readingIntent}`,
+    title: view === "section" && section ? `铭文 · ${section.sceneNote}${noteOpen ? " · 查看考据" : infoOpen ? " · 字形来源" : ""}` : "完整铭文 · 全览",
+    summary: view === "section" && section ? `${section.transcript}${noteOpen ? `\n用户刚展开「考」，查看的释读说明：${section.debateNote}` : infoOpen ? `\n用户刚查看字形来源说明：${data.footnote}` : ""}` : data.openingLines.join("\n"),
+    factIds: view === "section" && section ? [...new Set([...section.factIds, ...(followUp?.factIds ?? [])])] : [],
     sectionId: view === "section" ? section?.id : undefined,
-    questions: section?.followUp?.questions ?? [],
-    prompt: section?.followUp?.prompt,
+    questions: followUp?.questions ?? [],
+    prompt: followUp?.prompt,
     ready: phase === "scroll" && view === "section" && sectionReady,
-  });
+  }, !evidenceMode);
 
   const COLS = Math.ceil(fullText.length / PER_COL);
   /** 轴头宽 */
@@ -141,7 +157,7 @@ export default function InscriptionModule({
   const colCenterX = (col: number) => stripW - EDGE - col * COL_STEP - GLYPH / 2;
   /** 段 k 覆盖的列范围中心 */
   const sectionCenterCol = (k: number) => {
-    const [s, e] = sections[k].range;
+    const [s, e] = evidenceMode && evidenceRange ? evidenceRange : sections[k].range;
     return (Math.floor(s / PER_COL) + Math.floor((e - 1) / PER_COL)) / 2;
   };
   /**
@@ -178,15 +194,15 @@ export default function InscriptionModule({
    * 回调 ref 在 DOM 真正插进来那一刻触发，与挂载时机解耦。
    * 顺带过滤挂载过渡期的瞬态尺寸（宽或高 <50px 的测量不采信）。
    */
-  const roRef = useRef<ResizeObserver | null>(null);
   // useCallback 固定身份：内联函数每渲染一个新 ref 会让 React 反复重调 → 死循环
   const attachViewport = useCallback((el: HTMLDivElement | null) => {
     viewportRef.current = el;
-    roRef.current?.disconnect();
-    roRef.current = null;
-    if (!el) return;
+    setViewportElement(el);
+  }, []);
+  useEffect(() => {
+    if (!viewportElement) return;
     const take = () => {
-      const r = el.getBoundingClientRect();
+      const r = viewportElement.getBoundingClientRect();
       if (r.width <= 50 || r.height <= 50) return;
       // 值没变就不换 state 对象（同值 set 新对象也会触发渲染）
       setVp((prev) =>
@@ -197,10 +213,20 @@ export default function InscriptionModule({
     };
     take();
     const ro = new ResizeObserver(take);
-    ro.observe(el);
-    roRef.current = ro;
-  }, []);
-  useEffect(() => () => roRef.current?.disconnect(), []);
+    ro.observe(viewportElement);
+    // 必须在每次 effect setup 中重建 observer。StrictMode 的 setup→cleanup→setup
+    // 不能断开后不再连接；原生 dialog 初次挂载隐藏，打开后靠这次测量完成定位。
+    return () => ro.disconnect();
+  }, [viewportElement]);
+
+  // 独立证据层复用整卷与字形，不改变后台主线的 phase、选段或镜头。
+  useEffect(() => {
+    if (!evidenceMode || vp.w <= 0) return;
+    cameraScale.set(readScale);
+    cameraX.set(clampFocus(activeIndex, vp.w, readScale));
+    // 镜头几何由视口与选段派生，沿用主模块的计算。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evidenceMode, vp.w, vp.h, readScale, activeIndex, cameraScale, cameraX]);
 
   // 尺寸就绪后：首次进卷做「缓缓铺开」——镜头从卷首（读态位）拉回到全览，
   // 像手卷被展开铺平。此后回全览（末段读完）直接摆位即可。
@@ -247,16 +273,11 @@ export default function InscriptionModule({
     track("inscription_section_view", { artifactId: artifact.id, sectionIndex: activeIndex });
   }, [phase, activeIndex, artifact.id]);
 
-  /** 讲述自动开始的统一入口（切段/推近共用，先清旧计时） */
-  const scheduleNarration = (idx: number, delay: number) => {
+  /** 镜头到位后开放追问；不自动展开独白或打断阅读。 */
+  const scheduleReadingReady = (delay: number) => {
     setSectionReady(false);
-    if (autoNarrateRef.current !== null) cancel(autoNarrateRef.current);
-    const target = sections[idx];
-    if (target?.isClimax && !climaxDoneRef.current) {
-      autoNarrateRef.current = schedule(() => setPhase("climax"), delay + 900);
-    } else {
-      autoNarrateRef.current = schedule(() => setNarrating(true), delay);
-    }
+    if (readingReadyRef.current !== null) cancel(readingReadyRef.current);
+    readingReadyRef.current = schedule(() => setSectionReady(true), delay);
   };
 
   /** 交互时刻的视口实测（比 state 更可靠——点按钮的瞬间 DOM 一定在） */
@@ -272,7 +293,10 @@ export default function InscriptionModule({
     setPhase("scroll");
     setActiveIndex(idx);
     setNarrating(false);
+    setNarrationOpen(false);
     setNoteOpen(false);
+    setInfoOpen(false);
+    readingDetailsRef.current?.scrollTo({ top: 0 });
     const lv = liveVp();
     const rs = readScaleFor(lv.h);
     animate(cameraScale, rs, { duration: 0.9, ease: [0.22, 1, 0.36, 1] });
@@ -280,23 +304,25 @@ export default function InscriptionModule({
       duration: 0.9,
       ease: [0.22, 1, 0.36, 1],
     });
-    scheduleNarration(idx, 1400);
+    scheduleReadingReady(1400);
   };
 
-  /** 读态内切段：镜头平移吸附段 idx（拖卷松手/点条共用；点当前段 = 重播讲述） */
+  /** 读态内切段：仅平移卷面，释义区复位，独白保持默认收起。 */
   const goToSection = (idx: number) => {
     const clamped = Math.min(sections.length - 1, Math.max(0, idx));
-    if (clamped === activeIndex && narrating) return;
+    if (clamped === activeIndex) return;
     setActiveIndex(clamped);
     setNarrating(false);
+    setNarrationOpen(false);
     setNoteOpen(false);
     setInfoOpen(false);
+    readingDetailsRef.current?.scrollTo({ top: 0 });
     const lv = liveVp();
     animate(cameraX, clampFocus(clamped, lv.w, readScale), {
       duration: 0.65,
       ease: [0.22, 1, 0.36, 1],
     });
-    scheduleNarration(clamped, NARRATION_DELAY_MS + 400);
+    scheduleReadingReady(NARRATION_DELAY_MS + 400);
   };
 
   /** 松手吸附：由当前镜头位置反算最近的段 */
@@ -316,14 +342,22 @@ export default function InscriptionModule({
     goToSection(best);
   };
 
-  /** 末段讲完：直接进 closing。不再折回全览停留——「全览一句 122 字」+ closing
-   *  「一百二十二个字读完了」两屏同义（用户反馈的重复感），全览只留给「再读一遍」。 */
-  const handleNarrationComplete = () => {
-    setSectionReady(true);
-    if (activeIndex >= sections.length - 1) {
-      setReadComplete(true);
-      schedule(() => setPhase("closing"), 400);
+  const toggleNarration = () => {
+    if (narrationOpen) {
+      setNarrationOpen(false);
+      return;
     }
+    setNarrationOpen(true);
+    if (section?.isClimax && !climaxDoneRef.current) {
+      setPhase("climax");
+    } else {
+      setNarrating(true);
+    }
+  };
+
+  const completeReading = () => {
+    setReadComplete(true);
+    setPhase("closing");
   };
 
   /** 再读一遍：复位完成标记与 climax（重看时四字重新划亮） */
@@ -336,7 +370,7 @@ export default function InscriptionModule({
   // 卸载清理
   useEffect(
     () => () => {
-      if (autoNarrateRef.current !== null) cancel(autoNarrateRef.current);
+      if (readingReadyRef.current !== null) cancel(readingReadyRef.current);
     },
     [cancel],
   );
@@ -380,15 +414,16 @@ export default function InscriptionModule({
     }
   };
 
-  /** climax 收束：回卷轴，稍候自动开讲这一段 */
+  /** 用户主动打开独白后的四字互动收束，接着讲述本段。 */
   const finishClimax = () => {
     climaxDoneRef.current = true;
     setPhase("scroll");
-    schedule(() => setNarrating(true), 500);
+    setNarrating(true);
   };
 
   /** 字 j 的点亮态：已读 1 / 当前段依次亮 / 未读暗 */
   const litOpacity = (j: number, inCurrentSection: boolean) => {
+    if (evidenceMode) return inCurrentSection ? 1 : 0.18;
     const readStart = section?.range[0] ?? 0;
     if (j < readStart) return 1; // 已读过的段保持点亮
     if (inCurrentSection) return 1; // 当前段（带逐字 delay）
@@ -397,8 +432,7 @@ export default function InscriptionModule({
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      {/* 正文层：各相位 my-auto——放得下就居中，放不下自动顶对齐（auto margin 无剩余空间时归零）。
-          之前 justify-center 在矮屏内容超高时上下同时溢出，纸带上缘顶进章节标题（390×700 实测 -17px）。 */}
+      {/* 开场与全览仍居中；读态固定卷轴，下方内容独立滚动。 */}
       <div className="absolute inset-0 flex flex-col items-center px-6">
         <AnimatePresence mode="wait">
           {phase === "lead-in" && (
@@ -418,20 +452,20 @@ export default function InscriptionModule({
             </motion.div>
           )}
 
-          {phase === "scroll" && (
+          {(phase === "scroll" || phase === "climax") && (
             <motion.div
               key="scroll"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="my-auto flex w-full flex-col items-center pt-[calc(9.5rem+var(--safe-top))]"
+              className={`${evidenceMode ? "h-full min-h-0 justify-center" : view === "overview" ? "my-auto pt-[calc(9.5rem+var(--safe-top))]" : "h-full min-h-0 pt-[calc(clamp(11rem,22svh,16rem)+var(--safe-top))]"} flex w-full flex-col items-center`}
             >
               {/* 卷面：手机占满视口宽；桌面限宽居中（全屏宽的纸带在 27 列面前太稀，且与下方窄文字卡断裂）。
-                  高度 30vh：纸带实际高度由字区+留白决定（见 paperVisualH），这里只定镜头可用空间。
-                  pt 9.5rem = 标题底(~128) + 纸带 14px 上外扩 + 净空：顶对齐兜底时纸缘也压不到标题 */}
+                  高度 30svh：纸带实际高度由字区+留白决定（见 paperVisualH），这里只定镜头可用空间。
+                  全览保留原入场位置；读态锚点下移，随屏高适配，释义展开仍不改变卷轴位置。 */}
               <div
                 ref={attachViewport}
-                className="relative h-[30vh] max-h-[400px] min-h-[220px] w-full max-w-md sm:max-w-2xl"
+                className={evidenceMode ? "relative h-[calc(100%-2rem)] w-full max-w-2xl shrink-0" : "relative h-[30svh] max-h-[400px] min-h-[220px] w-full max-w-md shrink-0 sm:max-w-2xl"}
               >
                 {/* 裁剪层：与固定轴座同高（视口 ±14px）。纸带在此层内被裁，出界不露 */}
                 <div className="absolute -inset-y-[14px] left-0 right-0 overflow-hidden">
@@ -444,6 +478,10 @@ export default function InscriptionModule({
                   style={{
                     x: cameraX,
                     scale: cameraScale,
+                    // 镜头按整卷宽度计算；绝对定位 flex 的默认收缩宽度会让右起字列
+                    // 溢出到左侧，导致“宅兹中国”镜头误显示卷尾。
+                    width: stripW,
+                    paddingInline: SIDE_PAD,
                     transformOrigin: "0% 50%",
                     height: `${(paperLayoutH / cropH) * 100}%`,
                     top: `${(paperTop / cropH) * 100}%`,
@@ -453,7 +491,7 @@ export default function InscriptionModule({
                        丢了这行整个镜头是镜像的（v3 重写时踩过） */
                     flexDirection: "row-reverse",
                   }}
-                  drag={view === "section" ? "x" : false}
+                  drag={!evidenceMode && view === "section" ? "x" : false}
                   dragConstraints={dragBounds}
                   dragElastic={0.06}
                   dragMomentum={false}
@@ -464,7 +502,7 @@ export default function InscriptionModule({
                   {/* 首端轴头：长在纸带上（随镜头缩放，天然与纸同高）。
                       放在 flex row-reverse 的第一个子位 = 视觉最右 = 卷首。
                       flex 顺序：这个 Roller → 列0 → 列1…（col 0 仍在最右列） */}
-                  <Roller />
+                  <Roller hidden={evidenceMode} />
 
                   {cols.map((col, ci) => (
                     <div
@@ -472,7 +510,7 @@ export default function InscriptionModule({
                       className="flex w-[52px] shrink-0 flex-col items-center justify-center gap-2"
                     >
                       {col.map(({ c, j }) => {
-                        const [s, e] = section?.range ?? [0, 0];
+                        const [s, e] = evidenceMode && evidenceRange ? evidenceRange : section?.range ?? [0, 0];
                         const inCurrent = view === "section" && j >= s && j < e;
                         const op = litOpacity(j, inCurrent);
                         return hasGlyph(c) ? (
@@ -480,6 +518,7 @@ export default function InscriptionModule({
                             /* key 带 inCurrent：切段时该字重挂载，GlyphChar 的
                                笔画生长（grow）才会对新段重新播一遍 */
                             key={inCurrent ? `lit-${j}` : `dim-${j}`}
+                            data-evidence-highlight={evidenceMode && inCurrent ? c : undefined}
                             initial={false}
                             animate={{ opacity: op }}
                             transition={{
@@ -488,19 +527,19 @@ export default function InscriptionModule({
                             }}
                             className={
                               inCurrent
-                                ? "text-gilt-light drop-shadow-[0_0_8px_rgba(201,167,106,0.25)]"
+                                ? evidenceMode ? "text-[#f6d48d]" : "text-gilt-light"
                                 : op >= 1
                                   ? "text-gilt-light/90"
                                   : "text-gilt-dark"
                             }
                           >
-                            {/* 当前段：整字淡入换成逐笔书写（笔画生长）；
-                                growDelay 跟外层 opacity 错峰同节奏 */}
+                            {/* 当前段逐笔描金，最后一笔完成后原尺寸浮起；切段时卸下浮雕。 */}
                             <GlyphChar
                               char={c}
                               className="h-[52px] w-[52px]"
                               strokeWidth={3.4}
-                              grow={inCurrent}
+                              grow={inCurrent && !evidenceMode}
+                              relief={inCurrent}
                               growDelay={(j - s) * 55}
                             />
                           </motion.span>
@@ -509,13 +548,14 @@ export default function InscriptionModule({
                           <motion.span
                             key={j}
                             initial={false}
-                            animate={{ opacity: Math.min(op, 0.62) }}
+                            data-evidence-highlight={evidenceMode && inCurrent ? c : undefined}
+                            animate={{ opacity: evidenceMode && inCurrent ? 1 : Math.min(op, 0.62) }}
                             transition={{
                               duration: 0.4,
                               delay: inCurrent ? (j - s) * 0.055 : 0,
                             }}
                             className={`flex h-[52px] w-[52px] items-center justify-center font-title text-[34px] leading-none ${
-                              inCurrent ? "text-rice-100/70" : "text-rice-100/45 blur-[1.5px]"
+                              inCurrent ? evidenceMode ? "text-[#f6d48d]" : "text-rice-100/70" : "text-rice-100/45 blur-[1.5px]"
                             }`}
                           >
                             {c}
@@ -526,7 +566,7 @@ export default function InscriptionModule({
                   ))}
 
                   {/* 尾端轴头：flex 末位 = 视觉最左 = 卷尾 */}
-                  <Roller />
+                  <Roller hidden={evidenceMode} />
                 </motion.div>
 
                 {/* 固定轴座：视口两缘、贯穿滑动全程可见的「手柄」。纸带从它下面穿过
@@ -549,7 +589,7 @@ export default function InscriptionModule({
               </div>
 
               {/* ===== 全览态：提示 + 入口（读完后再进来，出口换成下一章） ===== */}
-              {view === "overview" ? (
+              {evidenceMode ? null : view === "overview" ? (
                 <div className="mt-7 flex w-full max-w-md flex-col items-center gap-4">
                   <p className="text-center text-sm leading-7 text-rice-200/70">
                     {data.overviewHint ?? "这一卷纸，就是全部的铭文。"}
@@ -580,135 +620,142 @@ export default function InscriptionModule({
                 </div>
               ) : (
                 section && (
-                  /* ===== 读态三层结构 =====
-                     一层：释文卡（卷轴的延续，同款纸质感紧贴卷底）+ 考据/脚注 ⓘ
-                     二层：何尊的低语（一次一句，金色微光，与史料明确分开）
-                     三层：分段导航点条（进度即导航）。每屏可见文字量 = 一张卡 + 一句话。 */
-                  <div className="mt-4 w-full max-w-md pb-[calc(3.5rem+var(--safe-bottom))] sm:max-w-xl">
-                    {/* —— 释文卡 —— */}
-                    <div className="relative">
-                      <div
-                        className="paper-noise rounded-sm border border-[#171209] px-5 pb-4 pt-3.5"
-                        style={{
-                          background:
-                            "linear-gradient(100deg, #3a2f1b 0%, #2e2515 55%, #251d10 100%)",
-                          boxShadow: "inset 0 0 30px rgba(14,10,4,0.55), 0 6px 24px rgba(0,0,0,0.4)",
-                        }}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="text-[11px] tracking-widest text-gilt-light/80">
-                            释文{section.sceneNote ? ` · ${section.sceneNote}` : ""}
-                          </p>
-                          <div className="flex items-center gap-1.5">
-                            {/* 考据角标：卡片标签行内的小「考」，不外凸不被卷轴压 */}
-                            {section.debateNote && (
+                  <div className="mt-5 flex min-h-0 w-full max-w-md flex-1 flex-col sm:max-w-xl">
+                    <div ref={readingDetailsRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3 [overflow-anchor:none]">
+                      {/* —— 释文卡 —— */}
+                      <div className="relative">
+                        <div
+                          className="rounded-2xl border border-gilt/30 bg-[#211c13]/80 px-4 pb-1 pt-4 sm:px-5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-xs tracking-wide text-gilt-light/90 sm:text-sm">
+                              当前释义{section.sceneNote ? ` · ${section.sceneNote}` : ""}
+                            </p>
+                            <div className="flex items-center gap-1.5">
+                              {/* 考据角标：卡片标签行内的小「考」，不外凸不被卷轴压 */}
+                              {section.debateNote && (
+                                <button
+                                  onClick={() => {
+                                    setNoteOpen((v) => !v);
+                                    setInfoOpen(false);
+                                  }}
+                                  className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] leading-none transition ${
+                                    noteOpen
+                                      ? "border-cinnabar-light/80 bg-cinnabar-light/20 text-cinnabar-light"
+                                      : "border-cinnabar-light/50 text-cinnabar-light/90 hover:border-cinnabar-light/80"
+                                  }`}
+                                  title="学界释读分歧"
+                                  aria-expanded={noteOpen}
+                                >
+                                  考
+                                </button>
+                              )}
+                              {/* 脚注 ⓘ：摹写声明收进浮层，不再常驻占行 */}
                               <button
                                 onClick={() => {
-                                  setNoteOpen((v) => !v);
-                                  setInfoOpen(false);
+                                  setInfoOpen((v) => !v);
+                                  setNoteOpen(false);
                                 }}
                                 className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] leading-none transition ${
-                                  noteOpen
-                                    ? "border-cinnabar-light/80 bg-cinnabar-light/20 text-cinnabar-light"
-                                    : "border-cinnabar-light/50 text-cinnabar-light/90 hover:border-cinnabar-light/80"
+                                  infoOpen
+                                    ? "border-gilt-light/70 bg-gilt/20 text-gilt-light"
+                                    : "border-gilt-light/40 text-gilt-light/70 hover:border-gilt-light/70"
                                 }`}
-                                title="学界释读分歧"
+                                title="字形来源说明"
+                                aria-expanded={infoOpen}
                               >
-                                考
+                                ⓘ
                               </button>
+                            </div>
+                          </div>
+                          {/* 释文：史料译文，整段常亮（逐字点亮惩罚阅读，不做） */}
+                          <p className="mb-4 mt-3 text-[15px] leading-7 text-rice-100/95 sm:text-base">
+                            {section.transcript}
+                          </p>
+                          {/* 考据 / 脚注浮层（互斥展开） */}
+                          <AnimatePresence>
+                            {noteOpen && section.debateNote && (
+                              <motion.p
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-2 overflow-hidden border-l-2 border-cinnabar-light/30 pl-3 text-[11px] leading-4 text-cinnabar-light/65"
+                              >
+                                {section.debateNote}
+                              </motion.p>
                             )}
-                            {/* 脚注 ⓘ：摹写声明收进浮层，不再常驻占行 */}
+                            {infoOpen && (
+                              <motion.p
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-2 overflow-hidden border-l-2 border-gilt/60 pl-3 text-[11px] leading-4 text-rice-200/50"
+                              >
+                                {data.footnote}
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                          <div className="border-t border-gilt/25">
                             <button
-                              onClick={() => {
-                                setInfoOpen((v) => !v);
-                                setNoteOpen(false);
-                              }}
-                              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] leading-none transition ${
-                                infoOpen
-                                  ? "border-gilt-light/70 bg-gilt/20 text-gilt-light"
-                                  : "border-gilt-light/40 text-gilt-light/70 hover:border-gilt-light/70"
-                              }`}
-                              title="字形来源说明"
+                              type="button"
+                              onClick={toggleNarration}
+                              aria-expanded={narrationOpen}
+                              aria-controls={`inscription-narration-${section.id}`}
+                              className="flex min-h-14 w-full items-center justify-between gap-3 py-3 text-left text-xs text-gilt-light/85 sm:text-sm"
                             >
-                              ⓘ
+                              <span>听何尊讲讲这段往事</span>
+                              <svg aria-hidden="true" viewBox="0 0 20 20" fill="none" className={`h-4 w-4 shrink-0 transition-transform duration-300 ${narrationOpen ? "rotate-180" : ""}`}>
+                                <path d="m4 7 6 6 6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
                             </button>
+                            <div id={`inscription-narration-${section.id}`} hidden={!narrationOpen} className="pb-4 text-center">
+                              {narrating && (
+                                <SpeechReveal
+                                  key={section.id}
+                                  lines={section.narrationLines}
+                                  paused={!narrationOpen}
+                                  lineDelay={data.lineDelay}
+                                  holdLast
+                                  textClassName="font-title text-base leading-relaxed text-gilt-light sm:text-lg"
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
-                        {/* 释文：史料译文，整段常亮（逐字点亮惩罚阅读，不做） */}
-                        <p className="mt-1.5 font-title text-[15px] leading-7 text-rice-100/95 sm:text-base">
-                          {section.transcript}
-                        </p>
-                        {/* 考据 / 脚注浮层（互斥展开） */}
-                        <AnimatePresence>
-                          {noteOpen && section.debateNote && (
-                            <motion.p
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="mt-2 overflow-hidden border-l-2 border-cinnabar-light/30 pl-3 text-[11px] leading-4 text-cinnabar-light/65"
-                            >
-                              {section.debateNote}
-                            </motion.p>
-                          )}
-                          {infoOpen && (
-                            <motion.p
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="mt-2 overflow-hidden border-l-2 border-gilt/60 pl-3 text-[11px] leading-4 text-rice-200/50"
-                            >
-                              {data.footnote}
-                            </motion.p>
-                          )}
-                        </AnimatePresence>
                       </div>
-                    </div>
 
-                    {/* —— 何尊的低语：一次一句，与史料卡片明确分层。
-                        居中：容器整体收窄（mx-auto + max-w），长句在容器内自然截行，
-                        右下悬浮钮在容器外咬不到 —— */}
-                    <div className="mx-auto mt-4 min-h-[3.5rem] max-w-[19rem] text-center sm:max-w-md">
-                      {narrating ? (
-                        <SpeechReveal
-                          key={section.id}
-                          lines={section.narrationLines}
-                          lineDelay={data.lineDelay}
-                          holdLast
-                          onComplete={handleNarrationComplete}
-                          textClassName="font-title text-base leading-relaxed text-gilt-light drop-shadow-[0_0_14px_rgba(201,167,106,0.25)] sm:text-lg"
-                        />
-                      ) : (
-                        <p className="pt-1.5 text-[11px] tracking-widest text-rice-200/30">……</p>
+                      {sectionReady && <div className="mx-auto mt-2 max-w-md"><StoryQuestionBubble compact inline /></div>}
+                    </div>
+                    {/* 分段导航独立于滚动区，跳过独白也能完成阅读。 */}
+                    <div className="flex shrink-0 flex-col items-center gap-3 border-t border-gilt/10 bg-ink-900/70 pb-[calc(1.5rem+var(--safe-bottom))] pt-3">
+                      <div className="flex min-h-6 items-center justify-center gap-2">
+                        {sections.map((s, i) => {
+                          const isCurrent = i === activeIndex;
+                          return (
+                            <button
+                              key={s.id}
+                              onClick={() => goToSection(i)}
+                              title={s.sceneNote ?? `第 ${i + 1} 段`}
+                              aria-label={`${s.sceneNote ?? `第 ${i + 1} 段`}，${i + 1} / ${sections.length}`}
+                              aria-current={isCurrent ? "step" : undefined}
+                              className={`flex items-center justify-center rounded-full transition-all duration-300 ${
+                                isCurrent
+                                  ? "w-16 bg-gilt/25 text-[10px] tracking-widest text-gilt-light"
+                                  : i < activeIndex
+                                    ? "h-2.5 w-2.5 bg-gilt/55 hover:bg-gilt/75"
+                                    : "h-2.5 w-2.5 bg-rice-200/15 hover:bg-rice-200/35"
+                              }`}
+                            >
+                              {isCurrent ? `${i + 1} / ${sections.length}` : ""}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {activeIndex === sections.length - 1 && (
+                        <button type="button" onClick={completeReading} className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs text-gilt-light transition hover:bg-gilt/30">
+                          读完了，继续 →
+                        </button>
                       )}
-                    </div>
-
-                    {sectionReady && <div className="mx-auto mt-3 max-w-md"><StoryQuestionBubble compact /></div>}
-                    {/* —— 分段导航点条：进度即导航（点哪段去哪段），末段点亮为「读完了」 —— */}
-                    <div className="mt-3 flex items-center justify-center gap-2">
-                      {sections.map((s, i) => {
-                        const isCurrent = i === activeIndex;
-                        const isLast = i === sections.length - 1;
-                        return (
-                          <button
-                            key={s.id}
-                            onClick={() => goToSection(i)}
-                            title={s.sceneNote ?? `第 ${i + 1} 段`}
-                            className={`flex items-center justify-center rounded-full transition-all duration-300 ${
-                              isCurrent
-                                ? "w-16 bg-gilt/25 text-[10px] tracking-widest text-gilt-light"
-                                : i < activeIndex
-                                  ? "h-2.5 w-2.5 bg-gilt/55 hover:bg-gilt/75"
-                                  : "h-2.5 w-2.5 bg-rice-200/15 hover:bg-rice-200/35"
-                            }`}
-                          >
-                            {isCurrent
-                              ? isLast
-                                ? "读完了"
-                                : `${i + 1} / ${sections.length}`
-                              : ""}
-                          </button>
-                        );
-                      })}
                     </div>
                   </div>
                 )
@@ -738,9 +785,6 @@ export default function InscriptionModule({
                   </div>
                 }
               />
-              <p className="mt-6 text-center text-[10px] leading-4 text-rice-200/35">
-                {data.footnote}
-              </p>
             </motion.div>
           )}
         </AnimatePresence>
@@ -903,11 +947,11 @@ function RollerMount({ side, inset }: { side: "left" | "right"; inset: number })
  * 纯 CSS 圆柱（横向渐变出立体感）+ 上下端帽。拖到卷头/卷尾时会进入画面，
  * 正是「拖到头了」的物理暗示。
  */
-function Roller() {
+function Roller({ hidden = false }: { hidden?: boolean }) {
   const cap =
     "absolute left-1/2 h-2.5 w-[34px] -translate-x-1/2 rounded-full shadow-[0_2px_6px_rgba(0,0,0,0.5)]";
   return (
-    <div className="relative h-full w-[24px] shrink-0 self-stretch" aria-hidden>
+    <div className="relative h-full w-[24px] shrink-0 self-stretch" style={hidden ? { visibility: "hidden" } : undefined} aria-hidden>
       <div
         className="h-full w-full rounded-full shadow-[0_6px_18px_rgba(0,0,0,0.55)]"
         style={{ background: "linear-gradient(90deg, #17120a, #4d3f22 38%, #241c0f)" }}

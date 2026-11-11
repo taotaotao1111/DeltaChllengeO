@@ -6,6 +6,8 @@ set -e
 if [ ! -f .cowork.json ]; then
   rm -f .redInfo ai.properties db.properties
   rm -rf .valos
+  # 原始设计稿和未启用的背景图留在本地，不进入部署包。
+  rm -rf design-assets
 fi
 
 if ! command -v npm >/dev/null 2>&1; then

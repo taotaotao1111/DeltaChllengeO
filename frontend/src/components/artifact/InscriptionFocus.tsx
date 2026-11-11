@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import type { Fact } from "../../types/artifact";
 import { useStoryTimers } from "../../utils/useStoryTimers";
 
@@ -12,6 +12,9 @@ interface InscriptionFocusProps {
   facts: Fact[];
   /** 说明旁的实物配图（可选，如「宅兹中国」文创摆件照片）；caption 走档案 */
   sideImage?: { src: string; caption?: string };
+  /** 精简模式仅保留逐字揭示与后续入口。 */
+  charactersOnly?: boolean;
+  continueLabel?: string;
   onClose: () => void;
 }
 
@@ -25,10 +28,13 @@ export default function InscriptionFocus({
   explainLines,
   facts,
   sideImage,
+  charactersOnly = false,
+  continueLabel,
   onClose,
 }: InscriptionFocusProps) {
   const [revealCount, setRevealCount] = useState(0);
   const [showExplain, setShowExplain] = useState(false);
+  const reduceMotion = useReducedMotion();
   const { schedule, cancel } = useStoryTimers();
 
   useEffect(() => {
@@ -37,13 +43,18 @@ export default function InscriptionFocus({
       setShowExplain(false);
       return;
     }
+    if (reduceMotion) {
+      setRevealCount(characters.length);
+      setShowExplain(true);
+      return;
+    }
     const timers: ReturnType<typeof schedule>[] = [];
     characters.forEach((_, i) => {
       timers.push(schedule(() => setRevealCount(i + 1), 500 + i * 650));
     });
     timers.push(schedule(() => setShowExplain(true), 500 + characters.length * 650 + 500));
     return () => timers.forEach(cancel);
-  }, [open, characters, schedule, cancel]);
+  }, [open, characters, schedule, cancel, reduceMotion]);
 
   return (
     <AnimatePresence>
@@ -56,7 +67,8 @@ export default function InscriptionFocus({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6 }}
         >
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gilt/10 blur-3xl" />
+          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2"
+            aria-hidden="true" style={{ background: "radial-gradient(ellipse, rgba(168,134,63,.13), rgba(168,134,63,.04) 45%, transparent 72%)" }} />
 
           <p className="mb-8 text-sm tracking-widest text-rice-200/60">
             我身上，有一句很重要的话。
@@ -72,7 +84,7 @@ export default function InscriptionFocus({
                     ? { opacity: 1, y: 0, filter: "blur(0px)" }
                     : { opacity: 0, y: 20, filter: "blur(6px)" }
                 }
-                transition={{ duration: 0.7, ease: "easeOut" }}
+                transition={{ duration: reduceMotion ? 0 : 0.7, ease: "easeOut" }}
                 className="font-title text-glow-gilt text-[13vw] leading-none text-gilt-light sm:text-6xl"
                 style={{ textShadow: "0 2px 18px rgba(201,167,106,0.4)" }}
               >
@@ -81,8 +93,17 @@ export default function InscriptionFocus({
             ))}
           </div>
 
+          {/* 原生透明容器保留按钮位置，避免移动端透明动画层出现矩形合成底色。 */}
+          {charactersOnly && <div className="relative mt-10 flex min-h-11 justify-center bg-transparent">
+            {showExplain && <button type="button" onClick={onClose}
+              className="overflow-hidden rounded-full border border-gilt/40 bg-gilt/10 bg-clip-padding px-6 py-2.5 text-sm tracking-wide text-gilt-light transition-colors [@media(hover:hover)]:hover:bg-gilt/20 focus-visible:outline focus-visible:outline-1 focus-visible:outline-offset-4 focus-visible:outline-gilt-light"
+              style={{ WebkitTapHighlightColor: "transparent", WebkitAppearance: "none", appearance: "none" }}>
+              {continueLabel ?? "继续 →"}
+            </button>}
+          </div>}
+
           <AnimatePresence>
-            {showExplain && (
+            {showExplain && !charactersOnly && (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -124,7 +145,7 @@ export default function InscriptionFocus({
                       onClick={onClose}
                       className="mt-8 rounded-full border border-gilt/40 px-6 py-2 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/10"
                     >
-                      我记住了
+                      {continueLabel ?? "我记住了"}
                     </button>
                   </div>
                 </div>
@@ -132,7 +153,7 @@ export default function InscriptionFocus({
             )}
           </AnimatePresence>
 
-          {!showExplain && (
+          {!showExplain && !charactersOnly && (
             <button
               onClick={onClose}
               className="absolute right-[calc(1rem+var(--safe-right))] top-[calc(1rem+var(--safe-top))] rounded-full px-3 py-2 text-xs text-rice-200/40 transition hover:text-rice-200/70"

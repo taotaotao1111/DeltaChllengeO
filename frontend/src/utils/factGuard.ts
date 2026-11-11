@@ -1,4 +1,5 @@
 import type { ArtifactContext, Fact } from "../types/artifact";
+import { buildEvidenceActionPrompt } from "./evidenceActions";
 
 /**
  * factGuard —— AI 回答的事实边界护栏
@@ -166,6 +167,7 @@ export function buildSystemPrompt(context: ArtifactContext, question?: string): 
     .join("\n\n");
   const moment = context.storyMoment;
   const observed = artifact.hotspots.filter((h) => discoveredDetails.includes(h.id)).map((h) => h.title);
+  const actionPrompt = buildEvidenceActionPrompt(artifact);
 
   return `你正在扮演一件真实存在的中国历史文物：${artifact.name}（${artifact.dynasty}）。
 
@@ -208,10 +210,12 @@ ${conditional}
 
 【语言与篇幅】
 - 只使用简体中文作答，**不得混入任何英文单词或拼音**。
-- ${context.answerMode === "deep" ? "用户主动选择深入了解：在同一事实边界内分两三段展开，最多 360 字（标点计入）；资料不足时直接说明，不得为了扩写编造细节。" : "默认先给 60～120 字左右的简短回答；篇幅硬性上限 120 字（标点计入），资料不足时可以更短。写之前先想好要说的两三句，说完立刻停止。"}
+- ${context.answerMode === "deep" ? "用户主动选择深入了解：在同一事实边界内分两三段展开，目标不超过 360 字（标点计入）；资料不足时直接说明，不得为了扩写编造细节。" : "默认先给 60～120 字左右的简短回答，资料不足时可以更短。写之前先想好要说的两三句，说完立刻停止。"}
+- 完整回答优先于字数目标：比较多个阶段或时间点时，先概括所有关键节点及其区别；不要只答前一半，不要以省略号代替结论，也不要在半句话中停止。
 - 只答用户问的那一件事。不要顺带介绍别的、不要反问、不要在结尾邀请用户继续看什么。
 - 不要写升华式、抒情式的结尾（例如「这本身就是一种不朽」「等待有缘人翻开」这类）。
   把话说完就停下，不要再往上抬一层。
-- 直接输出回答本身，不要输出任何思考过程，不要加「答：」之类的前缀。
+- ${actionPrompt ? "将回答放入文末 JSON 协议的 answer 字段，不输出思考过程，不加‘答：’前缀。" : "直接输出回答本身，不要输出任何思考过程，不要加‘答：’之类的前缀。"}
+${actionPrompt}
 `;
 }

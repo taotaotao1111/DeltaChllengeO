@@ -1,0 +1,32 @@
+.glass-fog { position: relative; isolation: isolate; overflow: hidden; background: #101110; }
+.glass-fog:not(.is-revealed) { touch-action: none; overscroll-behavior: none; }
+.glass-fog__scene { position: relative; z-index: 1; display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
+.glass-fog__ambience { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 0%, #ceaa6f44, transparent 43%), radial-gradient(ellipse at 50% 47%, #b1996530, transparent 52%), radial-gradient(ellipse at 50% 78%, #c3ac741a, transparent 36%); }
+.glass-fog__glass { position: absolute; z-index: 2; inset: 0; pointer-events: none; opacity: 1; contain: paint; will-change: opacity; transition: opacity 800ms ease-out; }
+.glass-fog__texture { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.glass-fog__input { position: absolute; z-index: 3; inset: 0; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+.glass-fog__input:active { cursor: grabbing; }
+.glass-fog__invitation { position: absolute; z-index: 4; right: 20px; bottom: max(14%, calc(40px + var(--safe-bottom))); left: 20px; pointer-events: none; color: #f1dbb7; text-align: center; text-shadow: 0 2px 16px #0009; }
+.glass-fog__invitation p { font-family: "Noto Serif SC", "Songti SC", serif; font-size: clamp(16px, 3.8vw, 21px); letter-spacing: .08em; line-height: 1.8; }
+.glass-fog__gesture { width: 154px; height: 90px; margin: 0 auto 8px; color: #f4dfb9; filter: drop-shadow(0 0 4px #f9dca85c); animation: glass-fog-gesture 3s ease-in-out infinite; }
+.glass-fog__swipe { opacity: .18; }
+.glass-fog__ornament { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; color: #dac29b99; font-size: 11px; }
+.glass-fog__ornament::before, .glass-fog__ornament::after { content: ""; width: 42px; height: 1px; background: linear-gradient(90deg, transparent, #dac29b99); }
+.glass-fog__ornament::after { transform: rotate(180deg); }
+.glass-fog__skip { position: absolute; z-index: 5; top: calc(4.5rem + var(--safe-top)); right: max(16px, var(--safe-right)); display: inline-flex; min-height: 44px; align-items: center; gap: 8px; padding: 8px 12px; color: #e4d2b3; font-size: 13px; line-height: 1; }
+.glass-fog__skip > svg { display: block; width: 14px; height: 14px; flex-shrink: 0; }
+.glass-fog__skip:focus-visible { outline: 2px solid #e4c489; outline-offset: 2px; border-radius: 6px; }
+.glass-fog.is-revealed .glass-fog__glass { opacity: 0; }
+.gallery-reveal-artifact-position { position: absolute; top: 44%; right: 0; left: 0; display: flex; justify-content: center; transform: translateY(-50%); pointer-events: none; }
+.gallery-reveal-artifact { height: min(48svh, 520px); width: min(78vw, 520px); flex-shrink: 0; }
+.gallery-reveal-caption { position: absolute; top: calc(44% + min(24svh, 260px) + 16px); right: 0; bottom: calc(2.5rem + var(--safe-bottom)); left: 0; display: flex; justify-content: center; align-items: flex-start; overflow-y: auto; overscroll-behavior: contain; }
+@media (min-width: 640px) {
+  .glass-fog__invitation { bottom: 12%; }
+  .gallery-reveal-artifact { height: min(54svh, 520px); width: min(54svh, 520px); }
+  .gallery-reveal-caption { top: calc(44% + min(27svh, 260px) + 20px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-fog__glass { transition: none; }
+  .glass-fog__gesture { animation: none; }
+}
+@keyframes glass-fog-gesture { 0%, 100% { opacity: .55; transform: translateX(-6px); } 50% { opacity: .95; transform: translateX(6px); } }

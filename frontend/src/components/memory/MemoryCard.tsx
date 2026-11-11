@@ -88,6 +88,7 @@ export default function MemoryCard() {
         discoveredCount: memory.details.length,
         exploredTitles: memory.details,
         completedTitles: memory.completed,
+        evidenceTitles: memory.evidence,
         storyUnit: memory.storyUnit,
       });
       setExported(canvas.toDataURL("image/png"));
@@ -208,6 +209,7 @@ export default function MemoryCard() {
 
                   {memory.details.length > 0 && <><p className="mt-6 text-[11px] tracking-widest text-gilt/60">我看过的细节 · {memory.details.length} 处</p><p className="mt-2 text-[13px] leading-7 text-rice-100/75">{memory.details.join(" · ")}</p></>}
                   {memory.completed.length > 0 && <><p className="mt-6 text-[11px] tracking-widest text-gilt/60">我读完的故事 · {memory.completed.length} {memory.storyUnit}</p><p className="mt-2 text-[13px] leading-7 text-rice-100/75">{memory.completed.join(" / ")}</p></>}
+                  {memory.evidence.length > 0 && <><p className="mt-6 text-[11px] tracking-widest text-gilt/60">我查看过的铭文证据</p><p className="mt-2 text-[13px] leading-7 text-rice-100/75">{memory.evidence.join(" · ")}</p></>}
                   {myQuestion && <><p className="mt-6 text-[11px] tracking-widest text-gilt/60">{questionLabel}</p><p className="mt-2 whitespace-pre-line text-[13px] leading-7 text-rice-100/70">{myQuestion}</p></>}
 
                   {hasLegacy && (

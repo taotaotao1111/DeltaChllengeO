@@ -1,10 +1,15 @@
-import { type CSSProperties, useRef, useState } from "react";
+import { type CSSProperties, useId, useRef, useState } from "react";
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
 import { track } from "../../../utils/tracking";
 import type { Artifact, FlipModuleData } from "../../../types/artifact";
 import { useStoryMoment } from "../../../utils/useStoryMoment";
 import StoryQuestionBubble from "../../ai/StoryQuestionBubble";
+import ArchiveCardFace from "./ArchiveCardFace";
+import ArchiveCardStack from "./ArchiveCardStack";
+import FlipCardProgress from "./FlipCardProgress";
+import { useGameStore } from "../../../store/gameStore";
+import "./FlipCardModule.css";
 
 type Phase = "lead-in" | "cards" | "merge" | "closing";
 
@@ -62,7 +67,7 @@ const paperCardClass =
  * 压暗后浮现点题句，把双层立意在章尾收束。
  *
  * 翻面手势：横向拖拽（像翻纸牌）——未翻态拖过卡片 1/4 宽自动翻面（带跟手旋转预览），
- * 已翻态点击或左滑继续；键盘 Enter / Space 也可翻面或继续。
+ * 点击或 Enter / Space 来回翻面；背面左滑或「下一张」继续，右滑返回故事。
  * 旋转统一由 motionValue 驱动（baseSpring 管翻面动画、dragX 管跟手预览），
  * 不用 animate prop——两者同属性会打架。
  */
@@ -79,6 +84,9 @@ export default function FlipCardModule({
   const [phase, setPhase] = useState<Phase>("lead-in");
   const [cardIndex, setCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [hasFlipped, setHasFlipped] = useState(false);
+  const [readCardIds, setReadCardIds] = useState<string[]>([]);
+  const cardPanelId = useId();
 
   // —— 拖拽翻牌的 motionValue 链 ——
   // baseRotation：0（正面）/ 180（背面），spring 驱动翻面动画
@@ -107,6 +115,14 @@ export default function FlipCardModule({
     ready: phase === "cards" && flipped,
   });
 
+  const goToCard = (index: number) => {
+    if (phase !== "cards" || useGameStore.getState().chatOpen || !Number.isInteger(index) || index < 0 || index >= cards.length || index === cardIndex) return;
+    setCardIndex(index);
+    setFlipped(false);
+    baseRotation.set(0);
+    dragX.set(0);
+  };
+
   const nextCard = () => {
     if (isLastCard) {
       // 有 mergeLine 才走「合成时刻」，否则读完直接 closing（框架默认行为）
@@ -117,18 +133,25 @@ export default function FlipCardModule({
         setPhase("closing");
       }
     } else {
-      setCardIndex(cardIndex + 1);
-      setFlipped(false);
-      baseRotation.set(0);
-      dragX.set(0);
+      goToCard(cardIndex + 1);
     }
   };
 
   const flip = () => {
     if (flipped) return;
+    cardRef.current?.focus({ preventScroll: true });
     setFlipped(true);
+    setHasFlipped(true);
+    if (card) setReadCardIds((ids) => ids.includes(card.id) ? ids : [...ids, card.id]);
     baseRotation.set(180);
     track("flip_card_view", { artifactId: artifact.id, cardId: card?.id ?? "", face: "back" });
+  };
+
+  const flipBack = () => {
+    cardRef.current?.focus({ preventScroll: true });
+    setFlipped(false);
+    baseRotation.set(0);
+    track("flip_card_view", { artifactId: artifact.id, cardId: card?.id ?? "", face: "front" });
   };
 
   /** 拖拽结束：左滑过阈值 = 翻面（未翻）/ 下一张（已翻） */
@@ -140,19 +163,21 @@ export default function FlipCardModule({
     if (info.offset.x < -threshold) {
       if (!flipped) flip();
       else nextCard();
-    }
+    } else if (info.offset.x > threshold && flipped) flipBack();
   };
 
-  /** 卡片本身承担继续操作；忽略拖拽后的补发点击，避免一次滑动跳过两张。 */
+  /** 点击只负责来回翻面；忽略拖拽或正文滚动的补发点击。 */
   const handleCardClick = () => {
     if (draggedRef.current || performance.now() < suppressClickUntil.current) return;
-    if (flipped) nextCard();
+    if (flipped) flipBack();
     else flip();
   };
 
   return (
     <div className="relative h-full w-full overflow-y-auto overscroll-contain">
-      <div className="relative flex min-h-full flex-col items-center justify-center px-6 pb-28 pt-40">
+      <div className={data.cardArtwork ? `archive-cards-layout${phase === "cards" ? " archive-cards-layout--reading" : ""}` : "relative flex min-h-full flex-col items-center justify-center px-6 pb-28 pt-40"}>
+        {phase === "cards" && <FlipCardProgress cards={cards} currentIndex={cardIndex} readIds={readCardIds}
+          panelId={cardPanelId} onSelect={goToCard} />}
         <AnimatePresence mode="wait">
           {phase === "lead-in" && (
             <motion.div
@@ -178,31 +203,17 @@ export default function FlipCardModule({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -24 }}
               transition={{ duration: 0.5 }}
-              className="flex flex-col items-center gap-6"
+              className={data.cardArtwork ? "archive-card-group" : "flex flex-col items-center gap-6"}
             >
-              {/* 进度点 */}
-              <div className="flex items-center gap-1.5">
-                {cards.map((c, i) => (
-                  <span
-                    key={c.id}
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === cardIndex
-                        ? "w-5 bg-gilt-light/70"
-                        : i < cardIndex
-                          ? "w-1.5 bg-gilt/50"
-                          : "w-1.5 bg-rice-200/15"
-                    }`}
-                  />
-                ))}
-              </div>
-
               {/* 卡片（perspective + rotateY 翻面 + 横向拖拽手势） */}
-              <div className="touch-none" style={{ perspective: 1200 }}>
+              <div className={data.cardArtwork ? `archive-card-stage${flipped ? " is-flipped" : ""}` : "touch-none"} style={{ perspective: 1200 }}>
                 <motion.div
+                  id={cardPanelId}
                   ref={cardRef}
                   drag="x"
                   dragConstraints={{ left: 0, right: 0 }}
                   dragElastic={0.6}
+                  dragDirectionLock
                   onDragStart={() => {
                     draggedRef.current = true;
                   }}
@@ -213,15 +224,22 @@ export default function FlipCardModule({
                   onKeyDown={(e) => {
                     if ((e.key === "Enter" || e.key === " ") && !e.repeat) {
                       e.preventDefault();
-                      if (flipped) nextCard(); else flip();
+                      if (flipped) flipBack(); else flip();
                     }
                   }}
-                  className={`relative aspect-[3/4] h-[46vh] max-h-[420px] w-auto cursor-grab active:cursor-grabbing ${
+                  className={data.cardArtwork ? "archive-card-frame" : `relative aspect-[3/4] h-[46vh] max-h-[420px] w-auto cursor-grab active:cursor-grabbing ${
                     flipped ? "cursor-pointer" : ""
                   }`}
                   role="button"
-                  aria-label={flipped ? isLastCard ? "读完这段故事" : "查看后续故事" : "翻开看核实的事实"}
+                  aria-label={`第 ${cardIndex + 1} 张，共 ${cards.length} 张；${flipped ? "翻回故事" : "翻面看史实"}`}
+                  aria-pressed={flipped}
                 >
+                  {data.cardArtwork ? <>
+                    <ArchiveCardFace face="front" artwork={data.cardArtwork} artifactName={artifact.name} card={card} hidden={flipped}
+                      onReadScroll={() => { suppressClickUntil.current = performance.now() + 300; }} />
+                    <ArchiveCardFace face="back" artwork={data.cardArtwork} artifactName={artifact.name} card={card} hidden={!flipped}
+                      onReadScroll={() => { suppressClickUntil.current = performance.now() + 300; }} />
+                  </> : <>
                   {/* 正面：STORY 口白（做旧纸） */}
                   <div
                     className={paperCardClass}
@@ -267,29 +285,34 @@ export default function FlipCardModule({
                       来源：{card.back.source}
                     </p>
                   </div>
+                  </>}
                 </motion.div>
               </div>
 
-              {flipped && <StoryQuestionBubble compact />}
-              {/* 只保留翻面和结尾出口，卡片本身可点击或滑动继续。 */}
-              {(!flipped || isLastCard) && <div className="flex h-10 items-center">
-                {!flipped ? (
+              {flipped && <StoryQuestionBubble compact variant="history" />}
+              {/* 首次展示时以呼吸手势提示翻面，完成一次翻面后不再显示。 */}
+              {!flipped && !hasFlipped && data.cardArtwork && <p className="archive-card-hint">
+                <svg viewBox="0 0 24 28" fill="none" aria-hidden="true"><path d="M9 15V5a2 2 0 0 1 4 0v7l1-1a2 2 0 0 1 3 1 2 2 0 0 1 3 2 2 2 0 0 1 2 2v4c0 4-3 6-6 6h-2c-3 0-4-2-5-4l-4-6c-1-2 1-4 3-2l3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" /><path d="M5 8a6 6 0 0 1 12-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
+                点击卡片翻面
+              </p>}
+              {(flipped || !data.cardArtwork) && <div className={data.cardArtwork ? "archive-card-next" : "flex h-11 items-center"}>
+                {!flipped && !data.cardArtwork ? (
                   <button
                     onClick={flip}
                     className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
                   >
                     翻面 →
                   </button>
-                ) : (
+                ) : flipped ? (
                   <motion.button
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     onClick={nextCard}
-                    className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
+                    className={data.cardArtwork ? "" : "rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"}
                   >
-                    读完了 →
+                    {isLastCard ? "读完了" : "下一张"}
                   </motion.button>
-                )}
+                ) : null}
               </div>}
             </motion.div>
           )}
@@ -306,8 +329,10 @@ export default function FlipCardModule({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
-              className="flex flex-col items-center gap-7"
+              className={data.cardArtwork ? "archive-card-group" : "flex flex-col items-center gap-7"}
             >
+              {data.cardArtwork ? <ArchiveCardStack artifactName={artifact.name} artwork={data.cardArtwork}
+                cards={cards} message={data.mergeLine ?? ""} /> : <>
               <div
                 className="relative aspect-[3/4] h-[46vh] max-h-[420px] w-auto"
                 style={{ perspective: 1100 }}
@@ -381,11 +406,12 @@ export default function FlipCardModule({
                   </p>
                 </motion.div>
               </div>
+              </>}
 
               <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 3.4 }}
+                transition={{ delay: data.cardArtwork ? 2.2 : 3.4 }}
                 onClick={() => setPhase("closing")}
                 className="rounded-full bg-gilt/20 px-5 py-2.5 text-xs tracking-wide text-gilt-light transition hover:bg-gilt/30"
               >

@@ -16,6 +16,7 @@ interface TraceGlyphsProps {
   onComplete: (dataUrls: (string | null)[]) => void;
   onSkip: () => void;
   embedded?: boolean;
+  returnLabel?: string;
 }
 
 /**
@@ -25,7 +26,7 @@ interface TraceGlyphsProps {
  * 笔画用 pointer events 画在 canvas 上，底层是 glyphs 表的淡色字模。
  * 每字「下一个」时当场 toDataURL（canvas 随即被下一字清空重画）。
  */
-export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = false }: TraceGlyphsProps) {
+export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = false, returnLabel = "返回记忆卡" }: TraceGlyphsProps) {
   const [index, setIndex] = useState(0);
   const resultsRef = useRef<(string | null)[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -171,7 +172,7 @@ export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = fals
           onClick={onSkip}
           className="text-[11px] text-rice-200/35 underline-offset-2 transition hover:text-rice-200/60"
         >
-          返回记忆卡
+          {returnLabel}
         </button>
         <button
           onClick={next}
