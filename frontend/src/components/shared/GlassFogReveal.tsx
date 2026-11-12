@@ -3,6 +3,8 @@ import { useReducedMotion } from "framer-motion";
 import { useStoryTimers } from "../../utils/useStoryTimers";
 import { blurFogPixels, getFogClearedRatio, wipeFogStroke, type FogPoint, type FogSceneSnapshot } from "../../utils/fogMask";
 import "./GlassFogReveal.css";
+import { track } from "../../utils/tracking";
+import { setAnalyticsFogVisible } from "../../utils/analyticsSignals";
 
 /** 冷凝玻璃直接在 Canvas 上擦除，避免移动端不断换 CSS 遮罩与实时模糊的合成闪烁。 */
 export default function GlassFogReveal({ children, className = "", threshold = 0.27, onRevealed,
@@ -27,10 +29,13 @@ export default function GlassFogReveal({ children, className = "", threshold = 0
   const reduceMotion = useReducedMotion();
   const { schedule } = useStoryTimers();
   useEffect(() => { callbackRef.current = onRevealed; }, [onRevealed]);
+  useEffect(() => { setAnalyticsFogVisible(true); return () => setAnalyticsFogVisible(false); }, []);
 
-  const complete = useCallback(() => {
+  const complete = useCallback((reason: "wipe" | "skip" = "wipe") => {
     if (completedRef.current) return;
     completedRef.current = true;
+    track(reason === "skip" ? "fog_skip" : "fog_complete");
+    setAnalyticsFogVisible(false);
     pointerRef.current = null;
     previousRef.current = null;
     setFaded(true);
@@ -188,7 +193,7 @@ export default function GlassFogReveal({ children, className = "", threshold = 0
         <p>{hint}</p>
         <span className="glass-fog__ornament">◇</span>
       </div>}
-      <button type="button" className="glass-fog__skip" onClick={complete}>
+      <button type="button" className="glass-fog__skip" onClick={() => complete("skip")}>
         <span>{skipLabel}</span>
         <svg viewBox="0 0 14 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="m4.5 5 5 5-5 5" />

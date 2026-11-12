@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { getArtifact } from "../../data/artifacts";
 import { useGameStore } from "../../store/gameStore";
 import { getStoryActs } from "../../utils/narrative";
+import { track } from "../../utils/tracking";
 
 interface ChapterMenuProps {
   open: boolean;
@@ -23,6 +24,7 @@ export default function ChapterMenu({ open, onClose }: ChapterMenuProps) {
     if (stage !== "chapter" || index !== chapterIndex) {
       setChapter(index);
       setStage("chapter");
+      track("menu_navigation", { artifactId });
     }
     onClose();
   };

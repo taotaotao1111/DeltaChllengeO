@@ -5,6 +5,7 @@ import MuseumScene from "../components/museum/MuseumScene";
 import GalleryScene from "../components/museum/GalleryScene";
 import ChapterHost from "../components/scenes/ChapterHost";
 import TimelineScene from "../components/scenes/TimelineScene";
+import EpilogueScene from "../components/scenes/EpilogueScene";
 import SectionNav from "../components/shared/SectionNav";
 import ArtifactChat from "../components/ai/ArtifactChat";
 import AmbientSound from "../components/shared/AmbientSound";
@@ -83,20 +84,21 @@ export default function Home() {
         </motion.div>
       )}
       {stage === "timeline" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-          <TimelineScene />
-        </motion.div>
+        // 结束页直接挂载可见内容，不让往返片尾时的整屏透明动画遮住时间线。
+        <TimelineScene key={`timeline-${currentArtifactId}`} />
       )}
+      {stage === "epilogue" && <EpilogueScene key={`epilogue-${currentArtifactId}`} />}
 
       <ArtifactChat />
-      <MemoryCard key={currentArtifactId} />
+      {/* 和场景使用不同的 key；重复的同级 key 会让片尾 DOM 在返回后残留。 */}
+      <MemoryCard key={`memory-${currentArtifactId}`} />
 
       {/*
         开场那一屏不出现溯源入口：竖版海报底部已经排满了标题与小字，
         再叠一行链接会显得杂乱，也和「推门进去」这个唯一动作抢注意力。
         但它不能整个删掉——史料溯源是本作品的立身之本，进入展厅后仍需随时可查。
       */}
-      {stage !== "museum" && (
+      {stage !== "museum" && stage !== "epilogue" && (
         <Link
           to="/sources"
           className="fixed bottom-[calc(0.6rem+var(--safe-bottom))] left-1/2 z-30 -translate-x-1/2 text-[10px] tracking-wide text-rice-200/25 transition hover:text-rice-200/60"

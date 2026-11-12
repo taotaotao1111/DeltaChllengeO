@@ -10,7 +10,7 @@ import TraceGlyphs from "../story/TraceGlyphs";
 import ExtraDialog from "../shared/ExtraDialog";
 import MemoryCardEditor from "./MemoryCardEditor";
 import MemoryPersonalIcon from "./MemoryPersonalIcon";
-import { createDecodedMemoryPreview } from "./memoryPreview";
+import { createDecodedMemoryPreview, releaseMemoryPreview } from "./memoryPreview";
 import "./MemoryCard.css";
 
 function formatToday() {
@@ -33,6 +33,7 @@ export default function MemoryCard() {
   const open = useGameStore((state) => state.memoryCardOpen);
   const prewarm = useGameStore((state) => state.stage === "timeline");
   const closeCard = useGameStore((state) => state.closeMemoryCard);
+  const finishEncounter = useGameStore((state) => state.finishEncounter);
   const discovered = useGameStore((state) => state.discoveredDetails);
   const selectedLine = useGameStore((state) => state.selectedMemoryLine);
   const messages = useGameStore((state) => state.chatMessages);
@@ -49,7 +50,8 @@ export default function MemoryCard() {
   const [draft, setDraft] = useState("");
   const [draftGlyphs, setDraftGlyphs] = useState<(string | null)[] | null>(null);
   const [rendered, setRendered] = useState<{ url: string; file: File; width: number; height: number; editorTop: string; editorHeight: string; posterRatio: number; data: MemoryPosterData } | null>(null);
-  const [presentationReady, setPresentationReady] = useState(false);
+  // rendered 只接收完成解码的图片；重开时直接复用，不先显示加载层里的「关闭」。
+  const presentationReady = rendered !== null;
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState(0);
@@ -64,13 +66,25 @@ export default function MemoryCard() {
   useScrollLock(open);
 
   useEffect(() => {
+    if (!shouldPrepare) return;
+    const background = window.matchMedia("(min-width:768px)").matches
+      ? "images/epilogue/next-encounter-desktop.webp"
+      : "images/epilogue/next-encounter-mobile.webp";
+    for (const src of [background, "images/epilogue/next-encounter-artwork.webp"]) {
+      const image = new Image();
+      image.src = src;
+      void image.decode?.().catch(() => {});
+    }
+  }, [shouldPrepare]);
+
+  useEffect(() => {
     if (!open || !saveToast) return;
     const timer = window.setTimeout(() => setSaveToast(0), 2600);
     return () => window.clearTimeout(timer);
   }, [open, saveToast]);
 
   useLayoutEffect(() => {
-    if (!open) { setPresentationReady(false); return; }
+    if (!open) return;
     const previous = document.activeElement;
     const dialog = dialogRef.current;
     dialog?.showModal();
@@ -81,12 +95,8 @@ export default function MemoryCard() {
     };
   }, [open]);
 
-  useLayoutEffect(() => {
-    if (open && rendered?.data === data) setPresentationReady(true);
-  }, [open, rendered, data]);
-
   // 图片的生命周期跟随缓存本身；收起弹窗不能释放仍被保留的图片地址。
-  useEffect(() => () => { if (rendered) URL.revokeObjectURL(rendered.url); }, [rendered]);
+  useEffect(() => () => { if (rendered) releaseMemoryPreview(rendered.url); }, [rendered]);
 
   useEffect(() => {
     if (!shouldPrepare || rendered?.data === data) { setRendering(false); return; }
@@ -98,8 +108,8 @@ export default function MemoryCard() {
         const { canvas, personalTop } = await renderCard(data);
         const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("无法生成图片")), "image/png"));
         if (cancelled) return;
-        const url = await createDecodedMemoryPreview(blob);
-        if (cancelled) { URL.revokeObjectURL(url); return; }
+        const url = await createDecodedMemoryPreview(blob, isMobileDevice());
+        if (cancelled) { releaseMemoryPreview(url); return; }
         setRendered({ url, file: new File([blob], "物语千年-我的千年相遇.png", { type: "image/png" }), width: canvas.width, height: canvas.height, editorTop: `${personalTop / canvas.height * 100}%`, editorHeight: `${210 / canvas.height * 100}%`, posterRatio: canvas.width / canvas.height, data });
       } catch {
         if (!cancelled) setError("记忆卡暂时没有生成成功，请再试一次。");
@@ -164,9 +174,12 @@ export default function MemoryCard() {
           {!desktop && hasPersonal && <button type="button" className="memory-edit-entry" onClick={editCard}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6Z" /></svg><span><strong>完善我的记忆卡</strong><small>留一句话 · 修改描红</small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
           </button>}
-          <footer className="memory-actions" aria-busy={transferring}>
-            <button type="button" className="memory-action memory-action-save" disabled={!rendered || rendered.data !== data || rendering || transferring || desktopEditing} onClick={save}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg>保存图片</button>
-            <button type="button" className="memory-action memory-action-share" disabled={!rendered || rendered.data !== data || rendering || transferring || desktopEditing} onClick={share}><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4" /></svg>分享</button>
+          <footer className="memory-actions memory-actions-ending" aria-busy={transferring}>
+            <button type="button" className="memory-action memory-action-save" disabled={!rendered || rendered.data !== data || rendering || transferring || desktopEditing} onClick={save}><span className="memory-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg></span>保存图片</button>
+            <button type="button" className="memory-action memory-action-share" disabled={!rendered || rendered.data !== data || rendering || transferring || desktopEditing} onClick={share}><span className="memory-action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><path d="m8.6 10.5 6.8-4m-6.8 7 6.8 4" /></svg></span>分享</button>
+            <button type="button" className="memory-finish-encounter" disabled={rendering || transferring || desktopEditing || !presentationReady} onClick={() => { setPanel(null); setShareHint(""); setSaveToast(0); finishEncounter(); }}>
+              <MemoryPersonalIcon kind="note" /><span>完成这次相遇</span><svg className="memory-finish-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="m7 4 6 6-6 6" /></svg>
+            </button>
           </footer>
         </div>
         {shareHint && <p role="status" className="memory-action-hint">{shareHint}</p>}

@@ -94,9 +94,8 @@ function Bar({ label, value, total }: { label: string; value: number; total: num
 }
 
 /**
- * 可信度报告：护栏不是形容词，是可度量的数字。
- * 数据来自 /api/stats（内存聚合，无个人信息）；服务不可用时降级为静态说明——
- * 护栏本身不依赖这份统计，始终生效。
+ * 数据来自 /api/stats（内存聚合，无个人信息）。
+ * 统计不可用时介绍已有的史料约束与依据标注，不将统计故障表述为可信度功能不可用。
  */
 function TrustReport() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
@@ -120,7 +119,7 @@ function TrustReport() {
       {failed ? (
         <ul className="space-y-2">
           <li className="text-sm leading-7 text-rice-200/60">
-            · 报告暂不可用（统计服务未启动或网络不可达）。对话护栏本身不依赖此统计，始终生效。
+            · AI 回答的史料约束与依据标注已启用。你可以在对话中查看回答依据、历史解释与理解边界。
           </li>
         </ul>
       ) : !stats ? (

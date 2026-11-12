@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # install.sh — Pod 解压后跑一次（每次发布都会跑，必须幂等）
 #
-# 本项目不使用 PostgreSQL（对话记录只存在浏览器内存里），所以模板里的
-# DB 初始化那一段整段删掉了，也不存在 backend/init_db.js。
+# 期待收集使用平台 PostgreSQL；首次反馈请求时幂等初始化表结构。
+# 对话记录仍保留在浏览器内存中，不写入反馈数据库。
 # 注意：这里绝不能跑 build——前端 dist 由 prepack.sh 在打包阶段产出。
 set -eo pipefail
 cd "$(dirname "$0")"

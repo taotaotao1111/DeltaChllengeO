@@ -38,6 +38,16 @@
 .memory-action { display:flex; align-items:center; justify-content:center; gap:7px; min-width:0; min-height:40px; padding:7px 12px; border:1.5px solid #edc77d; border-radius:999px; background:transparent; color:#edc77d; font-size:14px; line-height:20px; transition:filter .2s,background .2s; }
 .memory-action svg { width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .memory-action-save { background:linear-gradient(115deg,#ffdf91,#e9b04a); border-color:#f8d48a; color:#291a08; }
+.memory-actions-ending { grid-template-columns:44px 44px minmax(0,1fr); gap:12px; align-items:center; width:min(100%,420px); padding:4px 0; }
+.memory-actions-ending .memory-action { flex-direction:column; gap:4px; min-height:62px; padding:0; border:0; background:transparent; color:#ddbc80; font-size:10px; line-height:14px; }
+.memory-action-icon { display:grid; flex:none; place-items:center; width:40px; height:40px; padding:0; border:1px solid #b58e51; border-radius:50%; }
+.memory-actions-ending .memory-action svg { display:block; width:24px; height:24px; padding:0; border:0; stroke-width:2; }
+.memory-finish-encounter { display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:8px 12px; border:1px solid #eac384; border-radius:999px; background:linear-gradient(115deg,#f9dfac,#e6ba79); box-shadow:inset 0 0 0 3px #af804044; color:#30200f; font-family:'Songti SC',serif; font-size:13px; letter-spacing:.03em; }
+.memory-finish-encounter>span { display:block; line-height:20px; white-space:nowrap; }
+.memory-finish-encounter>.memory-finish-arrow { display:block; flex:none; align-self:center; width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+.memory-finish-encounter .memory-personal-icon { flex:none; width:17px; height:17px; }
+.memory-finish-encounter:disabled { opacity:.4; cursor:default; }
+@media (max-width:360px) { .memory-actions-ending { gap:8px; grid-template-columns:38px 38px minmax(0,1fr); } .memory-finish-encounter { gap:5px; padding-inline:8px; font-size:12px; } }
 .memory-action:disabled { opacity:.4; cursor:wait; }
 @media (hover:hover) { .memory-action:not(:disabled):hover { filter:brightness(1.08); } .memory-edit-entry:hover { background-color:rgba(112,76,34,.15); } }
 .memory-primary { display:flex; align-items:center; justify-content:center; gap:16px; min-height:48px; border:1px solid #e6bf77; border-radius:40px; background:linear-gradient(115deg,#aa7a38,#d0a05a 48%,#916328); color:#fff0cf; font-size:15px; box-shadow:0 0 18px rgba(193,137,57,.12); }

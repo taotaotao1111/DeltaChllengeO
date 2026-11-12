@@ -42,6 +42,8 @@ export default function TimelineScene() {
     setActivePhaseId(null);
   }, []);
   const artifact = getArtifact(artifactId);
+  const storyCompleted = useGameStore((s) => s.storyCompleted);
+  const openEpilogue = useGameStore((s) => s.openEpilogue);
   const ending = artifact.historyEnding;
   const appraise = artifact.chapters.flatMap((c) => c.module.kind === "flip" && c.module.appraise ? [c.module.appraise] : [])[0];
   const focusedPhase = ending?.phases.find((phase) => phase.id === focusedPhaseId);
@@ -72,39 +74,44 @@ export default function TimelineScene() {
         <img src={ending.background.mobile} alt="" width={941} height={1672} fetchPriority="high" />
       </picture>}
       <div className="history-ending__shade" aria-hidden />
-      <button type="button" onClick={() => setStage("chapter")} className="history-return"><span aria-hidden>←</span> 故事之旅</button>
-      <div className="history-content">
-        <header className="history-toolbar">
-          <span className="history-toolbar__label">物语千年 · 探索历史</span>
-          <button type="button" onClick={() => openMemoryCard()} className="history-memory">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden><rect x="7" y="4" width="13" height="17" rx="2" /><path d="m7 18-3-.5a2 2 0 0 1-1.5-2.4L5 4.5a2 2 0 0 1 2.4-1.4l2 .5M11 9h5M11 13h5" /></svg>
-            <span>我的探索记忆卡</span>
-          </button>
-        </header>
-        <section className="history-section history-life" aria-label="我的一生时间线">
-          <SectionHeading main>我的一生 · 时间线</SectionHeading>
-          {ending ? <HistoryTimeline key={artifactId} artifact={artifact} focusedId={focusedPhaseId} activeId={activePhaseId}
-            visitedIds={ending.phases.filter((phase) => discovered.includes(historyPhaseKey(phase.id))).map((phase) => phase.id)}
-            onFocus={focusPhase} onSelect={setActivePhaseId} /> : <Timeline events={artifact.timeline} />}
-        </section>
+      <header className="history-topbar" aria-label="探索历史顶部导航">
+        <button type="button" onClick={() => setStage("chapter")} className="history-return"><span aria-hidden>←</span> 故事之旅</button>
+      </header>
+      <div className="history-scroll">
+        <div className="history-content">
+          <header className="history-toolbar">
+            <span className="history-toolbar__label">物语千年 · 探索历史</span>
+            <button type="button" onClick={() => openMemoryCard()} className="history-memory">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.3" aria-hidden><rect x="7" y="4" width="13" height="17" rx="2" /><path d="m7 18-3-.5a2 2 0 0 1-1.5-2.4L5 4.5a2 2 0 0 1 2.4-1.4l2 .5M11 9h5M11 13h5" /></svg>
+              <span>我的探索记忆卡</span>
+            </button>
+          </header>
+          <section className="history-section history-life" aria-label="我的一生时间线">
+            <SectionHeading main>我的一生 · 时间线</SectionHeading>
+            {ending ? <HistoryTimeline key={artifactId} artifact={artifact} focusedId={focusedPhaseId} activeId={activePhaseId}
+              visitedIds={ending.phases.filter((phase) => discovered.includes(historyPhaseKey(phase.id))).map((phase) => phase.id)}
+              onFocus={focusPhase} onSelect={setActivePhaseId} /> : <Timeline events={artifact.timeline} />}
+          </section>
 
-        {artifact.span && <SpanBar castYear={artifact.span.castYear} foundYear={artifact.span.foundYear} note={artifact.span.note} />}
+          {artifact.span && <SpanBar castYear={artifact.span.castYear} foundYear={artifact.span.foundYear} note={artifact.span.note} />}
 
-        {(appraise || artifact.traceGlyphs) && <section className="history-section history-more" aria-label="故事之后的自选探索">
-          <SectionHeading>故事之后 · 更多探索</SectionHeading>
-          <div className="history-extras">
-            {appraise && <button type="button" className="history-extra" onClick={() => { track("appraise_open", { artifactId }); setAppraiseOpen(true); }}>
-              {ending && <img src={ending.appraisalImage} alt="" width={960} height={540} loading="lazy" />}
-              <span className="history-extra__copy"><small>自愿挑战{appraiseDone ? " · 已完成" : ""}</small><strong>轮到你来掌眼</strong><span>辨一辨，哪些是{artifact.name}的故事？</span></span>
-              <span className="history-extra__arrow" aria-hidden>↗</span>
-            </button>}
-            {artifact.traceGlyphs && <button type="button" className="history-extra" onClick={() => setTraceOpen(true)}>
-              {ending && <img src={ending.tracingImage} alt="" width={960} height={540} loading="lazy" />}
-              <span className="history-extra__copy"><small>铭文体验{tracedGlyphs?.some(Boolean) ? " · 已留笔迹" : ""}</small><strong>为铭文描红</strong><span>亲手描出「{artifact.traceGlyphs.chars.join("")}」</span></span>
-              <span className="history-extra__arrow" aria-hidden>↗</span>
-            </button>}
-          </div>
-        </section>}
+          {(appraise || artifact.traceGlyphs) && <section className="history-section history-more" aria-label="故事之后的自选探索">
+            <SectionHeading>故事之后 · 更多探索</SectionHeading>
+            <div className="history-extras">
+              {appraise && <button type="button" className="history-extra" onClick={() => { track("appraise_open", { artifactId }); setAppraiseOpen(true); }}>
+                {ending && <img src={ending.appraisalImage} alt="" width={960} height={540} loading="lazy" />}
+                <span className="history-extra__copy"><small>自愿挑战{appraiseDone ? " · 已完成" : ""}</small><strong>轮到你来掌眼</strong><span>辨一辨，哪些是{artifact.name}的故事？</span></span>
+                <span className="history-extra__arrow" aria-hidden>↗</span>
+              </button>}
+              {artifact.traceGlyphs && <button type="button" className="history-extra" onClick={() => setTraceOpen(true)}>
+                {ending && <img src={ending.tracingImage} alt="" width={960} height={540} loading="lazy" />}
+                <span className="history-extra__copy"><small>铭文体验{tracedGlyphs?.some(Boolean) ? " · 已留笔迹" : ""}</small><strong>为铭文描红</strong><span>亲手描出「{artifact.traceGlyphs.chars.join("")}」</span></span>
+                <span className="history-extra__arrow" aria-hidden>↗</span>
+              </button>}
+            </div>
+          </section>}
+          {storyCompleted && <button type="button" className="history-next-encounter" onClick={openEpilogue}>下一次相遇 <span aria-hidden>↗</span></button>}
+        </div>
       </div>
       {appraiseOpen && appraise && <ExtraDialog title="结尾彩蛋 · 鉴宝" onClose={() => setAppraiseOpen(false)}><div className="h-[max(680px,calc(100dvh-5rem))]"><AppraiseGate artifactId={artifactId} data={appraise} onDone={() => { markAppraiseDone(); setAppraiseOpen(false); }} /></div></ExtraDialog>}
       {traceOpen && artifact.traceGlyphs && <ExtraDialog title="故事之后 · 铭文描红" onClose={() => setTraceOpen(false)}>

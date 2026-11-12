@@ -3,6 +3,7 @@ import type { ChapterModule, ChatMessage, Scene, StoryMoment } from "../types/ar
 import { DEFAULT_ARTIFACT_ID, getArtifact } from "../data/artifacts";
 import { track } from "../utils/tracking";
 import { loadProgress, saveProgress, type ProgressSnapshot } from "../utils/progressStorage";
+import { loadEncounter, saveEncounter } from "../utils/encounterStorage";
 
 /**
  * 行为埋点说明：各 action 内的 track() 是纯发射（见 utils/tracking.ts）——
@@ -19,7 +20,7 @@ import { loadProgress, saveProgress, type ProgressSnapshot } from "../utils/prog
  *
  * AI 对话与记忆卡是贯穿全程的全局能力（悬浮入口 + 弹层），不作为独立 stage。
  */
-export type Stage = "museum" | "gallery" | "chapter" | "timeline";
+export type Stage = "museum" | "gallery" | "chapter" | "timeline" | "epilogue";
 
 /**
  * 已探索标记。
@@ -56,6 +57,12 @@ interface GameState {
   discoveredDetails: DiscoveredId[];
 
   memoryCardOpen: boolean;
+  storyCompleted: boolean;
+  epilogueSeen: boolean;
+  completeStory: () => void;
+  finishEncounter: () => void;
+  openEpilogue: () => void;
+  returnToMemoryCard: () => void;
   selectedMemoryLine: string | null;
   /** 用户留给未来的一句话；null = 还没问过，"" = 问过但跳过了 */
   userLegacyLine: string | null;
@@ -130,6 +137,8 @@ export const useGameStore = create<GameState>((set, get) => ({
   discoveredDetails: [],
 
   memoryCardOpen: false,
+  storyCompleted: loadEncounter(DEFAULT_ARTIFACT_ID).completed,
+  epilogueSeen: loadEncounter(DEFAULT_ARTIFACT_ID).epilogueSeen,
   selectedMemoryLine: null,
   userLegacyLine: null,
   artifactSnapshot: null,
@@ -169,6 +178,9 @@ export const useGameStore = create<GameState>((set, get) => ({
             userLegacyLine: null,
             tracedGlyphs: null,
             appraiseDone: false,
+            memoryCardOpen: false,
+            storyCompleted: loadEncounter(id).completed,
+            epilogueSeen: loadEncounter(id).epilogueSeen,
           },
     );
   },
@@ -250,6 +262,39 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ memoryCardOpen: true, selectedMemoryLine: line ?? null, chatOpen: false });
   },
   closeMemoryCard: () => set({ memoryCardOpen: false }),
+  completeStory: () => {
+    const state = get();
+    track("story_complete", { artifactId: state.currentArtifactId });
+    const firstCompletion = !state.storyCompleted;
+    saveEncounter(state.currentArtifactId, { completed: true });
+    set({ storyCompleted: true });
+    get().setStage("timeline");
+    // 重看故事、重新编辑纪念品不再自动弹卡或推进片尾。
+    if (firstCompletion && !state.epilogueSeen) get().openMemoryCard();
+  },
+  finishEncounter: () => {
+    const state = get();
+    // 已看状态只控制自动展示；记忆卡上的显式入口始终可以再次进入。
+    if (!state.memoryCardOpen) return;
+    track("encounter_finish", { artifactId: state.currentArtifactId });
+    // 关卡与进入片尾同步完成，不先暴露底下的探索历史，再延时切页。
+    get().openEpilogue();
+  },
+  openEpilogue: () => {
+    const state = get();
+    saveEncounter(state.currentArtifactId, { epilogueSeen: true });
+    track("epilogue_view", { artifactId: state.currentArtifactId, revisit: state.epilogueSeen });
+    set({ stage: "epilogue", epilogueSeen: true, memoryCardOpen: false, chatOpen: false, storyMoment: null, pendingChatQuestion: null });
+    get().persistCheckpoint();
+  },
+  returnToMemoryCard: () => {
+    if (get().stage !== "epilogue") return;
+    track("memory_card_open", { artifactId: get().currentArtifactId, source: "epilogue" });
+    // 一次状态更新恢复有内容的结束页并打开原卡；保留留言、描红及所选记忆。
+    set({ stage: "timeline", memoryCardOpen: true,
+      chatOpen: false, pendingChatQuestion: null, storyMoment: null });
+    get().persistCheckpoint();
+  },
   setUserLegacyLine: (line) => set({ userLegacyLine: line }),
   setArtifactSnapshot: (dataUrl) => set({ artifactSnapshot: dataUrl }),
   setTracedGlyphs: (dataUrls) => {
@@ -269,7 +314,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     const s = get();
     if (s.stage === "museum") return;
     saveProgress({
-      checkpoint: { stage: s.stage, artifactId: s.currentArtifactId, chapterIndex: s.chapterIndex },
+      // 再次续读回到故事结束页，不强制重播片尾。
+      checkpoint: { stage: s.stage === "epilogue" ? "timeline" : s.stage, artifactId: s.currentArtifactId, chapterIndex: s.chapterIndex },
       discovered: s.discoveredDetails,
       appraiseDone: s.appraiseDone,
       tracedDone: s.tracedGlyphs !== null,
@@ -295,6 +341,8 @@ export const useGameStore = create<GameState>((set, get) => ({
         ? getArtifact(snap.checkpoint.artifactId).traceGlyphs?.chars.map(() => null) ?? null
         : null,
       stage: snap.checkpoint.stage,
+      storyCompleted: loadEncounter(snap.checkpoint.artifactId).completed,
+      epilogueSeen: loadEncounter(snap.checkpoint.artifactId).epilogueSeen,
     });
   },
 

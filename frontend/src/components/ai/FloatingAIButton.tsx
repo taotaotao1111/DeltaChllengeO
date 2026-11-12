@@ -21,7 +21,7 @@ export default function FloatingAIButton({
     <button type="button" className="floating-ai" onClick={onClick} disabled={disabled} aria-label={label} title={label}>
       <span className="floating-ai__halo" aria-hidden="true" />
       <span className="floating-ai__surface" aria-hidden="true">
-        <svg viewBox="0 0 48 48" width="24" height="24" fill="none" aria-hidden="true">
+        <svg viewBox="0 0 48 48" width="28" height="28" fill="none" aria-hidden="true">
           <path d="M12 12.5C15.1 9.6 19.3 8 24 8c9.4 0 17 6.6 17 15s-7.6 15-17 15c-2.3 0-4.6-.4-6.6-1.2L9 41l2.2-9C8.5 29.5 7 26.4 7 23c0-4.1 1.9-7.8 5-10.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
           <circle cx="17" cy="23" r="2" fill="currentColor" />
           <circle cx="24" cy="23" r="2" fill="currentColor" />

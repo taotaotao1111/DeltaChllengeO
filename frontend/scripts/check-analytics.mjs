@@ -1,0 +1,53 @@
+import { build } from 'esbuild';
+import { fileURLToPath } from 'node:url';
+const result = await build({ stdin: { resolveDir: fileURLToPath(new URL('..', import.meta.url)), contents: `
+  import assert from 'node:assert/strict';
+  import { AnalyticsClock } from './src/utils/analyticsClock';
+  import { createExplorationAnalytics } from './src/utils/explorationAnalytics';
+  const clock=new AnalyticsClock(0);
+  assert.equal(clock.take(5000),5000);
+  clock.visibility(5000,false); assert.equal(clock.take(30000),0);
+  clock.visibility(30000,true); assert.equal(clock.take(35000),5000);
+  assert.equal(clock.take(90000),15000); assert.equal(clock.take(120000),0);
+  clock.activity(120000); assert.equal(clock.take(125000),5000);
+  const oldWindow=globalThis.window, oldDocument=globalThis.document, oldFetch=globalThis.fetch, oldPerformance=globalThis.performance;
+  let now=0, tick; const batches=[], timers=new Set(); let fail=false;
+  const windowMock=Object.assign(new EventTarget(), { matchMedia:()=>({matches:true}), location:{pathname:'/s/wuyu-qiannian/',search:''},
+    setInterval:fn=>{tick=fn; return 1;},clearInterval:()=>{},setTimeout:(fn,ms)=>{const id=setTimeout(fn,ms);timers.add(id);return id;},clearTimeout:id=>{clearTimeout(id);timers.delete(id);} });
+  globalThis.window=windowMock;
+  globalThis.document=Object.assign(new EventTarget(), { visibilityState:'visible',querySelectorAll:()=>[] });
+  Object.defineProperty(globalThis,'performance',{configurable:true,value:{now:()=>now}});
+  globalThis.fetch=async(url,options)=>{assert.equal(url,'/s/wuyu-qiannian/api/analytics/events'); assert.equal(options.credentials,'same-origin'); batches.push(JSON.parse(options.body)); if(fail) throw Error('offline'); return new Response('{}',{status:200});};
+  const drain=async()=>{for(let i=0;i<6;i++)await new Promise(resolve=>setImmediate(resolve));};
+  let context={step:'fog',artifact:'hezun'};
+  try {
+    const tracker=createExplorationAnalytics(), disconnect=tracker.connect(()=>context); await drain();
+    assert.equal(batches[0].events.filter(e=>e.name==='visit').length,1);
+    now=5000; tick(); await drain();
+    context={step:'inscription',artifact:'hezun'}; now=10000; tracker.sync();
+    now=15000; tick(); await drain();
+    const events=batches.flatMap(b=>b.events);
+    assert.equal(events.filter(e=>e.step==='fog').reduce((n,e)=>n+e.duration,0),10000);
+    assert.equal(events.filter(e=>e.step==='inscription').reduce((n,e)=>n+e.duration,0),5000);
+    document.visibilityState='hidden'; document.dispatchEvent(new Event('visibilitychange')); await drain();
+    const before=batches.flatMap(b=>b.events).reduce((n,e)=>n+e.duration,0);
+    now=200000; tick(); await drain();
+    assert.equal(batches.flatMap(b=>b.events).reduce((n,e)=>n+e.duration,0),before);
+    document.visibilityState='visible'; document.dispatchEvent(new Event('visibilitychange'));
+    now=205000; fail=true; tick(); await drain();
+    const failed=batches.at(-1); fail=false;
+    const oldDateNow=Date.now; Date.now=()=>oldDateNow()+120000;
+    now=210000; tick(); await drain(); Date.now=oldDateNow;
+    assert.ok(batches.some((b,i)=>i>batches.indexOf(failed) && b.events.some(e=>e.id===failed.events[0].id)), '重试保留原事件 ID 供服务端去重');
+    now=2200000; window.dispatchEvent(new Event('pointerdown')); tick(); await drain();
+    assert.ok(new Set(batches.map(b=>b.sessionId)).size>=2, '30 分钟无操作后开启新访问');
+    tracker.record('not_whitelisted'); disconnect(); await drain();
+    assert.equal(batches.flatMap(b=>b.events).some(e=>e.name==='not_whitelisted'),false);
+    const visits=batches.flatMap(b=>b.events).filter(e=>e.name==='visit').length;
+    const disconnectAgain=tracker.connect(()=>context); await drain();
+    assert.equal(batches.flatMap(b=>b.events).filter(e=>e.name==='visit').length,visits,'同一页面路由往返不重复计算访问');
+    disconnectAgain(); await drain();
+    console.log('✅ 探索统计：前后台与闲置计时、环节归属、上报失败重试、访问分段及路由往返通过');
+  } finally { for(const id of timers)clearTimeout(id); globalThis.window=oldWindow; globalThis.document=oldDocument; globalThis.fetch=oldFetch; Object.defineProperty(globalThis,'performance',{configurable:true,value:oldPerformance}); }
+` }, bundle:true,write:false,platform:'node',format:'esm',target:'node20',logLevel:'silent' });
+await import('data:text/javascript;base64,'+Buffer.from(result.outputFiles[0].text).toString('base64'));

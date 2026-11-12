@@ -17,6 +17,12 @@ const { Hono } = require('hono');
 const { HTTPException } = require('hono/http-exception');
 const { serve } = require('@hono/node-server');
 const { serveStatic } = require('@hono/node-server/serve-static');
+const { createExpectationRepository } = require('./expectationDb');
+const { createExpectationsApi } = require('./expectations');
+const { createAnalyticsApi } = require('./analytics');
+const { createAnalyticsRepository } = require('./analyticsDb');
+const { createUserProfiles } = require('./userProfiles');
+const adminAccess = require('../admin-access.json');
 
 const PORT = parseInt(process.env.APP_PORT || '3000', 10);
 const HOST = '0.0.0.0';
@@ -157,16 +163,29 @@ function requireUser(c) {
 
 const app = new Hono();
 
+const expectations = createExpectationRepository(loadProps('db.properties'));
+const profiles = createUserProfiles({ database: expectations.database });
+const resolveIdentity = (c) => profiles.resolve(requireUser(c), c.req.header('cookie') ?? '');
+app.route('/', createExpectationsApi({
+  requireUser,
+  repository: expectations,
+  adminEmails: adminAccess.emails,
+  resolveIdentity,
+}));
+app.route('/', createAnalyticsApi({ requireUser, repository: createAnalyticsRepository(expectations.database), adminEmails: adminAccess.emails, resolveIdentity }));
+
 // 探活：必须挂顶层 /health，不带任何前缀
 app.get('/health', (c) => c.json({ ok: true }));
 
 // 当前登录者。第一期前端还没有调用它，保留作为 SSO 接入的验证点，
 // 第二期 /api/chat 复用同一个 requireUser。
-app.get('/api/whoami', (c) => {
+app.get('/api/whoami', async (c) => {
   const u = requireUser(c);
+  const identity = await resolveIdentity(c);
   return c.json({
     userId: u.userId ?? u.id,
     username: u.username ?? u.name ?? u.displayName,
+    displayName: identity.name,
     email: u.email ?? u.workEmail,
   });
 });

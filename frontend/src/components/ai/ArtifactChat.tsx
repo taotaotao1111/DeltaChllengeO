@@ -107,7 +107,7 @@ export default function ArtifactChat() {
     useGameStore.getState().setChatLoading(false);
   };
 
-  if (stage === "museum" || stage === "gallery") return null;
+  if (stage === "museum" || stage === "gallery" || stage === "epilogue") return null;
   return <>
     <FloatingAIButton artifactName={artifact.name} hidden={chatOpen} hasNewReply={hasNewReply} onClick={() => toggleChat(true)} />
     <AnimatePresence>

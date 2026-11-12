@@ -25,6 +25,7 @@ export default function ChapterHost() {
   const setStage = useGameStore((s) => s.setStage);
   const setChapter = useGameStore((s) => s.setChapter);
   const markDiscovered = useGameStore((s) => s.markDiscovered);
+  const completeStory = useGameStore((s) => s.completeStory);
 
   const artifact = getArtifact(artifactId);
   const chapter = artifact.chapters[chapterIndex];
@@ -43,9 +44,10 @@ export default function ChapterHost() {
   // 每次 onNext = 当前章完成（倒退重看不触发——setChapter 的 chapter_view 才是 view 语义）。
   // 同时标记章节已读（chapter:<id> 约定，ChapterMenu 的目录用），幂等去重天然成立
   const onNext = () => {
+    if (offersDeepDive) track("continue_mainline", { artifactId });
     track("chapter_complete", { artifactId: artifactId, chapterIndex });
     markDiscovered(`chapter:${chapter.id}`);
-    if (nextIndex === undefined) setStage("timeline");
+    if (nextIndex === undefined) completeStory();
     else setChapter(nextIndex);
   };
   const onDeepDive = () => {

@@ -8,7 +8,7 @@ const result = await build({
     import { getPosterLayout, layoutPosterLines, MEMORY_BACKGROUND } from './src/components/memory/cardCanvas';
     import { hezun } from './src/data/artifacts/hezun';
     import { isMobileDevice, openImagePanel } from './src/components/memory/memoryTransfer';
-    import { createDecodedMemoryPreview } from './src/components/memory/memoryPreview';
+    import { createDecodedMemoryPreview, releaseMemoryPreview } from './src/components/memory/memoryPreview';
     const options={date:'2026.11.11'};
     const empty=buildMemoryPosterData(hezun,[],[],options);
     assert.deepEqual(empty.stats.map(stat=>stat.count),[0,0,0]);
@@ -78,8 +78,22 @@ const result = await build({
       globalThis.Image=class { set src(url){this.url=url;queueMicrotask(()=>this.onload());} };
       const fallbackUrl=await createDecodedMemoryPreview(image); // 兼容没有 decode() 的 WebView。
       assert.equal(await (await fetch(fallbackUrl)).text(),'PNG'); URL.revokeObjectURL(fallbackUrl);
+      const originalReader=globalThis.FileReader,originalCreate=URL.createObjectURL;
+      try {
+        globalThis.FileReader=class {
+          readAsDataURL(blob){void blob.arrayBuffer().then(bytes=>{this.result='data:'+blob.type+';base64,'+Buffer.from(bytes).toString('base64');this.onload();});}
+        };
+        URL.createObjectURL=()=>{throw new Error('手机预览不应创建 blob 地址');};
+        const inlineUrl=await createDecodedMemoryPreview(image,true);
+        assert.ok(inlineUrl.startsWith('data:image/png;base64,'));
+        assert.equal(await (await fetch(inlineUrl)).text(),'PNG'); // 图片字节完整，未上传或降采样。
+        releaseMemoryPreview(inlineUrl);
+      } finally {
+        URL.createObjectURL=originalCreate;
+        if(originalReader===undefined) delete globalThis.FileReader; else globalThis.FileReader=originalReader;
+      }
     } finally { if(previousImage===undefined) delete globalThis.Image; else globalThis.Image=previousImage; }
-    console.log('✅ 记忆海报：真实计数、长文本、设备分流、分享手势、解码后展示、预览地址有效与失败释放通过');
+    console.log('✅ 记忆海报：真实计数、长文本、设备分流、分享手势、解码后展示、手机内嵌 PNG 与 PC blob 分流、地址释放通过');
   ` }, bundle:true,write:false,platform:'node',format:'esm',target:'node20',logLevel:'silent',
 });
 await import(`data:text/javascript;base64,${Buffer.from(result.outputFiles[0].text).toString('base64')}`);

@@ -11,6 +11,11 @@
 const ENDPOINT = "api/track";
 
 type TrackProps = Record<string, string | number | boolean>;
+const listeners = new Set<(name: string, props?: TrackProps) => void>();
+export function subscribeTracking(listener: (name: string, props?: TrackProps) => void) {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 
 interface QueuedEvent {
   name: string;
@@ -23,6 +28,7 @@ let timer: number | undefined;
 
 export function track(name: string, props?: TrackProps): void {
   try {
+    for (const listener of listeners) { try { listener(name, props); } catch { /* 统计不阻断剧情 */ } }
     queue.push({ name, props, ts: Date.now() });
     if (timer === undefined) {
       timer = window.setTimeout(flush, 3000);

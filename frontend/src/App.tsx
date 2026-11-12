@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Sources from "./pages/Sources";
+import AdminExpectations from "./pages/AdminExpectations";
+import ExplorationAnalytics from "./components/shared/ExplorationAnalytics";
 
 /**
  * 部署到 Cowork 后访问路径是 `/s/<alias>/`，而 react-router 的 history 只认自己的
@@ -17,10 +19,12 @@ function detectBasename(): string {
 export default function App() {
   return (
     <BrowserRouter basename={detectBasename()}>
+      <ExplorationAnalytics />
       <div className="noise-overlay" aria-hidden />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/sources" element={<Sources />} />
+        <Route path="/admin/expectations" element={<AdminExpectations />} />
       </Routes>
     </BrowserRouter>
   );

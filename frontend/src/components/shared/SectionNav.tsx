@@ -24,7 +24,7 @@ export default function SectionNav() {
 
   const [menuOpen, setMenuOpen] = useState(false);
 
-  if (stage === "museum" || stage === "gallery") return null;
+  if (stage === "museum" || stage === "gallery" || stage === "epilogue") return null;
 
   const handleClick = (key: NavKey) => {
     if (key === "chapter") {

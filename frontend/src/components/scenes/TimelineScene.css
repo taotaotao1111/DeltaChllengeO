@@ -2,20 +2,22 @@
   --history-gold: #e4bc77;
   --history-text: #efe0c3;
   --history-muted: #b7a68b;
+  --history-nav-height: 68px;
   position: relative;
   isolation: isolate;
   height: 100dvh;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
+  overflow: hidden;
   background: #100d09;
   color: var(--history-text);
 }
 .history-ending__backdrop, .history-ending__shade { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
 .history-ending__backdrop img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
 .history-ending__shade { background: linear-gradient(180deg, #0a08051a, #0a080533 34%, #0a08058c); }
-.history-content { position: relative; z-index: 1; width: min(100% - 40px, 1120px); margin: 0 auto; padding: calc(76px + var(--safe-top)) 0 calc(64px + var(--safe-bottom)); }
-.history-return { position: fixed; top: calc(1.5rem + var(--safe-top)); left: calc(1.5rem + var(--safe-left)); z-index: 3; color: #cab895; font-size: 12px; letter-spacing: .05em; }
+.history-topbar { position: relative; z-index: 3; width: 100%; height: calc(var(--history-nav-height) + var(--safe-top)); background: linear-gradient(90deg, #21180f, #100d09 70%); border-bottom: 1px solid #b68b4326; box-shadow: 0 5px 18px #0004; }
+/* 滚动条从导航下方开始，避免整页滚动条占位使顶部背景缺一条。 */
+.history-scroll { position: relative; z-index: 1; height: calc(100% - var(--history-nav-height) - var(--safe-top)); overflow-y: auto; overflow-x: hidden; scroll-padding-top: 12px; overscroll-behavior: contain; }
+.history-content { position: relative; z-index: 1; width: min(100% - 40px, 1120px); margin: 0 auto; padding: 8px 0 calc(64px + var(--safe-bottom)); }
+.history-return { position: absolute; top: calc(8px + var(--safe-top)); left: calc(1.5rem + var(--safe-left)); z-index: 1; display: inline-flex; align-items: center; min-height: 44px; color: #cab895; font-size: 12px; letter-spacing: .05em; }
 .history-return span { margin-right: 5px; }
 .history-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 38px; margin-bottom: 20px; }
 .history-toolbar__label { color: #bba075; font-size: 10px; letter-spacing: .12em; }
@@ -57,6 +59,10 @@
 .history-span__note > p { position: absolute; z-index: 2; left: 12px; right: 12px; top: calc(100% + 6px); margin: 0; padding: 12px 14px; border: 1px solid #b68b4350; border-radius: 12px; background: #211a11; box-shadow: 0 8px 24px #0006; color: #bba98a; font-size: 10px; line-height: 1.8; }
 
 .history-more { margin-top: 26px; }
+.history-next-encounter { display:flex; align-items:center; gap:12px; min-height:44px; margin:22px auto 0; color:#d6b678; font-family:'Songti SC',serif; font-size:14px; letter-spacing:.1em; }
+@media (max-width: 767px) {
+  .history-next-encounter { display: none; }
+}
 .history-extras { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .history-extra { position: relative; display: flex; align-items: center; min-height: 100px; gap: 12px; overflow: hidden; padding: 14px; border: 1px solid #c89a504d; border-radius: 14px; background: #20170dd9; text-align: left; transition: border-color .2s; }
 .history-extra > img { position: absolute; inset: 0; width: 46%; height: 100%; object-fit: cover; object-position: center; opacity: .8; transition: transform .45s; }
@@ -73,7 +79,8 @@
   .history-memory:hover { background: #392817bf; }
 }
 @media (min-width: 600px) {
-  .history-content { width: min(100% - 80px, 1120px); padding-top: calc(94px + var(--safe-top)); }
+  .history-ending { --history-nav-height: 80px; }
+  .history-content { width: min(100% - 80px, 1120px); padding-top: 14px; }
   .history-toolbar { margin-bottom: 16px; }
   .history-toolbar__label { font-size: 11px; }
   .history-memory { min-height: 40px; padding-inline: 16px; font-size: 12px; }
@@ -85,8 +92,11 @@
   .history-extra__copy > strong { font-size: 20px; }
   .history-extra__arrow { width: 32px; height: 32px; font-size: 19px; }
 }
+@media (min-width: 640px) {
+  .history-return { top: calc(24px + var(--safe-top)); }
+}
 @media (min-width: 1024px) {
-  .history-content { width: min(100% - 128px, 1120px); padding-top: calc(clamp(84px, 11svh, 112px) + var(--safe-top)); }
+  .history-content { width: min(100% - 128px, 1120px); padding-top: clamp(4px, calc(11svh - 80px), 32px); }
   .history-toolbar { min-height: 40px; margin-bottom: 4px; }
   .history-toolbar__label { font-size: 11px; opacity: .75; }
   .history-memory { min-height: 40px; padding-inline: 18px; font-size: 13px; }
@@ -94,7 +104,7 @@
   .history-section-heading { margin-bottom: 18px; }
   .history-section-heading h1 { font-size: 29px; }
   .history-section-heading h2 { font-size: 23px; }
-  .history-return { left: 40px; top: 32px; font-size: 13px; }
+  .history-return { left: 40px; font-size: 13px; }
   .history-span { margin-top: 20px; padding: 14px 22px; }
   .history-span__number { font-size: 38px; }
   .history-span__header { gap: 22px; }
@@ -107,7 +117,7 @@
   .history-extra__copy > span { font-size: 12px; }
 }
 @media (min-width: 1024px) and (max-height: 800px) {
-  .history-content { padding-top: calc(80px + var(--safe-top)); padding-bottom: calc(40px + var(--safe-bottom)); }
+  .history-content { padding-top: 0; padding-bottom: calc(40px + var(--safe-bottom)); }
   .history-section-heading { margin-bottom: 12px; }
   .history-section-heading h1 { font-size: 25px; }
   .history-span { margin-top: 14px; padding-block: 10px; }

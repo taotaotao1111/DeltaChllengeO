@@ -12,6 +12,9 @@
     "check:interactions": "node scripts/check-interactions.mjs",
     "check:evidence": "node scripts/check-evidence.mjs",
     "check:memory": "node scripts/check-memory.mjs",
+    "check:epilogue": "node scripts/check-epilogue.mjs",
+    "check:expectations": "node scripts/check-expectations.mjs",
+    "check:analytics": "node scripts/check-analytics.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "eval:guard": "node scripts/eval-factguard.mjs scripts/factguard-cases.json"
