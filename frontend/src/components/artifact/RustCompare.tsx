@@ -57,7 +57,7 @@ export default function RustCompare({
       {/* 对比框：after 在底、before 在上用 clip-path 裁掉右侧 */}
       <div
         ref={frameRef}
-        className="relative mx-auto aspect-[2/3] h-[42vh] max-h-[460px] cursor-ew-resize touch-none select-none overflow-hidden rounded-lg border border-bronze-dark/60"
+        className="relative mx-auto aspect-[2/3] h-[42vh] max-h-[460px] cursor-ew-resize touch-none select-none overflow-hidden rounded-lg border border-bronze-dark/60 lg:h-[min(52vh,calc(100dvh-21rem))] lg:max-h-[560px] lg:shrink-0"
         onPointerDown={(e) => {
           e.currentTarget.setPointerCapture(e.pointerId);
           setDragging(true);

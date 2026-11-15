@@ -636,21 +636,25 @@ export const hezun: Artifact = {
          */
         guess: {
           question: "三千年前，我身上的「中国」是什么意思？",
+          presentation: "inscription",
           options: [
             {
               id: "same",
               label: "就是今天说的中国",
+              illustration: "modern-city",
               response: "不完全是。那时候它还不是一个国家的名字——它说的是一个更具体的位置。",
             },
             {
               id: "center",
               label: "天下的中心、可以建都的地方",
+              illustration: "royal-capital",
               response:
                 "你说到了。铭文里的「中国」，指的是天下之中的都邑——那个可以从中心去治理四方的地方。",
             },
             {
               id: "country-name",
               label: "一个国家的名字",
+              illustration: "walled-city",
               response: "还不是。三千年前它更像是对一个位置的称呼，「国」在当时指的是城邑。",
             },
           ],

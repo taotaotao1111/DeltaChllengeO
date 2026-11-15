@@ -1,0 +1,249 @@
+.inscription-guess-stage {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: safe center;
+  justify-content: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(10rem + var(--safe-top)) 12px calc(2.5rem + var(--safe-bottom));
+}
+
+.inscription-choice {
+  position: relative;
+  isolation: isolate;
+  flex-shrink: 0;
+  width: min(100%, 400px);
+  aspect-ratio: 3 / 4;
+  color: #efe1c4;
+  text-align: center;
+  font-family: "Noto Serif SC", "Songti SC", serif;
+}
+
+.inscription-choice__frame {
+  --frame-fade-x: 5%;
+  --frame-fade-top: 2.2%;
+  --frame-fade-bottom: 4%;
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  /* 原图外沿有不透明的深色留白，淡出这圈留白以衔接场景背景。
+     羽化只到金框外侧，保留顶部纹饰和框内的纹理。 */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 var(--frame-fade-x), #000 calc(100% - var(--frame-fade-x)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--frame-fade-top), #000 calc(100% - var(--frame-fade-bottom)), transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 var(--frame-fade-x), #000 calc(100% - var(--frame-fade-x)), transparent),
+    linear-gradient(to bottom, transparent, #000 var(--frame-fade-top), #000 calc(100% - var(--frame-fade-bottom)), transparent);
+  mask-composite: intersect;
+}
+
+.inscription-choice__frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  user-select: none;
+}
+
+.inscription-choice__content {
+  position: absolute;
+  inset: 12% 11.5% 11%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inscription-choice__question,
+.inscription-choice__response {
+  width: 100%;
+}
+
+.inscription-choice__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.65;
+  text-wrap: balance;
+  text-shadow: 0 2px 14px #000;
+}
+
+.inscription-choice__invitation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 12px 0 24px;
+  color: #bda16c;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.inscription-choice__invitation::before,
+.inscription-choice__invitation::after {
+  content: "";
+  width: 22px;
+  height: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, transparent, #a17a37);
+}
+
+.inscription-choice__invitation::after { transform: rotate(180deg); }
+
+.inscription-choice__options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inscription-choice__option {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  width: 100%;
+  min-height: 64px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #735a30;
+  border-radius: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(105deg, #3b29164d, #15130fb8 55%, #3025178c);
+  color: #e5d6b8;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .2s, background .2s, box-shadow .2s, color .2s;
+}
+
+.inscription-choice__label {
+  position: relative;
+  z-index: 1;
+  font-size: 16px;
+  line-height: 1.65;
+  text-shadow: 0 1px 8px #090704, 0 0 20px #090704;
+}
+
+.inscription-choice__landscape {
+  position: absolute;
+  z-index: -1;
+  right: 0;
+  bottom: 0;
+  width: min(58%, 224px);
+  height: 100%;
+  border-radius: inherit;
+  color: #c99b4b;
+  opacity: .42;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+
+.inscription-choice__cloud {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  height: 100%;
+  max-width: 34%;
+  border-radius: inherit;
+  color: #a47b3a;
+  opacity: .28;
+  pointer-events: none;
+}
+
+.inscription-choice__diamond {
+  position: absolute;
+  top: 50%;
+  left: -5px;
+  width: 9px;
+  height: 9px;
+  transform: translateY(-50%) rotate(45deg);
+  background: #ffd477;
+  box-shadow: 0 0 12px #e5ac48;
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.inscription-choice__option:focus {
+  border-color: #efc166;
+  background: linear-gradient(100deg, #6d4a1bb3, #30220ee0 52%, #74501ab3);
+  color: #fff0cb;
+  box-shadow: inset 0 0 22px #c38a2430, 0 0 20px #e1a54230;
+}
+
+.inscription-choice__option:focus-visible { outline: 2px solid #f6d08a; outline-offset: 3px; }
+.inscription-choice__option:focus .inscription-choice__diamond { opacity: 1; }
+.inscription-choice__option:focus .inscription-choice__landscape { opacity: .85; }
+
+@media (hover: hover) {
+  .inscription-choice__option:hover {
+    border-color: #efc166;
+    background: linear-gradient(100deg, #6d4a1bb3, #30220ee0 52%, #74501ab3);
+    color: #fff0cb;
+    box-shadow: inset 0 0 22px #c38a2430, 0 0 20px #e1a54230;
+  }
+  .inscription-choice__option:hover .inscription-choice__diamond { opacity: 1; }
+  .inscription-choice__option:hover .inscription-choice__landscape { opacity: .85; }
+}
+
+.inscription-choice__option:active { border-color: #efc166; background-color: #614317; }
+
+.inscription-choice__response-title {
+  margin: 0 0 22px;
+  color: #ba9c65;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.8;
+}
+
+.inscription-choice__answer {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.95;
+  text-align: left;
+}
+
+.inscription-choice__continue {
+  margin-top: 30px;
+  min-height: 44px;
+  border: 1px solid #b48b42;
+  border-radius: 999px;
+  padding: 10px 30px;
+  background: #79541d42;
+  color: #eed19c;
+  font-size: 14px;
+  transition: background .2s;
+}
+
+.inscription-choice__continue:hover { background: #79541d80; }
+.inscription-choice__continue:focus-visible { outline: 2px solid #f6d08a; outline-offset: 4px; }
+
+@media (min-width: 640px) {
+  .inscription-choice__frame { --frame-fade-x: 5.5%; --frame-fade-top: 3.5%; --frame-fade-bottom: 5%; }
+  .inscription-guess-stage { padding: 80px 32px 32px; }
+  .inscription-choice { width: min(100%, 760px); aspect-ratio: 3 / 2; }
+  .inscription-choice__content { inset: 14% 12% 12%; }
+  .inscription-choice__title { font-size: 23px; line-height: 1.6; }
+  .inscription-choice__invitation { margin: 12px 0 24px; font-size: 12px; gap: 12px; }
+  .inscription-choice__invitation::before,
+  .inscription-choice__invitation::after { width: 30px; }
+  .inscription-choice__options { gap: 14px; }
+  .inscription-choice__option { min-height: 64px; padding: 12px 28px; }
+  .inscription-choice__label { font-size: 18px; }
+  .inscription-choice__answer { max-width: 480px; margin-inline: auto; font-size: 22px; line-height: 1.9; }
+}
+
+@media (max-width: 360px) {
+  .inscription-choice__title { font-size: 18px; }
+  .inscription-choice__invitation { font-size: 10px; gap: 5px; margin-bottom: 18px; }
+  .inscription-choice__invitation::before,
+  .inscription-choice__invitation::after { width: 12px; }
+  .inscription-choice__options { gap: 10px; }
+  .inscription-choice__option { min-height: 58px; padding: 10px 14px; }
+  .inscription-choice__label { font-size: 15px; }
+  .inscription-choice__answer { font-size: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inscription-choice *, .inscription-choice *::before, .inscription-choice *::after { transition: none; }
+}

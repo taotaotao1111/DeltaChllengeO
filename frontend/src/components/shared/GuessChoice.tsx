@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import InscriptionChoice from "./InscriptionChoice";
 
 export interface GuessOption {
   id: string;
   label: string;
+  illustration?: "modern-city" | "royal-capital" | "walled-city";
   /** 选择后的第一人称回应，不需要判定"对错"，只需要给出更接近事实的引导 */
   response: string;
 }
@@ -14,6 +16,7 @@ interface GuessChoiceProps {
   onDone?: (optionId: string) => void;
   continueLabel?: string;
   className?: string;
+  presentation?: "inscription";
 }
 
 /**
@@ -28,9 +31,24 @@ export default function GuessChoice({
   onDone,
   continueLabel = "继续 →",
   className = "",
+  presentation,
 }: GuessChoiceProps) {
   const [pickedId, setPickedId] = useState<string | null>(null);
   const picked = options.find((o) => o.id === pickedId) ?? null;
+
+  if (presentation === "inscription") {
+    return (
+      <InscriptionChoice
+        question={question}
+        options={options}
+        picked={picked}
+        onPick={(id) => setPickedId((current) => current ?? id)}
+        onDone={onDone}
+        continueLabel={continueLabel}
+        className={className}
+      />
+    );
+  }
 
   return (
     <div className={`flex w-full flex-col items-center text-center ${className}`}>

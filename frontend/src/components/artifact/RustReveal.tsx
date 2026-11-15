@@ -81,7 +81,7 @@ export default function RustReveal({
           nudgeBar={0.88}
           nudgeHint="就差一点——把剩下的锈也刮掉，或等它自己剥落"
           // 放大刮区（用户反馈盒子小了）；高度驱动 + 2:3 贴合器物照片比例
-          className="mx-auto aspect-[2/3] h-[52vh] max-h-[560px] overflow-hidden rounded-lg"
+          className="mx-auto aspect-[2/3] h-[52vh] max-h-[560px] overflow-hidden rounded-lg lg:h-[min(52vh,calc(100dvh-21rem))] lg:max-h-[560px] lg:shrink-0"
           style={{
             border: "1px solid rgba(201,167,106,0.4)",
             boxShadow: "0 0 24px rgba(201,167,106,0.14), 0 14px 40px rgba(0,0,0,0.5)",
@@ -122,7 +122,7 @@ export default function RustReveal({
       ) : (
         /* 盖层图加载中：中性占位（尺寸与刮卡一致，避免布局跳动） */
         <div
-          className="mx-auto aspect-[2/3] h-[52vh] max-h-[560px] animate-pulse overflow-hidden rounded-lg bg-ink-800/60"
+          className="mx-auto aspect-[2/3] h-[52vh] max-h-[560px] animate-pulse overflow-hidden rounded-lg bg-ink-800/60 lg:h-[min(52vh,calc(100dvh-21rem))] lg:max-h-[560px] lg:shrink-0"
           style={{
             border: "1px solid rgba(201,167,106,0.4)",
             boxShadow: "0 0 24px rgba(201,167,106,0.14), 0 14px 40px rgba(0,0,0,0.5)",

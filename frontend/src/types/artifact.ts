@@ -118,6 +118,8 @@ export type ChapterBackdropMotif = "forge" | "patina" | "strata" | "scrap";
 export interface GuessOptionData {
   id: string;
   label: string;
+  /** 装饰性城市剪影，不代表历史复原或答案提示。 */
+  illustration?: "modern-city" | "royal-capital" | "walled-city";
   /** 选中后文物的回应；不判对错，只把认知纠正说清楚 */
   response: string;
 }
@@ -125,6 +127,7 @@ export interface GuessOptionData {
 export interface GuessBlock {
   question: string;
   options: GuessOptionData[];
+  presentation?: "inscription";
 }
 
 /**

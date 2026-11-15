@@ -114,10 +114,11 @@ export default function RevealModule({ artifact, data, presence, onNext, onDeepD
       )}
 
       {phase === "guess" && data.guess && (
-        <div className="flex h-full w-full items-center justify-center px-6">
+        <div className={data.guess.presentation === "inscription" ? "inscription-guess-stage" : "flex h-full w-full items-center justify-center px-6"}>
           <GuessChoice
             question={data.guess.question}
             options={data.guess.options}
+            presentation={data.guess.presentation}
             onDone={advance}
           />
         </div>
