@@ -59,10 +59,6 @@
 .history-span__note > p { position: absolute; z-index: 2; left: 12px; right: 12px; top: calc(100% + 6px); margin: 0; padding: 12px 14px; border: 1px solid #b68b4350; border-radius: 12px; background: #211a11; box-shadow: 0 8px 24px #0006; color: #bba98a; font-size: 10px; line-height: 1.8; }
 
 .history-more { margin-top: 26px; }
-.history-next-encounter { display:flex; align-items:center; gap:12px; min-height:44px; margin:22px auto 0; color:#d6b678; font-family:'Songti SC',serif; font-size:14px; letter-spacing:.1em; }
-@media (max-width: 767px) {
-  .history-next-encounter { display: none; }
-}
 .history-extras { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .history-extra { position: relative; display: flex; align-items: center; min-height: 100px; gap: 12px; overflow: hidden; padding: 14px; border: 1px solid #c89a504d; border-radius: 14px; background: #20170dd9; text-align: left; transition: border-color .2s; }
 .history-extra > img { position: absolute; inset: 0; width: 46%; height: 100%; object-fit: cover; object-position: center; opacity: .8; transition: transform .45s; }

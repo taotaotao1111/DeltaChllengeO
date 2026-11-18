@@ -1,0 +1,15 @@
+.trace-glyphs { isolation: isolate; }
+.trace-glyphs__background {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.trace-glyphs__background img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}

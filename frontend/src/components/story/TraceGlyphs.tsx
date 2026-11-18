@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import GlyphChar from "../shared/GlyphChar";
 import { HEZUN_GLYPHS } from "../../data/artifacts/hezun-glyphs";
 import { track } from "../../utils/tracking";
+import "./TraceGlyphs.css";
 
 /** canvas 内部分辨率：固定像素，retina 导出仍清晰 */
 const CANVAS_PX = 600;
@@ -137,8 +138,12 @@ export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = fals
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className={`${embedded ? compact ? "relative min-h-0 py-4" : "relative min-h-full py-8" : "fixed inset-0 z-[65]"} flex flex-col items-center justify-center ${compact ? "px-2" : "bg-ink-900/95 px-6"}`}
+      className={`trace-glyphs ${embedded ? compact ? "relative min-h-0 py-4" : "relative min-h-full py-8" : "fixed inset-0 z-[65]"} flex flex-col items-center justify-center ${compact ? "px-2" : "bg-ink-900/95 px-6"}`}
     >
+      {!compact && <picture className="trace-glyphs__background" aria-hidden="true">
+        <source media="(min-width: 768px)" srcSet="images/history/glyph-tracing-background-desktop.webp" />
+        <img src="images/history/glyph-tracing-background-mobile.webp" alt="" width="941" height="1672" draggable={false} />
+      </picture>}
       <p className="text-xs tracking-widest text-gilt-light/70">
         把这几个字，亲手描一遍
       </p>
@@ -192,7 +197,7 @@ export default function TraceGlyphs({ chars, onComplete, onSkip, embedded = fals
             transition={{ delay: 1.2 }}
             className="mt-4 text-[10px] leading-5 text-rice-200/25"
           >
-            三千年前的笔画，你补一笔。不判对错——写歪了，那就是你的字。
+            沿着古老的笔画，留下今天的笔迹。
           </motion.p>
         )}
       </AnimatePresence>

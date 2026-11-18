@@ -4,7 +4,7 @@
   "name": "DeltaChallenge",
   "srcDir": "/Users/taojiaxin/DeltaChallenge",
   "createdAt": 1788493657785,
-  "updatedAt": 1794722003374,
+  "updatedAt": 1794992390666,
   "createdBy": "cowork-cli",
   "stack": null,
   "guardCompliant": true,
@@ -18,9 +18,9 @@
     "rawAccessUrl": "https://cowork.xiaohongshu.com/s/1be34b4d/",
     "deploymentId": 25439,
     "deploymentStatus": "RUNNING",
-    "publishedAt": 1794722003374,
+    "publishedAt": 1794992390666,
     "visibility": "PUBLIC",
-    "version": "2.0.61",
-    "lastZipHash": "sha256:d3faf5f6c3fea3b62b71c54df7b4d09300069374181f533291514a78abb2c59a"
+    "version": "2.0.64",
+    "lastZipHash": "sha256:62d8d1622bc402d83fb556398a00e7463aec5d2ab98a21e9c938a253fa7a754d"
   }
 }

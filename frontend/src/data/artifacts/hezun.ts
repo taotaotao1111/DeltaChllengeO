@@ -975,13 +975,14 @@ export const hezun: Artifact = {
           questions: [
             {
               id: "q-order",
+              stepLabel: "验形",
               // 找茬式：指认实物而不是选文字。底图是平视棚拍照——内底不可见，
               // 但「指着口内」正是正确直觉（要看字就得往口里看），
               // 回应里把「字藏在里面」说清，不假装图上画着内底。
               question: "一件铜器摆上桌——点一点，你先验看哪里？",
               spot: {
                 imageSrc: "images/hezun-derust-after.jpg",
-                caption: "器身 · 博物馆展陈图",
+                caption: "器身 · 场景示意图",
                 regions: [
                   {
                     id: "mouth",
@@ -989,8 +990,9 @@ export const hezun: Artifact = {
                     correct: true,
                     response:
                       "好眼力。要看字，就得往口里看——这件器物入藏十余年，没人往里看一眼，122 个字就藏在里面。",
-                    // 口沿及口内区域（图面上部约 8%-25% 高、中央）
-                    rect: { x: 0.22, y: 0.06, w: 0.56, h: 0.2 },
+                    // 按当前 1024×1536 示意图校准：口内在图高约 21%–24%，
+                    // 中心约 22.5%；上方的黑色留白不属于口内。
+                    rect: { x: 0.25, y: 0.212, w: 0.5, h: 0.026 },
                   },
                   {
                     id: "pattern",
@@ -1011,6 +1013,7 @@ export const hezun: Artifact = {
             },
             {
               id: "q-size",
+              stepLabel: "辨量",
               question: "这尊的个头，你掂量是多少？",
               options: [
                 {
@@ -1033,7 +1036,8 @@ export const hezun: Artifact = {
             },
             {
               id: "q-date",
-              question: "内底 122 字释读完毕。你给这件器物断代定名——",
+              stepLabel: "断代",
+              question: "你给这件器物断代定名——",
               options: [
                 {
                   id: "shang",

@@ -116,6 +116,7 @@ const result = await build({
       assert.equal(state().stage,'timeline');
       const endingMarkup=renderToStaticMarkup(createElement(TimelineScene));
       for(const text of ['我的一生 · 时间线','我的探索记忆卡','故事之后 · 更多探索']) assert.ok(endingMarkup.includes(text));
+      assert.ok(!endingMarkup.includes('下一次相遇'),'探索页不再显示独立片尾入口');
       const epilogueMarkup=renderToStaticMarkup(createElement(EpilogueScene));
       assert.ok(epilogueMarkup.includes('回到记忆卡')); assert.ok(!epilogueMarkup.includes('回看何尊'));
       state().completeStory();

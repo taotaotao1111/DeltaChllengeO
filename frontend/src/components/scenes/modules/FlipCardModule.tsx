@@ -1,5 +1,5 @@
-import { type CSSProperties, useId, useRef, useState } from "react";
-import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
 import SpeechReveal from "../../shared/SpeechReveal";
 import { track } from "../../../utils/tracking";
 import type { Artifact, FlipModuleData } from "../../../types/artifact";
@@ -86,7 +86,30 @@ export default function FlipCardModule({
   const [flipped, setFlipped] = useState(false);
   const [hasFlipped, setHasFlipped] = useState(false);
   const [readCardIds, setReadCardIds] = useState<string[]>([]);
+  const [openingComplete, setOpeningComplete] = useState(false);
+  const [paperReady, setPaperReady] = useState(!data.cardArtwork);
   const cardPanelId = useId();
+
+  // 在念白期间解码当前屏幕需要的双面纸张，避免首张卡先显示文字、后补纸底。
+  useEffect(() => {
+    if (!data.cardArtwork) return;
+    let active = true;
+    const device = window.matchMedia("(min-width: 1024px)").matches ? "desktop" : "mobile";
+    const images = [data.cardArtwork.front[device], data.cardArtwork.back[device]].map((src) => {
+      const image = new Image();
+      image.src = src;
+      return image;
+    });
+    // 加载失败也结束等待，保留原有卡片文字及交互。
+    void Promise.allSettled(images.map((image) => image.decode())).then(() => {
+      if (active) setPaperReady(true);
+    });
+    return () => { active = false; };
+  }, [data.cardArtwork]);
+
+  useEffect(() => {
+    if (openingComplete && paperReady) setPhase(data.cards.length > 0 ? "cards" : "closing");
+  }, [openingComplete, paperReady, data.cards.length]);
 
   // —— 拖拽翻牌的 motionValue 链 ——
   // baseRotation：0（正面）/ 180（背面），spring 驱动翻面动画
@@ -120,6 +143,8 @@ export default function FlipCardModule({
     setCardIndex(index);
     setFlipped(false);
     baseRotation.set(0);
+    // 新卡必须从正面开始，不让上一张的翻面弹簧继续作用于新卡。
+    baseSpring.jump(0);
     dragX.set(0);
   };
 
@@ -178,7 +203,7 @@ export default function FlipCardModule({
       <div className={data.cardArtwork ? `archive-cards-layout${phase === "cards" ? " archive-cards-layout--reading" : ""}` : "relative flex min-h-full flex-col items-center justify-center px-6 pb-28 pt-40"}>
         {phase === "cards" && <FlipCardProgress cards={cards} currentIndex={cardIndex} readIds={readCardIds}
           panelId={cardPanelId} onSelect={goToCard} />}
-        <AnimatePresence mode="wait">
+        {/* 阶段与卡片同步替换，避免旧内容在新布局中继续退场。 */}
           {phase === "lead-in" && (
             <motion.div
               key="lead-in"
@@ -190,7 +215,7 @@ export default function FlipCardModule({
               <SpeechReveal
                 lines={data.openingLines}
                 lineDelay={data.lineDelay}
-                onComplete={() => (cards.length > 0 ? setPhase("cards") : setPhase("closing"))}
+                onComplete={() => setOpeningComplete(true)}
                 textClassName="font-title text-lg leading-relaxed text-rice-100 sm:text-xl"
               />
             </motion.div>
@@ -199,10 +224,7 @@ export default function FlipCardModule({
           {phase === "cards" && card && (
             <motion.div
               key={`card-${card.id}`}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -24 }}
-              transition={{ duration: 0.5 }}
+              initial={false}
               className={data.cardArtwork ? "archive-card-group" : "flex flex-col items-center gap-6"}
             >
               {/* 卡片（perspective + rotateY 翻面 + 横向拖拽手势） */}
@@ -446,7 +468,6 @@ export default function FlipCardModule({
             </motion.div>
           )}
 
-        </AnimatePresence>
       </div>
     </div>
   );

@@ -42,8 +42,6 @@ export default function TimelineScene() {
     setActivePhaseId(null);
   }, []);
   const artifact = getArtifact(artifactId);
-  const storyCompleted = useGameStore((s) => s.storyCompleted);
-  const openEpilogue = useGameStore((s) => s.openEpilogue);
   const ending = artifact.historyEnding;
   const appraise = artifact.chapters.flatMap((c) => c.module.kind === "flip" && c.module.appraise ? [c.module.appraise] : [])[0];
   const focusedPhase = ending?.phases.find((phase) => phase.id === focusedPhaseId);
@@ -110,10 +108,9 @@ export default function TimelineScene() {
               </button>}
             </div>
           </section>}
-          {storyCompleted && <button type="button" className="history-next-encounter" onClick={openEpilogue}>下一次相遇 <span aria-hidden>↗</span></button>}
         </div>
       </div>
-      {appraiseOpen && appraise && <ExtraDialog title="结尾彩蛋 · 鉴宝" onClose={() => setAppraiseOpen(false)}><div className="h-[max(680px,calc(100dvh-5rem))]"><AppraiseGate artifactId={artifactId} data={appraise} onDone={() => { markAppraiseDone(); setAppraiseOpen(false); }} /></div></ExtraDialog>}
+      {appraiseOpen && appraise && <ExtraDialog title="结尾彩蛋 · 鉴宝" onClose={() => setAppraiseOpen(false)}><AppraiseGate artifactId={artifactId} data={appraise} onDone={() => { markAppraiseDone(); setAppraiseOpen(false); }} /></ExtraDialog>}
       {traceOpen && artifact.traceGlyphs && <ExtraDialog title="故事之后 · 铭文描红" onClose={() => setTraceOpen(false)}>
         <TraceGlyphs embedded chars={artifact.traceGlyphs.chars} returnLabel="返回更多探索" onSkip={() => setTraceOpen(false)} onComplete={(urls) => { setTracedGlyphs(urls); setTraceOpen(false); openMemoryCard(); }} />
       </ExtraDialog>}

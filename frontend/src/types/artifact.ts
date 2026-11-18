@@ -326,9 +326,11 @@ export interface AppraiseOption {
 
 export interface AppraiseQuestion {
   id: string;
+  /** 顶部验看步骤名称，如「验形」「辨量」「断代」。 */
+  stepLabel?: string;
   question: string;
   /**
-   * 选择式（默认）：题面 + 几个胶囊选项。
+   * 选择式（默认）：题面 + 等宽选项签。
    */
   options?: AppraiseOption[];
   /**
